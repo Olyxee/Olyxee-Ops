@@ -321,13 +321,17 @@ function ProjectDetail({user,project,tasks,team,onBack,onOpen,onProjectUpdated,o
    const emailValid=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
    const managers=team.filter(member=>isManager(member)&&accountOf(member)==="Active");
    const superadmins=team.filter(member=>accessOf(member)==="Superadmin"&&accountOf(member)==="Active");
+   const departmentManager=managers.find(manager=>manager.id!==person?.id&&manager.department===department);
   const accessOptions:AccessRole[]=livePerson?["Manager","Member"]:administrator?["Superadmin","Admin","Manager","Member"]:["Member"];
    useEffect(()=>{
      if(accessRole==="Manager"){
        const superadmin=superadmins.find(member=>member.id!==person?.id);
        setReportsTo(superadmin?.id||"");
+      }else if(employmentType==="Intern"){
+        const manager=managers.find(member=>member.id!==person?.id&&member.department===department);
+        setReportsTo(manager?.id||"");
      }
-   },[accessRole,person?.id,team]);
+    },[accessRole,department,employmentType,person?.id,team]);
   const provision=async()=>{
     if(!person?.id)return;
     setProvisioning(true);
@@ -369,7 +373,7 @@ function ProjectDetail({user,project,tasks,team,onBack,onOpen,onProjectUpdated,o
   const emailShare=credentials?`mailto:${encodeURIComponent(credentials.email)}?subject=${encodeURIComponent("Your Olyxee Ops Account")}&body=${encodeURIComponent(shareMessage)}`:"#";
   const whatsappShare=credentials?`https://wa.me/?text=${encodeURIComponent(shareMessage)}`:"#";
   const savePerson=()=>onSave({...person,id:person?.id||"",name,email,department,employmentType,accessRole,accountStatus,reportsTo} as User);
-   const footer=<><button className="btn" onClick={onClose}>Cancel</button><button className="btn primary" disabled={!name.trim()||!emailValid||accessRole==="Manager"&&!reportsTo} onClick={savePerson}>{editing?"Save changes":"Add person"}</button></>;
+   const footer=<><button className="btn" onClick={onClose}>Cancel</button><button className="btn primary" disabled={!name.trim()||!emailValid||(accessRole==="Manager"||employmentType==="Intern")&&!reportsTo} onClick={savePerson}>{editing?"Save changes":"Add person"}</button></>;
    return <Modal title={editing?(editMode?"Edit person":"Person profile"):"Add team member"} className={`person-modal ${editing?"":"person-modal-add"}`} onClose={onClose} footer={footer}>
      <div className="person-modal-content">
      {!editing?<div className="person-add-form">
@@ -381,7 +385,7 @@ function ProjectDetail({user,project,tasks,team,onBack,onOpen,onProjectUpdated,o
          <label className="form-label">Employment<select className="select" value={employmentType} disabled={!administrator} onChange={event=>setEmploymentType(event.target.value as EmploymentType)}>{["Employee","Intern"].map(value=><option key={value}>{value}</option>)}</select></label>
          <label className="form-label">Access role<select className="select" value={accessRole} disabled={!administrator} onChange={event=>setAccessRole(event.target.value as AccessRole)}>{accessOptions.map(value=><option key={value}>{value}</option>)}</select></label>
          <label className="form-label">Account status<select className="select" value={accountStatus} onChange={event=>setAccountStatus(event.target.value as AccountStatus)}>{["Active","Suspended"].map(value=><option key={value}>{value}</option>)}</select></label>
-         {accessRole==="Member"&&<label className="form-label person-field-wide">Reports to<select className="select" value={reportsTo} disabled={!administrator} onChange={event=>setReportsTo(event.target.value)}><option value="">Unassigned</option>{managers.filter(manager=>administrator||manager.id===user.id).map(manager=><option key={manager.id} value={manager.id}>{manager.name}</option>)}</select></label>}
+         {accessRole==="Member"&&<label className="form-label person-field-wide">Reports to<select className="select" value={reportsTo} disabled={!administrator||employmentType==="Intern"} onChange={event=>setReportsTo(event.target.value)}><option value="">{employmentType==="Intern"&&!departmentManager?"No active manager in this department":"Unassigned"}</option>{managers.filter(manager=>administrator||manager.id===user.id).map(manager=><option key={manager.id} value={manager.id}>{manager.name}</option>)}</select>{employmentType==="Intern"&&<small className="person-field-help">Assigned automatically from the selected department.</small>}</label>}
          {accessRole==="Manager"&&<label className="form-label person-field-wide">Reports to<select className="select" value={reportsTo} disabled><option value="">{superadmins.length?"Select active Superadmin":"No active Superadmin available"}</option>{superadmins.map(superadmin=><option key={superadmin.id} value={superadmin.id}>{superadmin.name}</option>)}</select></label>}
        </div>
        <p className="person-add-footnote">Sign-in access can be created after the team member is added.</p>
@@ -394,7 +398,7 @@ function ProjectDetail({user,project,tasks,team,onBack,onOpen,onProjectUpdated,o
          <label className="form-label">Employment<select className="select" value={employmentType} disabled={livePerson||!administrator} onChange={event=>setEmploymentType(event.target.value as EmploymentType)}>{["Employee","Intern"].map(value=><option key={value}>{value}</option>)}</select></label>
          <label className="form-label">{livePerson?"Directory role":"Access role"}<select className="select" value={accessRole} disabled={!administrator||livePerson&&intern} onChange={event=>setAccessRole(event.target.value as AccessRole)}>{accessOptions.map(value=><option key={value}>{value}</option>)}</select></label>
          <label className="form-label">{livePerson?"Employment status":"Account status"}<select className="select" value={accountStatus} onChange={event=>setAccountStatus(event.target.value as AccountStatus)}>{["Active","Suspended"].map(value=><option key={value}>{value}</option>)}</select></label>
-         {accessRole==="Member"&&<label className="form-label person-field-wide">Reports to<select className="select" value={reportsTo} disabled={!administrator} onChange={event=>setReportsTo(event.target.value)}><option value="">Unassigned</option>{managers.filter(manager=>manager.id!==person?.id&&(administrator||manager.id===user.id)).map(manager=><option key={manager.id} value={manager.id}>{manager.name}</option>)}</select></label>}
+         {accessRole==="Member"&&<label className="form-label person-field-wide">Reports to<select className="select" value={reportsTo} disabled={!administrator||employmentType==="Intern"} onChange={event=>setReportsTo(event.target.value)}><option value="">{employmentType==="Intern"&&!departmentManager?"No active manager in this department":"Unassigned"}</option>{managers.filter(manager=>manager.id!==person?.id&&(administrator||manager.id===user.id)).map(manager=><option key={manager.id} value={manager.id}>{manager.name}</option>)}</select>{employmentType==="Intern"&&<small className="person-field-help">Assigned automatically from the selected department.</small>}</label>}
          {accessRole==="Manager"&&<label className="form-label person-field-wide">Reports to<select className="select" value={reportsTo} disabled><option value="">{superadmins.length?"Select active Superadmin":"No active Superadmin available"}</option>{superadmins.filter(superadmin=>superadmin.id!==person?.id).map(superadmin=><option key={superadmin.id} value={superadmin.id}>{superadmin.name}</option>)}</select></label>}
        </div>
        {canProvision&&<details className="person-account-disclosure"><summary>Account access</summary><div className="person-account-content">
