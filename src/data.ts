@@ -2,7 +2,7 @@ export type EmploymentType="Employee"|"Intern";
 export type AccessRole="Superadmin"|"Admin"|"Manager"|"Member";
 export type AccountStatus="Active"|"Pending"|"Suspended";
 export type Status="Inbox"|"Planned"|"Available"|"Assigned"|"In Progress"|"Blocked"|"In Review"|"Done"|"Cancelled"|"Backlog"|"In progress"|"In review";
-export type User={id:string;name:string;email:string;employmentType:EmploymentType;accessRole:AccessRole;accountStatus:AccountStatus;department:string;reportsTo?:string;avatarUrl?:string;contactDetails?:string;githubUsername?:string;role?:string;active?:boolean};
+export type User={id:string;name:string;email:string;employmentType:EmploymentType;accessRole:AccessRole;accountStatus:AccountStatus;department:string;reportsTo?:string;avatarUrl?:string;contactDetails?:string;githubUsername?:string;role?:string;active?:boolean;hasOpsAccess?:boolean;opsRole?:AccessRole;opsActive?:boolean};
 export type Availability="Available"|"Busy"|"Offline";
 export type StaffStatus={userId:string;availability:Availability;start:string;end:string;note:string;updatedAt:string};
 export type Blocker={reason:string;need:string;waitingFor:string;severity:"Low"|"Medium"|"High"|"Critical";reportedBy:string;createdAt:string;resolvedAt?:string};
@@ -15,57 +15,14 @@ export type WeeklyObjective={id:string;title:string;description:string;managerId
 export type Access={id:string;requester:string;department:string;resourceType:string;system:string;relatedTask:string;reason:string;status:"Pending"|"Approved"|"Rejected";date:string};
 export type ProjectResource={id:string;name:string;kind:"document"|"image"};
 export type Project={id:string;name:string;description:string;githubUrl:string;assigneeIds:string[];resources:ProjectResource[];active:boolean;status:"Active"|"Archived";logoUrl?:string};
-export const users:User[]=[
-  {id:"u1",name:"Morgan Lee",email:"info@olyxee.com",employmentType:"Employee",accessRole:"Superadmin",accountStatus:"Active",department:"Operations",role:"Super Admin",active:true},
-  {id:"u2",name:"Alisha Fatima",email:"alisha@olyxee.com",employmentType:"Employee",accessRole:"Manager",accountStatus:"Active",department:"AI Engineering",reportsTo:"u1",role:"Manager",active:true},
- {id:"u3",name:"Noah Williams",email:"noah@olyxee.com",employmentType:"Intern",accessRole:"Member",accountStatus:"Active",department:"AI Engineering",reportsTo:"u2",role:"Intern",active:true},
- {id:"u4",name:"Sofia Chen",email:"sofia@olyxee.com",employmentType:"Intern",accessRole:"Member",accountStatus:"Active",department:"Product Engineering",reportsTo:"u6",role:"Intern",active:true},
-  {id:"u5",name:"Ethan Brooks",email:"ethan@olyxee.com",employmentType:"Intern",accessRole:"Member",accountStatus:"Active",department:"Data",reportsTo:"u7",role:"Intern",active:true},
-  {id:"u6",name:"Priya Nair",email:"priya@olyxee.com",employmentType:"Employee",accessRole:"Manager",accountStatus:"Active",department:"Product Engineering",reportsTo:"u1",role:"Manager",active:true},
-  {id:"u7",name:"Tomás Reed",email:"tomas@olyxee.com",employmentType:"Employee",accessRole:"Manager",accountStatus:"Active",department:"Data",reportsTo:"u1",role:"Manager",active:true}];
-export const seedStaffStatuses:StaffStatus[]=[
-  {userId:"u1",availability:"Available",start:"09:00",end:"17:30",note:"Reviewing weekly delivery and team priorities.",updatedAt:"Seeded"},
-  {userId:"u2",availability:"Busy",start:"09:00",end:"17:30",note:"In Orgni sync review.",updatedAt:"Seeded"},
-  {userId:"u3",availability:"Available",start:"10:00",end:"18:00",note:"Open for pairing after lunch.",updatedAt:"Seeded"},
-  {userId:"u4",availability:"Available",start:"09:30",end:"17:30",note:"Working through Okiru invites.",updatedAt:"Seeded"},
-  {userId:"u5",availability:"Busy",start:"08:30",end:"16:30",note:"Investigating customs provider mapping.",updatedAt:"Seeded"},
-  {userId:"u6",availability:"Available",start:"09:00",end:"17:30",note:"Product workspace planning.",updatedAt:"Seeded"},
-  {userId:"u7",availability:"Offline",start:"09:00",end:"17:00",note:"Away from desk this afternoon.",updatedAt:"Seeded"}
-];
-export const projects=["Orgni","Olyxee Logistics","Okiru","Internal Operations","Research"];
-export const seedProjects:Project[]=[
- {id:"p1",name:"Orgni",description:"Team membership, imports, and synchronization for the Orgni workspace.",githubUrl:"https://github.com/olyxee/orgni",assigneeIds:["u2","u3"],resources:[{id:"r1",name:"orgni-architecture.pdf",kind:"document"},{id:"r2",name:"team-sync-flow.png",kind:"image"}],active:true,status:"Active"},
- {id:"p2",name:"Olyxee Logistics",description:"Customs automation and shipment exception workflows for logistics operations.",githubUrl:"https://github.com/olyxee/logistics",assigneeIds:["u7","u5"],resources:[{id:"r3",name:"customs-field-map.docx",kind:"document"}],active:true,status:"Active"},
- {id:"p3",name:"Okiru",description:"Company workspace, billing, and invitation experiences for Okiru customers.",githubUrl:"https://github.com/olyxee/okiru",assigneeIds:["u6","u4"],resources:[{id:"r4",name:"okiru-workspace-spec.pdf",kind:"document"},{id:"r5",name:"workspace-preview.png",kind:"image"}],active:true,status:"Active"},
- {id:"p4",name:"Internal Operations",description:"Internal operating cadence, permissions, and weekly delivery reviews.",githubUrl:"https://github.com/olyxee/internal-operations",assigneeIds:["u1"],resources:[{id:"r6",name:"weekly-review-template.docx",kind:"document"}],active:true,status:"Active"},
- {id:"p5",name:"Research",description:"Water forecasting simulations, API delivery, and reproducible model fixtures.",githubUrl:"https://github.com/olyxee/research",assigneeIds:["u2","u3"],resources:[{id:"r7",name:"simulation-brief.pdf",kind:"document"},{id:"r8",name:"forecast-dashboard.png",kind:"image"}],active:true,status:"Active"}];
-const base={department:"AI Engineering",createdBy:"u1",createdDate:"2026-09-14",targetWeek:"14–18 Sep 2026",criteria:["Acceptance criteria are agreed","Evidence is attached before review"],dependencies:[],comments:[],activity:["Task seeded for week 38"],attachments:[],reviewState:"Not submitted" as const};
-export const seedTasks:Task[]=[
- {...base,id:"OLX-101",title:"Orgni Teams Integration",project:"Orgni",status:"In Review",assignee:"u2",priority:"High",due:"2026-09-16",description:"Connect Orgni team membership to the internal directory.",criteria:["Teams map to Orgni workspaces","Sync retries safely","Audit event is emitted"],pr:"https://github.com/olyxee/orgni/pull/184",reviewState:"Awaiting review",weeklyCommitment:true},
- {...base,id:"OLX-102",title:"Water Forecaster Simulation API",project:"Research",status:"Done",assignee:"u3",priority:"Critical",due:"2026-09-17",description:"Expose simulation runs for the forecasting prototype.",criteria:["API returns a run ID","Inputs are validated","README has a curl example"],pr:"https://github.com/olyxee/research/pull/142",merged:true,reviewState:"Approved",weeklyCommitment:true},
- {...base,department:"Product Engineering",id:"OLX-103",title:"Okiru Company Workspace",project:"Okiru",status:"Done",assignee:"u4",priority:"Medium",due:"2026-09-15",description:"Create the company workspace setup flow.",criteria:["Owner can create workspace","Duplicate names are handled","Audit event is emitted"],pr:"https://github.com/olyxee/okiru/pull/177",merged:true,reviewState:"Approved",weeklyCommitment:true},
- {...base,department:"Data",id:"OLX-104",title:"Olyxee Logistics Customs Automation",project:"Olyxee Logistics",status:"Blocked",assignee:"u5",priority:"High",due:"2026-09-18",description:"Automate customs document checks for shipments.",criteria:["Missing HS codes are flagged","A review queue is visible","Dry run is available"],blocker:{reason:"Staging customs credentials are unavailable.",need:"A read-only staging service account.",waitingFor:"Operations",severity:"High",reportedBy:"u5",createdAt:"2026-09-15"},weeklyCommitment:true},
- {...base,id:"OLX-105",title:"Orgni parser tests",project:"Orgni",status:"Done",assignee:"u2",priority:"Medium",due:"2026-09-14",description:"Increase parser coverage for team exports.",criteria:["Fixtures cover nested teams","Failure output is clear"],pr:"https://github.com/olyxee/orgni/pull/180",reviewState:"Approved",weeklyCommitment:true},
- {...base,department:"Operations",id:"OLX-106",title:"Friday Review CSV export",project:"Internal Operations",status:"Done",assignee:"u1",priority:"Medium",due:"2026-09-18",description:"Export the current Friday Review view.",criteria:["Exports filtered view","Filename contains week range"],reviewState:"Approved",weeklyCommitment:true},
- {...base,id:"OLX-107",title:"Forecast fixture set",project:"Research",status:"Planned",priority:"Medium",due:"2026-09-21",description:"Create versioned simulation fixtures.",criteria:["Fixtures are versioned","Update process is documented"],weeklyCommitment:true},
- {...base,id:"OLX-108",title:"Orgni sync progress indicator",project:"Orgni",status:"Done",assignee:"u2",priority:"Low",due:"2026-09-18",description:"Show progress while large team sets sync.",criteria:["Updates every two seconds","Handles reconnect"],reviewState:"Approved",weeklyCommitment:true},
- {...base,department:"Operations",id:"OLX-109",title:"Permissions matrix",project:"Internal Operations",status:"Done",assignee:"u1",priority:"Critical",due:"2026-09-14",description:"Define role permissions for Ops.",criteria:["Admin actions are explicit","Intern scope is documented"],reviewState:"Approved"},
- {...base,department:"Data",id:"OLX-110",title:"Shipment exception digest",project:"Olyxee Logistics",status:"Assigned",assignee:"u5",priority:"High",due:"2026-09-18",description:"Summarise shipment exceptions for daily review.",criteria:["Digest groups by severity","Owners are visible"]},
- {...base,department:"Product Engineering",id:"OLX-111",title:"Okiru billing settings",project:"Okiru",status:"Inbox",priority:"Low",due:"2026-09-23",description:"Add billing settings to the company workspace.",criteria:["Plan is displayed","Owner can update contact"]},
- {...base,id:"OLX-112",title:"Research run comparison",project:"Research",status:"In Review",assignee:"u3",priority:"High",due:"2026-09-17",description:"Compare the latest model runs.",criteria:["Baseline is recorded","Outliers have an owner"],pr:"https://github.com/olyxee/research/pull/42",reviewState:"Awaiting review"},
- {...base,department:"Data",id:"OLX-113",title:"Customs provider mapping",project:"Olyxee Logistics",status:"Blocked",assignee:"u5",priority:"High",due:"2026-09-19",description:"Map provider codes to internal shipment codes.",criteria:["All live providers mapped"],blocker:{reason:"Provider code list has changed.",need:"A confirmed mapping file.",waitingFor:"Logistics lead",severity:"Medium",reportedBy:"u5",createdAt:"2026-09-16"}},
- {...base,id:"OLX-114",title:"Orgni import validation",project:"Orgni",status:"Done",assignee:"u2",priority:"Medium",due:"2026-09-15",description:"Validate import size and shape.",criteria:["Invalid files are rejected"],pr:"https://github.com/olyxee/orgni/pull/186",reviewState:"Approved"},
- {...base,department:"Product Engineering",id:"OLX-115",title:"Okiru invite email",project:"Okiru",status:"In Progress",assignee:"u4",priority:"Medium",due:"2026-09-18",description:"Send invitations to workspace members.",criteria:["Invite is sent","Duplicate invites handled"]},
- {...base,department:"Operations",id:"OLX-116",title:"Release notes template",project:"Internal Operations",status:"Blocked",assignee:"u1",priority:"Low",due:"2026-09-18",description:"Standardise weekly release notes.",criteria:["Template has owners"],blocker:{reason:"No agreed owner for release notes.",need:"A named reviewer.",waitingFor:"Engineering leads",severity:"Low",reportedBy:"u1",createdAt:"2026-09-16"}},
- {...base,department:"Data",id:"OLX-117",title:"Customs dry-run report",project:"Olyxee Logistics",status:"Cancelled",priority:"Low",due:"2026-09-18",description:"Produce a dry-run summary.",criteria:["Summary includes exceptions"]},
- {...base,id:"OLX-118",title:"Simulation API README",project:"Research",status:"Planned",assignee:"u3",priority:"Low",due:"2026-09-18",description:"Document the simulation API.",criteria:["Setup is documented","Example request works"]}];
-export const seedAccess:Access[]=[
- {id:"AR-31",requester:"u3",department:"AI Engineering",resourceType:"Repository",system:"GitHub private repository",relatedTask:"OLX-102",reason:"Need to open a PR for the simulation API.",status:"Pending",date:"16 Sep 2026"},
- {id:"AR-29",requester:"u5",department:"Data",resourceType:"Environment",system:"Staging customs service",relatedTask:"OLX-104",reason:"Required to validate customs automation.",status:"Pending",date:"15 Sep 2026"}];
-export const seedAudit:Audit[]=[{id:"a1",actor:"Morgan Lee",action:"Created week 38 commitments",time:"14 Sep, 09:00"},{id:"a2",actor:"Alisha Fatima",action:"Submitted OLX-101 for review",time:"15 Sep, 16:22"},{id:"a3",actor:"Noah Williams",action:"Started OLX-102",time:"16 Sep, 09:14"},{id:"a4",actor:"System",action:"GitHub evidence synced for OLX-105",time:"16 Sep, 08:51"}];
-export const seedNotices:Notice[]=[{id:"n2",userId:"u2",title:"Work submitted",body:"OLX-101 is ready for review.",read:false,time:"2 hours ago"},{id:"n3",userId:"u5",title:"Task blocked",body:"OLX-104 needs customs credentials.",read:false,time:"Yesterday"}];
-export const seedWeeklyObjectives:WeeklyObjective[]=[
- {id:"WO-01",title:"Stabilise Orgni team sync",description:"Ship a dependable sync path with clear failure handling and an operator-ready handoff.",managerId:"u2",priority:"Critical",dueDate:"2026-09-18",status:"In progress",createdBy:"u1",createdDate:"2026-09-14"},
- {id:"WO-02",title:"Close the customs workflow gap",description:"Unblock staging access and validate the exception path before the weekly close.",managerId:"u7",priority:"High",dueDate:"2026-09-18",status:"At risk",createdBy:"u1",createdDate:"2026-09-15"}
-];
-export const departments=[["AI Engineering","Alisha Fatima","5 members"],["Product Engineering","Priya Nair","6 members"],["Data","Tomás Reed","4 members"],["Operations","Morgan Lee","3 members"]];
+
+export const users:User[]=[];
+export const seedStaffStatuses:StaffStatus[]=[];
+export const projects:string[]=[];
+export const seedProjects:Project[]=[];
+export const seedTasks:Task[]=[];
+export const seedAccess:Access[]=[];
+export const seedAudit:Audit[]=[];
+export const seedNotices:Notice[]=[];
+export const seedWeeklyObjectives:WeeklyObjective[]=[];
+export const departments:[string,string,string][]=[];
