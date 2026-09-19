@@ -495,40 +495,44 @@ app.post("/api/people", requireAuth, requireAccount, async (request, response) =
       }
       const result = await peoplePool.query(`
         INSERT INTO public.workspace_accounts
-          (email, display_name, manage_interns, manage_projects, active, created_by, reports_to_account_id)
-        VALUES ($1, $2, $3, $3, $4, $5, $6)
+          (email, display_name, manage_interns, manage_projects, active, created_by, reports_to_account_id, department)
+        VALUES ($1, $2, $3, $3, $4, $5, $6, $7)
         RETURNING id
-      `, [email, name, accessRole === "Manager", accountStatus === "Active", request.appAccount.email, reportsToAccountId]);
+      `, [email, name, accessRole === "Manager", accountStatus === "Active", request.appAccount.email, reportsToAccountId, department]);
       return response.status(201).json({ ok: true, id: `account-${result.rows[0].id}` });
     }
 
+    const internDepartment = appRole === "Manager"
+      ? validateDepartment(request.appAccount.department)
+      : department;
     if (appRole === "Manager") {
       const manager = await peoplePool.query(`
         SELECT id, email, display_name
         FROM public.workspace_accounts
-        WHERE lower(email) = lower($1) AND active = true
+        WHERE lower(email) = lower($1)
+          AND active = true
+          AND department = $2
+          AND (manage_interns = true OR manage_projects = true)
         LIMIT 1
-      `, [request.appAccount.email]);
-      if (!manager.rowCount) return response.status(403).json({ error: "Your manager record was not found." });
-      reportsTo = `account-${manager.rows[0].id}`;
+      `, [request.appAccount.email, internDepartment]);
+      if (!manager.rowCount) return response.status(403).json({ error: "Your active department manager record was not found." });
     }
 
-    let supervisorName = "";
-    let supervisorEmail = "";
-    let supervisorAccountId = null;
-    if (reportsTo) {
-      const managerMatch = /^account-(\d+)$/.exec(reportsTo);
-      if (!managerMatch) return response.status(400).json({ error: "Invalid manager selection." });
-      const manager = await peoplePool.query(`
-        SELECT display_name, email
-        FROM public.workspace_accounts
-        WHERE id = $1 AND active = true
-      `, [Number(managerMatch[1])]);
-      if (!manager.rowCount) return response.status(400).json({ error: "Selected manager is unavailable." });
-      supervisorAccountId = Number(managerMatch[1]);
-      supervisorName = manager.rows[0].display_name || manager.rows[0].email;
-      supervisorEmail = manager.rows[0].email;
+    const departmentManager = await peoplePool.query(`
+      SELECT id, display_name, email
+      FROM public.workspace_accounts
+      WHERE active = true
+        AND department = $1
+        AND (manage_interns = true OR manage_projects = true)
+      ORDER BY manage_interns DESC, id
+      LIMIT 1
+    `, [internDepartment]);
+    if (!departmentManager.rowCount) {
+      return response.status(400).json({ error: `Assign an active Manager to ${internDepartment} before adding an Intern.` });
     }
+    const supervisorAccountId = departmentManager.rows[0].id;
+    const supervisorName = departmentManager.rows[0].display_name || departmentManager.rows[0].email;
+    const supervisorEmail = departmentManager.rows[0].email;
 
     const result = await peoplePool.query(`
       INSERT INTO public.interns
@@ -539,7 +543,7 @@ app.post("/api/people", requireAuth, requireAccount, async (request, response) =
       `OPS-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
       name,
       email,
-      appRole === "Manager" ? validateDepartment(request.body.department || request.appAccount.department) : department,
+      internDepartment,
       accountStatus === "Active" ? "Active" : "Inactive",
       supervisorName,
       supervisorEmail,
@@ -659,22 +663,21 @@ app.patch("/api/people/:id", requireAuth, requireAccount, async (request, respon
       if (!ownership.rowCount) return response.status(403).json({ error: "You can only manage your direct reports." });
     }
 
-    let supervisorName = "";
-    let supervisorEmail = "";
-    let supervisorAccountId = null;
-    if (reportsTo) {
-      const managerMatch = /^account-(\d+)$/.exec(reportsTo);
-      if (!managerMatch) return response.status(400).json({ error: "Invalid manager selection." });
-      const manager = await peoplePool.query(`
-        SELECT display_name, email
-        FROM public.workspace_accounts
-        WHERE id = $1 AND active = true
-      `, [Number(managerMatch[1])]);
-      if (!manager.rowCount) return response.status(400).json({ error: "Selected manager is unavailable." });
-      supervisorAccountId = Number(managerMatch[1]);
-      supervisorName = manager.rows[0].display_name || manager.rows[0].email;
-      supervisorEmail = manager.rows[0].email;
+    const departmentManager = await peoplePool.query(`
+      SELECT id, display_name, email
+      FROM public.workspace_accounts
+      WHERE active = true
+        AND department = $1
+        AND (manage_interns = true OR manage_projects = true)
+      ORDER BY manage_interns DESC, id
+      LIMIT 1
+    `, [department]);
+    if (!departmentManager.rowCount) {
+      return response.status(400).json({ error: `Assign an active Manager to ${department} before saving this Intern.` });
     }
+    const supervisorAccountId = departmentManager.rows[0].id;
+    const supervisorName = departmentManager.rows[0].display_name || departmentManager.rows[0].email;
+    const supervisorEmail = departmentManager.rows[0].email;
 
     const result = await peoplePool.query(`
       UPDATE public.interns
@@ -1375,11 +1378,17 @@ app.post("/api/projects", requireAuth, requireAccount, requireAdmin, async (requ
 app.patch("/api/projects/:id", requireAuth, requireAccount, requireAdmin, async (request, response) => {
   const githubUrl = String(request.body.githubUrl || "").trim();
   if (!/^https?:\/\/(www\.)?github\.com\/.+/i.test(githubUrl)) return response.status(400).json({ error: "Enter a valid GitHub repository URL." });
+  const logoUrl = typeof request.body.logoUrl === "string" ? request.body.logoUrl : undefined;
+  if (logoUrl !== undefined && logoUrl.length > 500000) return response.status(400).json({ error: "Project logo is too large." });
+  if (logoUrl && !logoUrl.startsWith("data:image/") && !logoUrl.startsWith("/api/assets/")) {
+    return response.status(400).json({ error: "Project logo must be an uploaded image." });
+  }
   const result = await appPool.query("SELECT state_value FROM workspace_state WHERE state_key = 'projects'");
   const projects = result.rows[0]?.state_value || [];
   const project = projects.find((item) => item.id === request.params.id);
   if (!project) return response.status(404).json({ error: "Project not found." });
   project.githubUrl = githubUrl;
+  if (logoUrl !== undefined) project.logoUrl = logoUrl || undefined;
   if (request.appAccount.app_role === "Superadmin") {
     project.assigneeIds = Array.isArray(request.body.assigneeIds) ? [...new Set(request.body.assigneeIds.map(String))] : project.assigneeIds;
   }

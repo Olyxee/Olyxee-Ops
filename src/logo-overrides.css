@@ -1,0 +1,7 @@
+.project-logo:not(.project-logo-fallback),
+.project-logo-preview {
+  border: 0 !important;
+  background: transparent !important;
+  object-fit: contain !important;
+  box-shadow: none !important;
+}
