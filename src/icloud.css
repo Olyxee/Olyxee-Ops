@@ -525,8 +525,22 @@ body .app.workspace-shell .workspace-topbar {
     padding-top: 26px;
   }
 
-  .workspace-board {
+  .workspace-board,
+  .workspace-board:not(.workspace-board-member) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-areas:
+      "welcome tasks"
+      "projects projects"
+      "people departments"
+      "review review";
     gap: 16px !important;
+  }
+
+  .workspace-board-member {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-areas:
+      "welcome tasks"
+      "projects projects";
   }
 
   .workspace-tasks .workspace-list {
@@ -536,6 +550,15 @@ body .app.workspace-shell .workspace-topbar {
   .workspace-tasks .workspace-list > button:nth-child(odd) {
     padding-right: 3px;
     border-right: 0;
+  }
+
+  .workspace-card-head {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .workspace-objectives {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -595,7 +618,17 @@ body .app.workspace-shell .workspace-topbar {
     padding-top: 16px;
   }
 
-  .workspace-board {
+  .workspace-board,
+  .workspace-board:not(.workspace-board-member),
+  .workspace-board-member {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-areas:
+      "welcome"
+      "tasks"
+      "projects"
+      "people"
+      "departments"
+      "review";
     gap: 14px !important;
   }
 
@@ -613,9 +646,85 @@ body .app.workspace-shell .workspace-topbar {
 
   .workspace-card-head {
     min-height: 58px;
+    gap: 10px;
   }
 
   .workspace-card-head b {
     font-size: 15px;
+  }
+
+  .workspace-head-actions {
+    flex: 0 0 auto;
+  }
+
+  .workspace-head-actions > button,
+  .workspace-card-head > .workspace-head-actions > button {
+    min-height: 32px;
+    padding: 6px 7px;
+  }
+
+  .workspace-list,
+  .workspace-tasks .workspace-list,
+  .workspace-project-grid,
+  .workspace-department-grid,
+  .workspace-objectives {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .workspace-list small,
+  .workspace-project-grid small,
+  .workspace-objectives small {
+    max-width: 62vw;
+  }
+}
+
+@media (max-width: 430px) {
+  .workspace-card-head {
+    align-items: center;
+    padding-right: 11px;
+    padding-left: 11px;
+  }
+
+  .workspace-card-head > div {
+    min-width: 0;
+  }
+
+  .workspace-card-head b {
+    overflow: hidden;
+    font-size: 14px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .workspace-icon {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 auto;
+  }
+
+  .workspace-head-actions > button:first-child:not(:last-child) {
+    width: 34px;
+    overflow: hidden;
+    color: transparent;
+    gap: 0;
+  }
+
+  .workspace-head-actions > button:first-child:not(:last-child) svg {
+    color: #315c4f;
+    flex: 0 0 auto;
+  }
+
+  .workspace-project-grid > button {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .workspace-project-grid .avatar-stack {
+    display: none;
+  }
+
+  .workspace-objectives > div {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
