@@ -951,7 +951,12 @@ async function getManagerReportIds(identity) {
     SELECT report.id FROM (
       SELECT 'intern-' || i.id::text AS id
       FROM public.interns i
-      JOIN public.workspace_accounts manager ON i.supervisor_account_id = manager.id
+       JOIN public.workspace_accounts manager
+         ON i.supervisor_account_id = manager.id
+         OR (
+           i.supervisor_account_id IS NULL
+           AND lower(trim(coalesce(i.supervisor_email, ''))) = lower(trim(coalesce(manager.email, '')))
+         )
       WHERE i.archived_at IS NULL
         AND lower(coalesce(i.employment_status, '')) = 'active'
         AND lower(manager.email) = lower($1)
