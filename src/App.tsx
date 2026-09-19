@@ -77,10 +77,9 @@ function UnifiedWorkspace({user,team,statuses,tasks,allTasks,projectsData,object
   const scopedPeople=team.filter(person=>isAdmin(user)||person.id===user.id||person.reportsTo===user.id);
   const scopedObjectives=objectives.filter(objective=>isAdmin(user)||objective.managerId===user.id);
   const visibleDepartments=departments.filter(department=>isAdmin(user)||department[0]===user.department);
-  const firstName=user.name.split(" ")[0];
   return <div className={`workspace-board ${accessOf(user)==="Member"?"workspace-board-member":""}`}>
     <div className="workspace-stack workspace-stack-summary">
-    <section id="workspace-overview" className="workspace-card workspace-welcome"><div><div className="eyebrow">Week 38 · Operating workspace</div><h1>Good morning, {firstName}.</h1><p>Your delivery, people, projects, and decisions are together in one workspace.</p></div><div className="workspace-person"><Avatar person={user} size={54}/><span><b>{accessOf(user)}</b><small>{user.department} · {employmentOf(user)}</small></span></div></section>
+    <section id="workspace-overview" className="workspace-card workspace-welcome"><Avatar person={user} size={92}/><div className="workspace-profile-copy"><h1>{user.name}</h1><p>{user.email}</p><b>{accessOf(user)}</b><small>{employmentOf(user)} · {user.department}</small></div><span className="workspace-week">Week 38 · 14–18 Sep 2026</span></section>
     </div>
     <div className="workspace-stack workspace-stack-work">
     <section id="workspace-tasks" className="workspace-card workspace-tasks"><div className="workspace-card-head"><div><span className="workspace-icon blue"><ClipboardList size={17}/></span><b>Tasks</b></div><span className="workspace-head-actions">{can("task")&&<button onClick={()=>onModal("task")}><Plus size={14}/> New</button>}<button onClick={()=>onView("Tasks")}>Open <ChevronRight size={13}/></button></span></div><div className="workspace-list">{tasks.filter(task=>!["Done","Cancelled"].includes(task.status)).slice(0,6).map(task=><button key={task.id} onClick={()=>onOpen(task.id)}><span><b>{task.title}</b><small>{task.id} · {task.project} · Due {task.due}</small></span><Status s={task.status}/></button>)}{!tasks.length&&<div className="workspace-empty">No tasks in your workspace.</div>}</div></section>
