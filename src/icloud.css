@@ -544,9 +544,16 @@ body .app.workspace-shell .workspace-card {
 body .app.workspace-shell .workspace-topbar {
   min-height: 48px;
   height: 48px;
+  grid-template-columns: minmax(190px, 1fr) minmax(280px, 500px) minmax(190px, 1fr);
   background: rgba(220, 241, 253, 0.48) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.38);
   box-shadow: none;
+}
+
+body .app.workspace-shell .workspace-topbar .top-actions {
+  width: max-content;
+  justify-self: end;
+  margin-left: auto;
 }
 
 .workspace-brand b {
@@ -1290,6 +1297,10 @@ body .app.workspace-shell .workspace-topbar {
       "departments"
       "review";
     gap: 14px !important;
+  }
+
+  body .app.workspace-shell .workspace-topbar {
+    grid-template-columns: auto minmax(120px, 1fr) auto;
   }
 
   .workspace-board,
