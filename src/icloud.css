@@ -526,6 +526,21 @@ body .app.workspace-shell .workspace-topbar {
   letter-spacing: -0.02em;
 }
 
+.settings-modal-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.settings-modal-title > svg {
+  width: 30px;
+  height: 30px;
+  padding: 6px;
+  border-radius: 9px;
+  background: rgba(207, 232, 244, 0.82);
+  color: #286681;
+}
+
 .settings-dialog .modal-head .close {
   width: 32px;
   height: 32px;
@@ -551,28 +566,37 @@ body .app.workspace-shell .workspace-topbar {
 }
 
 .settings-layout {
-  min-height: 530px;
+  height: min(530px, calc(100dvh - 152px));
+  min-height: 420px;
   grid-template-columns: 210px minmax(0, 1fr);
   background: rgba(237, 245, 249, 0.82);
 }
 
 .settings-sidebar {
   gap: 6px;
+  align-content: start;
+  overflow-y: auto;
   padding: 16px 11px;
   border-right: 1px solid rgba(169, 199, 213, 0.42);
   background: rgba(226, 240, 247, 0.68);
 }
 
 .settings-sidebar button {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 14px;
+  align-items: center;
+  gap: 10px;
   min-height: 54px;
-  padding: 10px 12px;
+  padding: 9px 10px;
   border-radius: 12px;
   color: #536e7b;
+  text-align: left;
   transition: background 0.16s ease, box-shadow 0.16s ease, color 0.16s ease, transform 0.16s ease;
 }
 
 .settings-sidebar button:hover {
   background: rgba(255, 255, 255, 0.58);
+  transform: translateX(2px);
 }
 
 .settings-sidebar button:active {
@@ -585,21 +609,74 @@ body .app.workspace-shell .workspace-topbar {
   box-shadow: 0 4px 14px rgba(31, 87, 113, 0.12);
 }
 
+.settings-tab-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(210, 229, 238, 0.68);
+  color: #5f7f8e;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.settings-sidebar button.active .settings-tab-icon {
+  background: #3b86a6;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(38, 111, 144, 0.24);
+}
+
+.settings-sidebar button:hover .settings-tab-icon {
+  transform: scale(1.04);
+}
+
+.settings-tab-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
 .settings-sidebar button b {
   font-size: 12px;
 }
 
 .settings-sidebar button small {
+  overflow: hidden;
   color: #7e949e;
   font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.settings-sidebar button svg {
+.settings-tab-chevron {
   color: #8ca1aa;
+  transition: color 0.18s ease, transform 0.18s ease;
+}
+
+.settings-sidebar button.active .settings-tab-chevron {
+  color: #3b7892;
+  transform: translateX(2px);
 }
 
 .settings-panel {
+  min-width: 0;
+  overflow-y: auto;
   padding: 28px;
+}
+
+.settings-panel-content {
+  animation: settings-panel-enter 0.24s cubic-bezier(0.22, 0.8, 0.32, 1) both;
+}
+
+@keyframes settings-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .settings-section-head {
@@ -760,7 +837,10 @@ body .app.workspace-shell .workspace-topbar {
   }
 
   .settings-layout {
+    height: min(620px, calc(100dvh - 142px));
+    min-height: 0;
     grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
   }
 
   .settings-sidebar {
@@ -781,12 +861,20 @@ body .app.workspace-shell .workspace-topbar {
   .settings-sidebar button {
     min-height: 40px;
     flex: 0 0 auto;
-    padding: 8px 13px;
+    grid-template-columns: 28px auto;
+    gap: 7px;
+    padding: 7px 11px 7px 7px;
     white-space: nowrap;
   }
 
-  .settings-sidebar button small,
-  .settings-sidebar button svg {
+  .settings-tab-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+  }
+
+  .settings-tab-copy small,
+  .settings-tab-chevron {
     display: none;
   }
 
@@ -883,6 +971,18 @@ body .app.workspace-shell .workspace-topbar {
   .workspace-project-grid small,
   .workspace-objectives small {
     max-width: 62vw;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-panel-content {
+    animation: none;
+  }
+
+  .settings-sidebar button,
+  .settings-tab-icon,
+  .settings-tab-chevron {
+    transition: none;
   }
 }
 
