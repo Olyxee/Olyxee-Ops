@@ -3,8 +3,8 @@ name: Staff data access
 description: Security boundary for exposing live staff records from the connected external database.
 ---
 
-Expose only aggregate staff metrics while the app uses selectable demo identities. Do not return person-level live records such as names or emails until requests are protected by verified authentication and role-based authorization.
+The user explicitly chose to show person-level Supabase staff records in the Superadmin People view for testing, despite the current selectable demo identities. Treat this as a testing setup, not a production-ready privacy boundary.
 
-**Why:** Demo identity selection does not prove who the visitor is, so a person-level API would expose private staff data to anyone with app access.
+**Why:** Demo identity selection does not prove who the visitor is, but the user specifically requested replacement of the demo directory with live records after this limitation was explained.
 
-**How to apply:** Aggregate counts can be read from the connected database for testing. Require real sign-in and server-side authorization before adding live staff-directory endpoints.
+**How to apply:** Keep the live directory restricted to the Superadmin interface during testing. Before production use, require real sign-in and server-side role authorization for the person-level API.

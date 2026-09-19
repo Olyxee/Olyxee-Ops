@@ -1,1 +1,1 @@
-- [Staff data access](staff-data-access.md) — expose aggregate metrics only until verified authentication protects person-level staff records.
+- [Staff data access](staff-data-access.md) — live staff rows are enabled for Superadmin testing; real authentication is still required before production.
