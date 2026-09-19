@@ -5,6 +5,7 @@ import "./index.css";
 import "./icloud.css";
 import "./logo-overrides.css";
 import "./home-card-overrides.css";
+import "./home-review-final.css";
 
 function Login() {
   const [email, setEmail] = useState("info@olyxee.com");
