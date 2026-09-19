@@ -390,7 +390,7 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
     });
 
     response.set("Cache-Control", "private, max-age=30");
-    const people = [...managers, ...interns];
+    const people = [...managers, ...interns].filter((person) => person.active !== false);
     const role = request.appAccount.app_role;
     const ownEmail = String(request.appAccount.email).toLowerCase();
     const current = people.find((person) => String(person.email).toLowerCase() === ownEmail);
@@ -787,13 +787,9 @@ app.post("/api/people/:id/ops-access", requireAuth, requireAccount, async (reque
     if (!person) return response.status(404).json({ error: "Person not found." });
     if (!person.email) return response.status(400).json({ error: "Add an email address before creating Ops access." });
 
-    const requestedPassword = String(request.body.password || "");
     const randomBytes = new Uint8Array(9);
     crypto.getRandomValues(randomBytes);
-    const temporaryPassword = requestedPassword || `${Buffer.from(randomBytes).toString("base64url")}!7a`;
-    if (temporaryPassword.length < 10 || temporaryPassword.length > 128) {
-      return response.status(400).json({ error: "The temporary password must be between 10 and 128 characters." });
-    }
+    const temporaryPassword = `${Buffer.from(randomBytes).toString("base64url")}!7a`;
     const passwordHash = await bcrypt.hash(temporaryPassword, 12);
     const role = person.role === "Manager" ? "Manager" : "Member";
     const accountResult = await appPool.query(`
