@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Archive, ArrowLeft, Bell, BriefcaseBusiness, Building2, Check, ChevronRight, CircleHelp, ClipboardList, Clock3, FileCheck2, FileText, GitPullRequest, Image, LayoutDashboard, LogOut, Menu, Plus, Search, Settings, Upload, UserPlus, UserRound, Users, X } from "lucide-react";
 import { Audit, departments, seedProjects, seedTasks, seedAudit, seedNotices, seedWeeklyObjectives, seedStaffStatuses, Project, ProjectResource, Task, User, users, Notice, AccessRole, EmploymentType, AccountStatus, WeeklyObjective, ObjectiveStatus, StaffStatus, Availability } from "./data";
+import "./person-modal.css";
 
 type View="Overview"|"Tasks"|"Projects"|"People"|"Blockers"|"Weekly Review"|"Departments"|"Integrations"|"Audit Log"|"Settings"|"Notifications";
 type DatabasePerson=User&{source:"Supabase";employmentStatus?:string;supervisorName?:string};
@@ -333,15 +334,26 @@ function ProjectDetail({project,tasks,team,onBack,onOpen,onResourceAdded,flash}:
   const shareMessage=credentials?`Hi ${credentials.name}, your Olyxee Ops login is ready.\n\nLogin email: ${credentials.email}\nTemporary password: ${credentials.temporaryPassword}\n\nPlease keep these details private and sign in to Olyxee Ops.`:"";
   const emailShare=credentials?`mailto:${encodeURIComponent(credentials.email)}?subject=${encodeURIComponent("Your Olyxee Ops login")}&body=${encodeURIComponent(shareMessage)}`:"#";
   const whatsappShare=credentials?`https://wa.me/?text=${encodeURIComponent(shareMessage)}`:"#";
-  return <Modal title={editing?"Manage team member":"Add team member"} onClose={onClose} footer={<><button className="btn" onClick={onClose}>Close</button><button className="btn primary" disabled={!name.trim()||!emailValid} onClick={()=>onSave({...person,id:person?.id||"",name,email,department,employmentType,accessRole,accountStatus,reportsTo} as User)}>{editing?"Save changes":"Add person"}</button></>}>
-    <div className="form-grid">
-      <label className="form-label">Full name<input className="input" value={name} onChange={event=>setName(event.target.value)} placeholder="Full name"/></label>
-       <label className="form-label">Email address<input className="input" type="email" value={email} onChange={event=>setEmail(event.target.value)} placeholder="name@example.com"/>{email&&!emailValid&&<span style={{color:"#9a453d"}}>Enter a valid email address.</span>}</label>
-      <label className="form-label">Department<select className="select" value={department} disabled={!administrator||livePerson&&!intern} onChange={event=>setDepartment(event.target.value)}><option value="">Select a department</option>{departmentOptions.map(option=><option key={option}>{option}</option>)}</select></label>
-      <label className="form-label">Employment type<select className="select" value={employmentType} disabled={livePerson||!administrator} onChange={event=>setEmploymentType(event.target.value as EmploymentType)}>{["Employee","Intern"].map(value=><option key={value}>{value}</option>)}</select></label>
-      <label className="form-label">{livePerson?"People directory role":"Access role"}<select className="select" value={accessRole} disabled={!administrator||livePerson&&intern} onChange={event=>setAccessRole(event.target.value as AccessRole)}>{accessOptions.map(value=><option key={value}>{value}</option>)}</select></label>
-      <label className="form-label">{livePerson?"Employment status":"Account status"}<select className="select" value={accountStatus} onChange={event=>setAccountStatus(event.target.value as AccountStatus)}>{["Active","Suspended"].map(value=><option key={value}>{value}</option>)}</select></label>
-      {accessRole==="Member"&&intern&&<label className="form-label">Manager<select className="select" value={reportsTo} disabled={!administrator} onChange={event=>setReportsTo(event.target.value)}><option value="">Unassigned</option>{managers.filter(manager=>administrator||manager.id===user.id).map(manager=><option key={manager.id} value={manager.id}>{manager.name}</option>)}</select></label>}
+  return <Modal title={editing?"Manage team member":"Add team member"} className="person-modal" onClose={onClose} footer={<><button className="btn" onClick={onClose}>Close</button><button className="btn primary" disabled={!name.trim()||!emailValid} onClick={()=>onSave({...person,id:person?.id||"",name,email,department,employmentType,accessRole,accountStatus,reportsTo} as User)}>{editing?"Save changes":"Add person"}</button></>}>
+    <div className="person-modal-intro"><span className="person-modal-kicker">{editing?"TEAM DIRECTORY":"NEW TEAM MEMBER"}</span><p>{editing?"Keep this person’s directory record and Ops access in sync.":"Set up the directory record first; access can be provisioned when ready."}</p></div>
+    <div className="person-modal-content">
+    <div className="person-modal-section">
+      <div className="person-modal-section-head"><span><b>Profile</b><small>Basic contact details</small></span><i>01</i></div>
+      <div className="person-modal-fields person-modal-fields-profile">
+        <label className="form-label">Full name<input className="input" value={name} onChange={event=>setName(event.target.value)} placeholder="Full name"/></label>
+        <label className="form-label">Email address<input className="input" type="email" value={email} onChange={event=>setEmail(event.target.value)} placeholder="name@example.com"/>{email&&!emailValid&&<span className="person-field-error">Enter a valid email address.</span>}</label>
+      </div>
+    </div>
+    <div className="person-modal-section">
+      <div className="person-modal-section-head"><span><b>Role & organisation</b><small>Where this person sits in Olyxee</small></span><i>02</i></div>
+      <div className="person-modal-fields">
+        <label className="form-label">Department<select className="select" value={department} disabled={!administrator||livePerson&&!intern} onChange={event=>setDepartment(event.target.value)}><option value="">Select a department</option>{departmentOptions.map(option=><option key={option}>{option}</option>)}</select></label>
+        <label className="form-label">Employment type<select className="select" value={employmentType} disabled={livePerson||!administrator} onChange={event=>setEmploymentType(event.target.value as EmploymentType)}>{["Employee","Intern"].map(value=><option key={value}>{value}</option>)}</select></label>
+        <label className="form-label">{livePerson?"People directory role":"Access role"}<select className="select" value={accessRole} disabled={!administrator||livePerson&&intern} onChange={event=>setAccessRole(event.target.value as AccessRole)}>{accessOptions.map(value=><option key={value}>{value}</option>)}</select></label>
+        <label className="form-label">{livePerson?"Employment status":"Account status"}<select className="select" value={accountStatus} onChange={event=>setAccountStatus(event.target.value as AccountStatus)}>{["Active","Suspended"].map(value=><option key={value}>{value}</option>)}</select></label>
+        {accessRole==="Member"&&intern&&<label className="form-label person-field-wide">Manager<select className="select" value={reportsTo} disabled={!administrator} onChange={event=>setReportsTo(event.target.value)}><option value="">Unassigned</option>{managers.filter(manager=>administrator||manager.id===user.id).map(manager=><option key={manager.id} value={manager.id}>{manager.name}</option>)}</select></label>}
+      </div>
+    </div>
       {canProvision&&person?.hasOpsAccess&&<section className="access-provision account-management">
         <div><b>Manage Ops account</b><p>Control this person’s role and sign-in access. These settings do not alter their employee record.</p></div>
         <div className="account-management-grid">
@@ -362,7 +374,7 @@ function ProjectDetail({project,tasks,team,onBack,onOpen,onResourceAdded,flash}:
         <button className="btn" type="button" disabled={provisioning||Boolean(temporaryPassword)&&temporaryPassword.length<10} onClick={provision}>{provisioning?"Resetting password…":"Reset temporary password"}</button>
         {credentials&&<div className="access-credentials"><span><small>Login email</small><b>{credentials.email}</b></span><span><small>Temporary password</small><b className="mono">{credentials.temporaryPassword}</b></span><div><button className="btn" type="button" onClick={()=>navigator.clipboard.writeText(shareMessage)}>Copy details</button><a className="btn" href={emailShare}>Share by email</a><a className="btn" href={whatsappShare} target="_blank" rel="noreferrer">Share by WhatsApp</a></div></div>}
       </section>}
-      <div className="notice">{livePerson?"Changes are saved to the connected people database.":administrator?"Employment type, access permissions, and account status are managed independently.":"Managers can add members within their own department and manage their account status."}</div>
+      <div className="notice person-modal-note">{livePerson?"Changes are saved to the connected people database.":administrator?"Employment type, access permissions, and account status are managed independently.":"Managers can add members within their own department and manage their account status."}</div>
     </div>
   </Modal>
  }

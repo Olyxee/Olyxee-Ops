@@ -2161,7 +2161,7 @@ body .app.workspace-shell .workspace-welcome {
 body .app.workspace-shell .workspace-topbar {
   position: relative;
   isolation: isolate;
-  overflow: hidden;
+  overflow: visible;
   background: rgba(235, 247, 252, .42) !important;
   border-bottom: 0 !important;
 }
@@ -2170,13 +2170,13 @@ body .app.workspace-shell .workspace-topbar::before {
   content: "";
   position: absolute;
   z-index: -2;
-  inset: -14px;
+  inset: 0;
   background-image: url("../attached_assets/image_1789783340211.png");
   background-position: center 18%;
   background-size: cover;
+  clip-path: inset(0);
   filter: blur(8px);
   opacity: .62;
-  transform: scale(1.04);
 }
 
 body .app.workspace-shell .workspace-topbar::after {
@@ -2184,6 +2184,7 @@ body .app.workspace-shell .workspace-topbar::after {
   position: absolute;
   z-index: -1;
   inset: 0;
+  clip-path: inset(0);
   background: linear-gradient(90deg, rgba(241, 250, 253, .62), rgba(223, 243, 251, .42), rgba(241, 250, 253, .58));
   border-bottom: 0;
 }
