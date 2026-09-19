@@ -2038,81 +2038,45 @@ body .app.workspace-shell .workspace-welcome {
 
 @media (min-width: 1081px) {
   .workspace-board:not(.workspace-board-member) {
-    grid-auto-rows: 340px;
+    grid-auto-rows: 300px;
     grid-template-areas:
-      "welcome welcome welcome welcome welcome welcome tasks tasks tasks tasks tasks tasks"
-      "projects projects projects projects projects projects people people people people people people"
-      "departments departments departments departments departments departments review review review review review review" !important;
+      "welcome welcome welcome welcome tasks tasks tasks tasks tasks tasks tasks tasks"
+      "projects projects projects projects projects projects projects projects departments departments departments departments"
+      "people people people people review review review review review review review review" !important;
   }
 
   .workspace-people .workspace-list {
     display: block;
-    padding: 8px 20px 14px;
+    padding: 7px 16px 12px;
   }
 
   .workspace-people .workspace-list > button {
     min-width: 0;
-    display: grid;
-    grid-template-columns: minmax(180px, 1.15fr) minmax(300px, 1.8fr) auto;
-    padding: 11px 2px;
+    display: flex;
+    padding: 9px 2px;
     border-right: 0;
   }
 
   .workspace-board:not(.workspace-board-member) > .workspace-stack > .workspace-card {
-    height: 340px;
-    min-height: 340px;
+    height: 300px;
+    min-height: 300px;
     overflow: hidden;
   }
 }
 
 @media (min-width: 701px) and (max-width: 1080px) {
   .workspace-board:not(.workspace-board-member) {
-    grid-auto-rows: 320px;
+    grid-auto-rows: 290px;
     grid-template-areas:
       "welcome welcome welcome welcome welcome welcome tasks tasks tasks tasks tasks tasks"
-      "projects projects projects projects projects projects people people people people people people"
-      "departments departments departments departments departments departments review review review review review review" !important;
+      "projects projects projects projects projects projects departments departments departments departments departments departments"
+      "people people people people people people review review review review review review" !important;
   }
 
   .workspace-board:not(.workspace-board-member) > .workspace-stack > .workspace-card {
-    height: 320px;
-    min-height: 320px;
+    height: 290px;
+    min-height: 290px;
     overflow: hidden;
-  }
-}
-
-.workspace-person-parameters {
-  min-width: 0;
-  display: grid;
-  grid-template-columns: 1.15fr .65fr 1fr;
-  align-items: center;
-  gap: 16px;
-}
-
-.workspace-person-parameters > span {
-  min-width: 0;
-  display: grid;
-  gap: 3px;
-}
-
-.workspace-person-parameters small {
-  color: #87938f;
-  font-size: 8px;
-  text-transform: uppercase;
-  letter-spacing: .07em;
-}
-
-.workspace-person-parameters b {
-  overflow: hidden;
-  color: #344a43;
-  font-size: 10px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-@media (max-width: 900px) {
-  .workspace-person-parameters {
-    display: none;
   }
 }
 
