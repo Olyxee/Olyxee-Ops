@@ -14,6 +14,7 @@
 .workspace-review-home .review-home-title b { color:#242528; }
 .workspace-review-home .review-home-title small { color:#92949a; font-size:10px; font-weight:500; }
 .workspace-review-home .review-home-task-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; padding:18px 22px 22px; }
+.workspace-review-home .review-home-objective-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; padding:18px 22px 22px; }
 .workspace-review-home .review-home-body { display:grid; grid-template-columns:minmax(0,1.02fr) minmax(0,1fr); }
 .workspace-review-home .review-home-objectives { padding:20px 23px 22px; border-right:1px solid #ececef; }
 .workspace-review-home .review-home-decisions { padding:20px 23px 22px; }
@@ -51,6 +52,7 @@
 .workspace-review-home .review-home-more { width:calc(100% - 46px); margin:0 23px 18px; border:1px solid #dbe8e4; background:#f5faf8; }
 @media (max-width:760px) {
   .workspace-review-home .review-home-task-list { grid-template-columns:1fr; }
+  .workspace-review-home .review-home-objective-list { grid-template-columns:1fr; }
   .workspace-review-home .review-home-body { grid-template-columns:1fr; }
   .workspace-review-home .review-home-objectives { border-right:0; border-bottom:1px solid #ececef; }
 }
@@ -59,6 +61,7 @@
   .workspace-review-home .review-home-head .workspace-head-actions { width:100%; justify-content:flex-start; }
   .workspace-review-home .review-home-objectives,.workspace-review-home .review-home-decisions { padding:16px 14px; }
   .workspace-review-home .review-home-task-list { padding:14px; }
+  .workspace-review-home .review-home-objective-list { padding:14px; }
   .workspace-review-home .review-objective-open { grid-template-columns:10px minmax(0,1fr); }
   .workspace-review-home .review-objective-open .workspace-objective-state,.workspace-review-home .review-objective-open > svg { display:none; }
   .workspace-review-home .review-task-row { grid-template-columns:67px minmax(0,1fr) 15px; }
