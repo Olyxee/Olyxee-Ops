@@ -100,6 +100,119 @@
   text-align: left;
 }
 
+/* Intern workspace: colorful task-focused cards without copying the manager review UI. */
+.workspace-board-member .workspace-welcome {
+  border-color: rgba(144, 190, 222, 0.56) !important;
+  background:
+    radial-gradient(circle at 88% 12%, rgba(129, 190, 233, 0.24), transparent 35%),
+    linear-gradient(145deg, rgba(248, 252, 255, 0.86), rgba(215, 235, 248, 0.58)) !important;
+}
+
+.workspace-board-member .workspace-tasks .workspace-list {
+  gap: 11px;
+  padding: 16px;
+}
+
+.workspace-board-member .workspace-tasks .workspace-list > button {
+  --intern-task-accent: #287dc1;
+  --intern-task-border: #a9cce9;
+  --intern-task-surface: #e6f3ff;
+  position: relative;
+  min-height: 76px;
+  padding: 13px 14px 13px 19px !important;
+  overflow: hidden;
+  border: 1px solid var(--intern-task-border) !important;
+  border-radius: 16px !important;
+  background:
+    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--intern-task-accent) 13%, transparent), transparent 42%),
+    linear-gradient(135deg, color-mix(in srgb, var(--intern-task-surface) 90%, white), rgba(255,255,255,.8)) !important;
+  box-shadow:
+    0 8px 20px color-mix(in srgb, var(--intern-task-accent) 12%, transparent),
+    inset 0 1px 0 rgba(255,255,255,.9) !important;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.workspace-board-member .workspace-tasks .workspace-list > button::before {
+  position: absolute;
+  top: 16px;
+  bottom: 16px;
+  left: 6px;
+  width: 4px;
+  border-radius: 999px;
+  background: var(--intern-task-accent);
+  content: "";
+}
+
+.workspace-board-member .workspace-tasks .workspace-list > button:hover {
+  border-color: color-mix(in srgb, var(--intern-task-accent) 55%, white) !important;
+  box-shadow:
+    0 13px 27px color-mix(in srgb, var(--intern-task-accent) 17%, transparent),
+    inset 0 1px 0 rgba(255,255,255,.96) !important;
+  transform: translateY(-2px);
+}
+
+.workspace-board-member .workspace-tasks .workspace-list > .workspace-task-submitted-for-review {
+  --intern-task-accent: #a76d19;
+  --intern-task-border: #e5c995;
+  --intern-task-surface: #fff2d9;
+}
+
+.workspace-board-member .workspace-tasks .workspace-list > .workspace-task-blocked {
+  --intern-task-accent: #b95047;
+  --intern-task-border: #e3aaa5;
+  --intern-task-surface: #ffe5e2;
+}
+
+.workspace-board-member .workspace-tasks .workspace-list > .workspace-task-in-progress {
+  --intern-task-accent: #6d55aa;
+  --intern-task-border: #c8b9e6;
+  --intern-task-surface: #eee7ff;
+}
+
+.workspace-board-member .workspace-tasks .workspace-list > button b {
+  color: #172330 !important;
+  font-size: 13px;
+}
+
+.workspace-board-member .workspace-tasks .workspace-list > button small {
+  color: #61758a !important;
+}
+
+.workspace-board-member .workspace-tasks .workspace-list > button .badge {
+  border: 1px solid color-mix(in srgb, var(--intern-task-accent) 24%, transparent);
+  background: rgba(255,255,255,.7) !important;
+  color: color-mix(in srgb, var(--intern-task-accent) 88%, #1d1d1f) !important;
+  box-shadow: 0 2px 7px color-mix(in srgb, var(--intern-task-accent) 9%, transparent);
+}
+
+.workspace-board-member .workspace-project-grid {
+  gap: 12px;
+  padding: 16px;
+}
+
+.workspace-board-member .workspace-project-grid > button {
+  min-height: 134px;
+  border: 1px solid #b8d3e8 !important;
+  border-radius: 17px !important;
+  background: linear-gradient(145deg, #e9f5ff, rgba(255,255,255,.84)) !important;
+  box-shadow: 0 9px 20px rgba(45, 112, 158, 0.11), inset 0 1px rgba(255,255,255,.9) !important;
+}
+
+.workspace-board-member .workspace-project-grid > button:nth-child(2n) {
+  border-color: #d2c3e8 !important;
+  background: linear-gradient(145deg, #f1ebff, rgba(255,255,255,.85)) !important;
+}
+
+.workspace-board-member .workspace-project-grid > button:nth-child(3n) {
+  border-color: #b9dacd !important;
+  background: linear-gradient(145deg, #e6f5ef, rgba(255,255,255,.85)) !important;
+}
+
+.workspace-board-member .workspace-project-grid > button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 15px 28px rgba(45, 83, 115, 0.16), inset 0 1px rgba(255,255,255,.94) !important;
+}
+
 @media (max-width: 700px) {
   .workspace-board .workspace-card {
     background:
@@ -107,5 +220,10 @@
       rgba(229, 240, 246, 0.4) !important;
     backdrop-filter: blur(22px) saturate(140%) !important;
     -webkit-backdrop-filter: blur(22px) saturate(140%) !important;
+  }
+
+  .workspace-board-member .workspace-tasks .workspace-list,
+  .workspace-board-member .workspace-project-grid {
+    padding: 12px;
   }
 }
