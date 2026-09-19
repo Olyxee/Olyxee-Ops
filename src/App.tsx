@@ -293,7 +293,32 @@ function ProjectDetail({user,project,tasks,team,onBack,onOpen,onProjectUpdated,o
       </div>
     </Modal>
   }
-  function ProjectModal({user,team,onClose,onSave}:{user:User;team:User[];onClose:()=>void;onSave:(project:Omit<Project,"id">)=>void}){const [name,setName]=useState("");const [description,setDescription]=useState("");const [githubUrl,setGithubUrl]=useState("");const [logoUrl,setLogoUrl]=useState("");const [assigneeIds,setAssigneeIds]=useState<string[]>([]);const people=[...team].sort((a,b)=>Number(b.active!==false)-Number(a.active!==false)||a.name.localeCompare(b.name));const validUrl=/^https?:\/\/(www\.)?github\.com\/.+/i.test(githubUrl.trim());const readLogo=(file?:File)=>{if(!file)return;const reader=new FileReader();reader.onload=()=>setLogoUrl(String(reader.result));reader.readAsDataURL(file)};return <Modal title="Create project" onClose={onClose} footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn primary" disabled={!name.trim()||!validUrl} onClick={()=>onSave({name:name.trim(),description:description.trim()||"Project workspace",githubUrl:githubUrl.trim(),logoUrl:logoUrl||undefined,assigneeIds,resources:[],active:true,status:"Active"})}>Create project</button></>}><div className="form-grid"><label className="form-label">Project name<input className="input" value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Customer onboarding"/></label><label className="form-label">Description<textarea className="textarea" rows={3} value={description} onChange={e=>setDescription(e.target.value)} placeholder="What outcome does this project deliver?"/></label><label className="form-label">Project logo<input className="input" type="file" accept="image/*" onChange={e=>readLogo(e.target.files?.[0])}/>{logoUrl&&<img className="project-logo-preview" src={logoUrl} alt="Project logo preview"/>}</label><label className="form-label">GitHub repository URL<input className="input" type="url" value={githubUrl} onChange={e=>setGithubUrl(e.target.value)} placeholder="https://github.com/olyxee/repository"/>{githubUrl&&!validUrl&&<span style={{color:"#9a453d"}}>Enter a valid GitHub URL.</span>}</label>{accessOf(user)==="Superadmin"&&<div className="form-label">Assign people<div className="list" style={{padding:"4px 0"}}>{people.map(person=><label className="inline" style={{fontSize:12,padding:"5px 0"}} key={person.id}><input type="checkbox" checked={assigneeIds.includes(person.id)} onChange={e=>setAssigneeIds(ids=>e.target.checked?[...ids,person.id]:ids.filter(id=>id!==person.id))}/><span>{person.name} <span className="muted">· {person.position||person.role}{person.active===false?" · Inactive":""}</span></span></label>)}</div></div>}</div></Modal>}
+  function ProjectModal({user,team,onClose,onSave}:{user:User;team:User[];onClose:()=>void;onSave:(project:Omit<Project,"id">)=>void}){
+    const [name,setName]=useState("");
+    const [description,setDescription]=useState("");
+    const [githubUrl,setGithubUrl]=useState("");
+    const [logoUrl,setLogoUrl]=useState("");
+    const [assigneeIds,setAssigneeIds]=useState<string[]>([]);
+    const [peopleQuery,setPeopleQuery]=useState("");
+    const people=[...team].sort((a,b)=>Number(b.active!==false)-Number(a.active!==false)||a.name.localeCompare(b.name));
+    const normalizedPeopleQuery=peopleQuery.trim().toLowerCase();
+    const filteredPeople=people.filter(person=>!normalizedPeopleQuery||[person.name,person.email,person.department,person.position,person.role].some(value=>value?.toLowerCase().includes(normalizedPeopleQuery)));
+    const validUrl=/^https?:\/\/(www\.)?github\.com\/.+/i.test(githubUrl.trim());
+    const readLogo=(file?:File)=>{if(!file)return;const reader=new FileReader();reader.onload=()=>setLogoUrl(String(reader.result));reader.readAsDataURL(file)};
+    return <Modal title="Create project" onClose={onClose} footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn primary" disabled={!name.trim()||!validUrl} onClick={()=>onSave({name:name.trim(),description:description.trim()||"Project workspace",githubUrl:githubUrl.trim(),logoUrl:logoUrl||undefined,assigneeIds,resources:[],active:true,status:"Active"})}>Create project</button></>}>
+      <div className="form-grid">
+        <label className="form-label">Project name<input className="input" value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Customer onboarding"/></label>
+        <label className="form-label">Description<textarea className="textarea" rows={3} value={description} onChange={e=>setDescription(e.target.value)} placeholder="What outcome does this project deliver?"/></label>
+        <label className="form-label">Project logo<input className="input" type="file" accept="image/*" onChange={e=>readLogo(e.target.files?.[0])}/>{logoUrl&&<img className="project-logo-preview" src={logoUrl} alt="Project logo preview"/>}</label>
+        <label className="form-label">GitHub repository URL<input className="input" type="url" value={githubUrl} onChange={e=>setGithubUrl(e.target.value)} placeholder="https://github.com/olyxee/repository"/>{githubUrl&&!validUrl&&<span style={{color:"#9a453d"}}>Enter a valid GitHub URL.</span>}</label>
+        {accessOf(user)==="Superadmin"&&<div className="form-label project-people-picker">
+          <span>Assign people {assigneeIds.length>0&&<small>{assigneeIds.length} selected</small>}</span>
+          <div className="project-people-search"><Search size={15}/><input value={peopleQuery} onChange={event=>setPeopleQuery(event.target.value)} placeholder="Search by name, department, or role" aria-label="Search people"/></div>
+          <div className="project-people-results">{filteredPeople.map(person=><label key={person.id}><input type="checkbox" checked={assigneeIds.includes(person.id)} onChange={event=>setAssigneeIds(ids=>event.target.checked?[...ids,person.id]:ids.filter(id=>id!==person.id))}/><span><b>{person.name}</b><small>{person.department} · {person.position||person.role}{person.active===false?" · Inactive":""}</small></span></label>)}{filteredPeople.length===0&&<div className="workspace-empty">No people match your search.</div>}</div>
+        </div>}
+      </div>
+    </Modal>
+  }
  function PersonModal({user,team,person,onClose,onSave}:{user:User;team:User[];person?:User;onClose:()=>void;onSave:(person:User)=>void|Promise<void>}){
   const administrator=isAdmin(user);
   const editing=Boolean(person);
