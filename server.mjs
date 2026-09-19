@@ -948,12 +948,20 @@ async function getTaskIdentity(request) {
 async function getManagerReportIds(identity) {
   if (!peoplePool || identity.role !== "Manager") return [];
   const result = await peoplePool.query(`
-    SELECT 'intern-' || i.id::text AS id
-    FROM public.interns i
-    JOIN public.workspace_accounts manager ON i.supervisor_account_id = manager.id
-    WHERE i.archived_at IS NULL
-      AND lower(coalesce(i.employment_status, '')) = 'active'
-      AND lower(manager.email) = lower($1)
+    SELECT report.id FROM (
+      SELECT 'intern-' || i.id::text AS id
+      FROM public.interns i
+      JOIN public.workspace_accounts manager ON i.supervisor_account_id = manager.id
+      WHERE i.archived_at IS NULL
+        AND lower(coalesce(i.employment_status, '')) = 'active'
+        AND lower(manager.email) = lower($1)
+      UNION ALL
+      SELECT 'account-' || staff.id::text AS id
+      FROM public.workspace_accounts staff
+      JOIN public.workspace_accounts manager ON staff.reports_to_account_id = manager.id
+      WHERE staff.active = true
+        AND lower(manager.email) = lower($1)
+    ) report
   `, [requestEmail(identity)]);
   return result.rows.map((row) => row.id);
 }

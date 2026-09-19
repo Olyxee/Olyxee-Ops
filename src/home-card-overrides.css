@@ -101,6 +101,32 @@
 }
 
 /* Intern workspace: colorful task-focused cards without copying the manager review UI. */
+@media (min-width: 701px) {
+  .workspace-board-member {
+    grid-auto-rows: auto !important;
+    grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+    grid-template-areas:
+      "welcome welcome welcome welcome welcome tasks tasks tasks tasks tasks tasks tasks"
+      "welcome welcome welcome welcome welcome projects projects projects projects projects projects projects" !important;
+    align-items: stretch !important;
+  }
+
+  .workspace-board-member .workspace-welcome {
+    height: 100% !important;
+    min-height: 620px !important;
+  }
+
+  .workspace-board-member .workspace-tasks {
+    height: auto !important;
+    min-height: 330px !important;
+  }
+
+  .workspace-board-member .workspace-projects {
+    height: auto !important;
+    min-height: 265px !important;
+  }
+}
+
 .workspace-board-member .workspace-welcome {
   border-color: rgba(144, 190, 222, 0.56) !important;
   background:
@@ -214,6 +240,13 @@
 }
 
 @media (max-width: 700px) {
+  .workspace-board-member {
+    grid-template-areas:
+      "welcome"
+      "tasks"
+      "projects" !important;
+  }
+
   .workspace-board .workspace-card {
     background:
       linear-gradient(145deg, rgba(255, 255, 255, 0.66), rgba(218, 235, 244, 0.42)),
