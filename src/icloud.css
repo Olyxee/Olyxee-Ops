@@ -2422,21 +2422,21 @@ body .app.workspace-shell .workspace-topbar::after {
   z-index: 1;
   width: 100%;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 12px;
-  padding: 13px;
+  gap: 17px;
+  padding: 2px 0 16px;
   border: 0;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, .58);
-  box-shadow: 0 8px 22px rgba(40, 94, 114, .1);
-  backdrop-filter: blur(12px);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .workspace-profile-identity .avatar {
-  width: 68px !important;
-  height: 68px !important;
-  border-width: 3px;
+  width: 88px !important;
+  height: 88px !important;
+  border-width: 4px;
 }
 
 .workspace-profile-identity > div {
@@ -2444,10 +2444,10 @@ body .app.workspace-shell .workspace-topbar::after {
 }
 
 .workspace-profile-identity h2 {
-  margin: 5px 0 2px;
+  margin: 7px 0 3px;
   overflow: hidden;
   color: #173544;
-  font-size: 16px;
+  font-size: 21px;
   letter-spacing: -.025em;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2457,7 +2457,7 @@ body .app.workspace-shell .workspace-topbar::after {
   margin: 0;
   overflow: hidden;
   color: #728994;
-  font-size: 9px;
+  font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2471,16 +2471,155 @@ body .app.workspace-shell .workspace-topbar::after {
     grid-template-columns: auto minmax(0, 1fr);
   }
 
-  .workspace-profile-identity .workspace-profile-status {
-    grid-column: 1 / -1;
-    justify-self: start;
-  }
-
   .department-card-actions {
     grid-template-columns: 1fr 1fr;
   }
 
   .department-card-actions .select {
     grid-column: 1 / -1;
+  }
+}
+
+.workspace-department-grid > button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 13px 7px;
+  border: 0;
+  border-bottom: 1px solid #edf0ef;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.workspace-department-grid > button:hover,
+.workspace-department-grid > button:focus-visible {
+  background: rgba(218, 239, 238, .48);
+  outline: none;
+}
+
+.workspace-department-grid > button > span {
+  min-width: 0;
+  margin-right: auto;
+}
+
+.workspace-department-grid > button > svg {
+  flex: 0 0 auto;
+  color: #77909a;
+}
+
+.person-modal {
+  width: min(700px, calc(100vw - 28px));
+  max-height: calc(100dvh - 28px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 18px;
+}
+
+.person-modal .modal-head,
+.person-modal .modal-foot {
+  flex: 0 0 auto;
+}
+
+.person-modal .modal-head {
+  align-items: center;
+}
+
+.person-modal .modal-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 22px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.person-modal .modal-foot {
+  position: relative;
+  z-index: 2;
+  padding: 14px 20px;
+  background: rgba(248, 250, 249, .98);
+  box-shadow: 0 -10px 24px rgba(27, 67, 78, .07);
+}
+
+.person-modal .modal-foot .btn {
+  min-width: 110px;
+}
+
+.person-modal-content {
+  display: grid;
+  gap: 16px;
+}
+
+.person-modal-section {
+  overflow: hidden;
+  border: 1px solid rgba(180, 207, 220, .52);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .92);
+}
+
+.person-modal-section-head {
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 11px 15px;
+  border-bottom: 1px solid rgba(192, 212, 222, .5);
+  background: rgba(235, 246, 250, .72);
+}
+
+.person-modal-section-head > span {
+  display: grid;
+  gap: 3px;
+}
+
+.person-modal-section-head small {
+  color: #758b95;
+  font-size: 9px;
+}
+
+.person-modal-section-head > i {
+  color: #6f8f9d;
+  font-family: "DM Mono", monospace;
+  font-size: 10px;
+  font-style: normal;
+}
+
+.person-modal-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 16px;
+}
+
+.person-modal-fields .person-field-wide {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 620px) {
+  .person-modal {
+    width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+  }
+
+  .person-modal .modal-body {
+    padding: 16px;
+  }
+
+  .person-modal-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .person-modal .modal-foot {
+    padding: 11px 14px;
+  }
+
+  .person-modal .modal-foot .btn {
+    flex: 1;
+    min-width: 0;
   }
 }
