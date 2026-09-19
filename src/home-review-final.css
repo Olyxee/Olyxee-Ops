@@ -113,3 +113,120 @@
   .workspace-review-home .review-task-row { grid-template-columns:67px minmax(0,1fr) 15px; }
   .workspace-review-home .review-task-due { display:none; }
 }
+
+/* Focused Weekly Review page: weekly objectives only. */
+body .weekly-review-page .review-objective-health {
+  grid-template-columns: 190px minmax(180px,1fr) minmax(320px,auto) !important;
+  align-items: center;
+}
+
+body .weekly-review-page .review-objective-summary {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(130px,1fr));
+  gap: 8px 14px;
+}
+
+body .weekly-review-page .review-objective-summary > span {
+  display: grid;
+  grid-template-columns: 8px 22px minmax(0,1fr);
+  align-items: center;
+  gap: 7px;
+  color: #6e6e73;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+body .weekly-review-page .review-objective-summary i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #8e8e93;
+}
+
+body .weekly-review-page .review-objective-summary i.not-started { background:#2f7fc1; }
+body .weekly-review-page .review-objective-summary i.in-progress { background:#b77b20; }
+body .weekly-review-page .review-objective-summary i.at-risk { background:#b95147; }
+body .weekly-review-page .review-objective-summary i.complete { background:#347b65; }
+body .weekly-review-page .review-objective-summary b { color:#1d1d1f; font-size:13px; }
+
+body .weekly-review-page .review-objective-grid {
+  grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+}
+
+body .weekly-review-page .review-objective-card {
+  min-height: 220px !important;
+  border-color: #d8dbe0 !important;
+  background: #fff !important;
+}
+
+body .weekly-review-page .review-objective-card h3 {
+  font-size: 18px !important;
+}
+
+body .weekly-review-page .review-objective-card > p {
+  min-height: 42px;
+  color: #64666b !important;
+  font-size: 12px !important;
+}
+
+body .weekly-review-page .review-objective-no-description {
+  color: #a0a1a6 !important;
+}
+
+body .weekly-review-page .review-objective-card footer {
+  align-items: center;
+  padding-top: 13px;
+}
+
+body .weekly-review-page .review-objective-owner {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+body .weekly-review-page .review-objective-owner > span,
+body .weekly-review-page .review-objective-card footer time {
+  display: grid;
+  gap: 2px;
+}
+
+body .weekly-review-page .review-objective-owner small,
+body .weekly-review-page .review-objective-card footer time small {
+  color: #98999e;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+body .weekly-review-page .review-objective-owner b,
+body .weekly-review-page .review-objective-card footer time b {
+  overflow: hidden;
+  color: #3a3a3c;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width:820px) {
+  body .weekly-review-page .review-objective-health {
+    grid-template-columns: 160px minmax(140px,1fr) !important;
+  }
+
+  body .weekly-review-page .review-objective-summary {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(4,minmax(0,1fr));
+  }
+}
+
+@media (max-width:560px) {
+  body .weekly-review-page .review-objective-health,
+  body .weekly-review-page .review-objective-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  body .weekly-review-page .review-objective-summary {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+}

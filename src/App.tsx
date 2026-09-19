@@ -583,39 +583,35 @@ function SettingsModal({user,team,setTeam,statuses,setStatuses,tasks,flash,onClo
      </div>
   </Modal>
 }
-function Review({tasks,objectives,team,user,onOpen,onNewObjective,update,setObjectives,can,flash}:{tasks:Task[];objectives:WeeklyObjective[];team:User[];user:User;onOpen:(id:string)=>void;onNewObjective:()=>void;update:(id:string,p:Partial<Task>)=>void;setObjectives:React.Dispatch<React.SetStateAction<WeeklyObjective[]>>;can:(x:string)=>boolean;flash:(s:string)=>void}){
-  const [decisions,setDecisions]=useState<Record<string,string>>({});
-  const [reasons,setReasons]=useState<Record<string,string>>({});
+function Review({objectives,team,user,onNewObjective,setObjectives}:{tasks:Task[];objectives:WeeklyObjective[];team:User[];user:User;onOpen:(id:string)=>void;onNewObjective:()=>void;update:(id:string,p:Partial<Task>)=>void;setObjectives:React.Dispatch<React.SetStateAction<WeeklyObjective[]>>;can:(x:string)=>boolean;flash:(s:string)=>void}){
   const visibleObjectives=objectives.filter(objective=>isAdmin(user)||isManager(user)||objective.managerId===user.id);
-  const committed=tasks.filter(task=>task.weeklyCommitment);
-  const delivered=committed.filter(task=>task.status==="Completed");
-  const awaitingApproval=committed.filter(task=>task.status==="Submitted for Review");
-  const blocked=committed.filter(task=>task.status==="Blocked");
-  const missed=committed.filter(task=>!["Completed","Submitted for Review","Blocked","Cancelled"].includes(task.status)&&task.due<currentDate());
-  const discussionCount=blocked.length+awaitingApproval.length+missed.length;
-  const sections=[["BLOCKED COMMITMENTS",blocked,"red"],["AWAITING APPROVAL",awaitingApproval,"amber"],["MISSED COMMITMENTS",missed,"red"]] as const;
-  const reviewMetrics=[["Delivered",`${delivered.length} / ${committed.length}`,"green"],["Decisions needed",discussionCount,"blue"],["Blocked",blocked.length,"red"],["Awaiting approval",awaitingApproval.length,"amber"]] as const;
-  const owner=(task:Task)=>team.find(person=>person.id===task.assignee)?.name||"Unassigned";
+  const complete=visibleObjectives.filter(objective=>objective.status==="Complete").length;
+  const inProgress=visibleObjectives.filter(objective=>objective.status==="In progress").length;
+  const atRisk=visibleObjectives.filter(objective=>objective.status==="At risk").length;
+  const notStarted=visibleObjectives.filter(objective=>objective.status==="Not started").length;
+  const completion=visibleObjectives.length?Math.round(complete/visibleObjectives.length*100):0;
+  const owner=(objective:WeeklyObjective)=>team.find(person=>person.id===objective.managerId);
   return <div className="weekly-review-page">
     <div className="weekly-review-hero">
-      <div><span className="eyebrow">Operating cadence · Week at a glance</span><h1>Weekly Review</h1><p>Understand delivery health, then focus the conversations that move work forward.</p></div>
+      <div><span className="eyebrow">Weekly objectives</span><h1>Weekly Review</h1><p>A clear view of this week’s objectives, who owns them, and where each one stands.</p></div>
       {(isAdmin(user)||isManager(user))&&<button className="btn primary review-new-objective" onClick={onNewObjective}><Plus size={15}/> New objective</button>}
     </div>
-    <section className="review-health" aria-label="Weekly delivery health">
-      <div className="review-health-intro"><span className="review-health-kicker">Delivery health</span><strong>{committed.length ? `${Math.round(delivered.length/committed.length*100)}%` : "—"}</strong><span>weekly commitments delivered</span></div>
-      <div className="review-health-track" aria-label={`${delivered.length} of ${committed.length} commitments delivered`}><span style={{width:`${committed.length?Math.round(delivered.length/committed.length*100):0}%`}}/></div>
-      <div className="review-health-caption"><span>{delivered.length} delivered</span><span>{committed.length-delivered.length} still open</span></div>
+    <section className="review-health review-objective-health" aria-label="Weekly objective progress">
+      <div className="review-health-intro"><span className="review-health-kicker">Objective progress</span><strong>{visibleObjectives.length?`${completion}%`:"—"}</strong><span>{complete} of {visibleObjectives.length} complete</span></div>
+      <div className="review-health-track" aria-label={`${complete} of ${visibleObjectives.length} objectives complete`}><span style={{width:`${completion}%`}}/></div>
+      <div className="review-objective-summary">
+        <span><i className="not-started"/><b>{notStarted}</b> Not started</span>
+        <span><i className="in-progress"/><b>{inProgress}</b> In progress</span>
+        <span><i className="at-risk"/><b>{atRisk}</b> At risk</span>
+        <span><i className="complete"/><b>{complete}</b> Complete</span>
+      </div>
     </section>
     <section className="review-objectives">
-      <div className="review-section-head"><div><span className="eyebrow">This week</span><h2>Objectives</h2><p className="review-section-note">The outcomes your team committed to.</p></div><span className="review-count">{visibleObjectives.length} tracked</span></div>
-      <div className="review-objective-grid">{visibleObjectives.map(objective=><article className={`review-objective-card status-${objective.status.toLowerCase().replace(/\s+/g,"-")}`} key={objective.id}>
+      <div className="review-section-head"><div><span className="eyebrow">This week</span><h2>Weekly objectives</h2><p className="review-section-note">Each objective shows its owner, priority, due date, and current status.</p></div><span className="review-count">{visibleObjectives.length} objectives</span></div>
+      <div className="review-objective-grid">{visibleObjectives.map(objective=>{const responsible=owner(objective);return <article className={`review-objective-card status-${objective.status.toLowerCase().replace(/\s+/g,"-")}`} key={objective.id}>
         <div className="review-objective-top"><span className={`review-priority priority-${objective.priority.toLowerCase()}`}>{objective.priority}</span>{isManager(user)&&objective.managerId===user.id?<select className="select review-status-select" aria-label={`Status for ${objective.title}`} value={objective.status} onChange={event=>setObjectives(items=>items.map(item=>item.id===objective.id?{...item,status:event.target.value as ObjectiveStatus}:item))}>{["Not started","In progress","At risk","Complete"].map(status=><option key={status}>{status}</option>)}</select>:<Status s={objective.status}/>}</div>
-        <h3>{objective.title}</h3>{objective.description&&<p>{objective.description}</p>}<footer><span>{objective.managerId===user.id?"Your objective":team.find(person=>person.id===objective.managerId)?.name||"Unassigned"}</span><time dateTime={objective.dueDate}>Due {objective.dueDate}</time></footer>
-      </article>)}{!visibleObjectives.length&&<div className="panel empty review-empty">No objectives have been created.</div>}</div>
-    </section>
-    <section className="review-agenda section-gap"><div className="review-section-head"><div><span className="eyebrow">Needs attention</span><h2>Items needing attention</h2><p className="review-section-note">Work that needs a decision, an unblock, or a reset.</p></div><span className="review-count">{discussionCount} open</span></div>
-      <div className="review-metrics">{reviewMetrics.map(([label,value,tone])=><div className={`review-metric metric-${tone}`} key={label}><span>{label}</span><strong>{value}</strong></div>)}</div>
-      {discussionCount===0?<div className="panel empty review-empty"><strong>All clear.</strong><br/>No commitments require a decision.</div>:<div className="grid review-decision-grid">{sections.filter(([,items])=>items.length).map(([label,items,tone])=><div className={`panel review-decision-panel decision-${tone}`} key={label}><div className="panel-head"><span className="panel-title">{label}</span><span className={`badge ${tone}`}>{items.length}</span></div><div className="list">{items.map(task=><button type="button" className="row review-task-row review-task-open" key={task.id} onClick={()=>onOpen(task.id)} aria-label={`Open details for ${task.title}`}><div className="row-main"><div className="row-title">{task.title}</div><div className="row-meta">{task.code||task.id} · {task.project} · {owner(task)} · Due {task.due}</div></div><div className="review-task-action"><Status s={task.status}/><span>View details <ChevronRight size={14}/></span></div></button>)}</div></div>)}</div>}
+        <h3>{objective.title}</h3>{objective.description?<p>{objective.description}</p>:<p className="review-objective-no-description">No additional description.</p>}<footer><span className="review-objective-owner">{responsible&&<Avatar person={responsible} size={26}/>}<span><small>Owner</small><b>{objective.managerId===user.id?"You":responsible?.name||"Unassigned"}</b></span></span><time dateTime={objective.dueDate}><small>Due date</small><b>{objective.dueDate}</b></time></footer>
+      </article>})}{!visibleObjectives.length&&<div className="panel empty review-empty"><strong>No weekly objectives yet.</strong><br/>Create an objective to start this week’s review.</div>}</div>
     </section>
   </div>
 }
