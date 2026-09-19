@@ -293,6 +293,218 @@ body .app.workspace-shell .workspace-topbar {
   border-radius: 9px;
 }
 
+/* Clean iOS-style settings sheet */
+.settings-dialog {
+  width: min(880px, calc(100% - 28px));
+  max-height: min(780px, calc(100dvh - 28px));
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 20px;
+  background: rgba(247, 251, 253, 0.94);
+  box-shadow: 0 30px 80px rgba(9, 54, 82, 0.28);
+  backdrop-filter: blur(28px) saturate(140%);
+  -webkit-backdrop-filter: blur(28px) saturate(140%);
+}
+
+.settings-dialog .modal-head {
+  min-height: 58px;
+  padding: 0 20px;
+  border-bottom: 1px solid rgba(168, 198, 212, 0.45);
+  background: rgba(239, 248, 252, 0.88);
+}
+
+.settings-dialog .modal-head > b {
+  color: #17384a;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+}
+
+.settings-dialog .modal-head .close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(211, 230, 239, 0.72);
+  color: #4d6a78;
+}
+
+.settings-dialog .modal-body {
+  padding: 0;
+  overflow: auto;
+}
+
+.settings-dialog .modal-foot {
+  min-height: 66px;
+  padding: 11px 18px;
+  border-top: 1px solid rgba(168, 198, 212, 0.42);
+  background: rgba(247, 251, 253, 0.92);
+}
+
+.settings-dialog .modal-foot .btn {
+  min-width: 92px;
+}
+
+.settings-layout {
+  min-height: 530px;
+  grid-template-columns: 210px minmax(0, 1fr);
+  background: rgba(237, 245, 249, 0.82);
+}
+
+.settings-sidebar {
+  gap: 6px;
+  padding: 16px 11px;
+  border-right: 1px solid rgba(169, 199, 213, 0.42);
+  background: rgba(226, 240, 247, 0.68);
+}
+
+.settings-sidebar button {
+  min-height: 54px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: #536e7b;
+  transition: background 0.16s ease, box-shadow 0.16s ease, color 0.16s ease, transform 0.16s ease;
+}
+
+.settings-sidebar button:hover {
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.settings-sidebar button:active {
+  transform: scale(0.98);
+}
+
+.settings-sidebar button.active {
+  background: rgba(255, 255, 255, 0.92);
+  color: #173f54;
+  box-shadow: 0 4px 14px rgba(31, 87, 113, 0.12);
+}
+
+.settings-sidebar button b {
+  font-size: 12px;
+}
+
+.settings-sidebar button small {
+  color: #7e949e;
+  font-size: 9px;
+}
+
+.settings-sidebar button svg {
+  color: #8ca1aa;
+}
+
+.settings-panel {
+  padding: 28px;
+}
+
+.settings-section-head {
+  margin-bottom: 18px;
+}
+
+.settings-section-head h3 {
+  color: #15384a;
+  font-size: 24px;
+  letter-spacing: -0.04em;
+}
+
+.settings-section-head p {
+  max-width: 440px;
+  color: #6c828c;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.settings-group {
+  overflow: hidden;
+  margin-bottom: 16px;
+  border: 1px solid rgba(180, 207, 220, 0.52);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 5px 18px rgba(29, 75, 96, 0.07);
+}
+
+.profile-photo-row {
+  min-height: 104px;
+  padding: 17px 18px;
+}
+
+.profile-photo-row .avatar {
+  box-shadow: 0 4px 14px rgba(25, 77, 101, 0.14);
+}
+
+.profile-photo-row > div > b {
+  color: #18394a;
+  font-size: 15px;
+}
+
+.profile-photo-row > div > span {
+  color: #738994;
+}
+
+.profile-photo-row button,
+.profile-photo-action {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: rgba(221, 239, 247, 0.78);
+  color: #23607d;
+}
+
+.profile-photo-row button {
+  background: rgba(246, 228, 226, 0.72);
+  color: #95534c;
+}
+
+.settings-fields > label {
+  min-height: 58px;
+  grid-template-columns: 145px minmax(0, 1fr);
+  align-items: center;
+  padding: 13px 17px;
+  border-bottom-color: rgba(192, 212, 222, 0.5);
+  color: #405d6b;
+  font-size: 11px;
+}
+
+.settings-fields input,
+.settings-fields select,
+.settings-fields textarea {
+  min-height: 34px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: rgba(234, 244, 249, 0.7);
+  color: #153444;
+  font-size: 12px;
+}
+
+.settings-fields textarea {
+  min-height: 82px;
+}
+
+.settings-fields input:focus,
+.settings-fields select:focus,
+.settings-fields textarea:focus {
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(63, 139, 177, 0.16);
+}
+
+.settings-fields input[readonly] {
+  background: transparent;
+}
+
+.settings-list > div {
+  min-height: 64px;
+  padding: 14px 17px;
+  border-bottom-color: rgba(192, 212, 222, 0.5);
+}
+
+.settings-danger {
+  padding: 17px;
+  border: 1px solid rgba(220, 178, 172, 0.55);
+  border-radius: 14px;
+  background: rgba(255, 250, 249, 0.9);
+  box-shadow: 0 5px 18px rgba(101, 55, 49, 0.05);
+}
+
 @media (max-width: 1080px) {
   .workspace-content {
     padding-top: 26px;
@@ -313,6 +525,57 @@ body .app.workspace-shell .workspace-topbar {
 }
 
 @media (max-width: 700px) {
+  .settings-dialog {
+    width: calc(100% - 16px);
+    max-height: calc(100dvh - 16px);
+    border-radius: 18px;
+  }
+
+  .settings-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-sidebar {
+    display: flex;
+    flex-direction: row;
+    gap: 7px;
+    overflow-x: auto;
+    padding: 9px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(169, 199, 213, 0.42);
+    scrollbar-width: none;
+  }
+
+  .settings-sidebar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .settings-sidebar button {
+    min-height: 40px;
+    flex: 0 0 auto;
+    padding: 8px 13px;
+    white-space: nowrap;
+  }
+
+  .settings-sidebar button small,
+  .settings-sidebar button svg {
+    display: none;
+  }
+
+  .settings-panel {
+    padding: 20px 14px;
+  }
+
+  .settings-section-head h3 {
+    font-size: 21px;
+  }
+
+  .settings-fields > label {
+    min-height: 0;
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
   .workspace-content {
     padding-top: 16px;
   }
