@@ -14,7 +14,7 @@
 .workspace-review-home .review-home-title b { color:#242528; }
 .workspace-review-home .review-home-title small { color:#92949a; font-size:10px; font-weight:500; }
 .workspace-review-home .review-home-task-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; padding:18px 22px 22px; }
-.workspace-review-home .review-home-objective-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; padding:18px 22px 22px; }
+.workspace-review-home .review-home-objective-list { display:grid; grid-template-columns:1fr; gap:10px; padding:18px 22px 22px; }
 .workspace-review-home .review-home-body { display:grid; grid-template-columns:minmax(0,1.02fr) minmax(0,1fr); }
 .workspace-review-home .review-home-objectives { padding:20px 23px 22px; border-right:1px solid #ececef; }
 .workspace-review-home .review-home-decisions { padding:20px 23px 22px; }
