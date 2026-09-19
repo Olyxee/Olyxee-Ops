@@ -2047,12 +2047,14 @@ body .app.workspace-shell .workspace-welcome {
 
   .workspace-people .workspace-list {
     display: block;
-    padding: 7px 16px 12px;
+    padding: 0 16px 12px;
   }
 
   .workspace-people .workspace-list > button {
     min-width: 0;
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(180px, 1.25fr) minmax(150px, 1fr) minmax(150px, 1fr) auto;
+    gap: 18px;
     padding: 9px 2px;
     border-right: 0;
   }
@@ -2061,6 +2063,56 @@ body .app.workspace-shell .workspace-welcome {
     height: 300px;
     min-height: 300px;
     overflow: hidden;
+  }
+}
+
+.workspace-people-columns {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.25fr) minmax(150px, 1fr) minmax(150px, 1fr) auto;
+  gap: 18px;
+  padding: 9px 18px 7px;
+  border-bottom: 1px solid rgba(156, 190, 187, .2);
+  color: #8a999f;
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.workspace-person-detail {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  text-align: left;
+}
+
+.workspace-person-detail small {
+  display: none;
+}
+
+.workspace-person-detail b {
+  overflow: hidden;
+  color: #455b62;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .workspace-people-columns {
+    display: none;
+  }
+
+  .workspace-people .workspace-list {
+    padding-top: 7px;
+  }
+
+  .workspace-people .workspace-list > button {
+    display: flex;
+  }
+
+  .workspace-person-detail {
+    display: none;
   }
 }
 
