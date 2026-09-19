@@ -5,6 +5,12 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import bcrypt from "bcryptjs";
 import { Client as ObjectStorageClient } from "@replit/object-storage";
+import {
+  OFFICIAL_DEPARTMENTS,
+  UNASSIGNED_DEPARTMENT,
+  isOfficialDepartment,
+  resolveDepartment,
+} from "./shared/departments.mjs";
 
 const app = express();
 const port = Number(process.env.PORT || 5000);
@@ -39,6 +45,13 @@ const upload = multer({
 const stateKeys = new Set(["tasks", "projects", "audit", "notices", "objectives", "staff-statuses", "departments"]);
 const loginAttempts = new Map();
 const dummyPasswordHash = await bcrypt.hash(crypto.randomUUID(), 12);
+
+const validateDepartment = (value, { allowUnassigned = true } = {}) => {
+  const department = String(value || "").trim();
+  if (isOfficialDepartment(department)) return department;
+  if (allowUnassigned && (!department || department === UNASSIGNED_DEPARTMENT)) return UNASSIGNED_DEPARTMENT;
+  return null;
+};
 
 app.disable("x-powered-by");
 app.use(express.json({ limit: "2mb" }));
@@ -358,7 +371,7 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
         employmentType: "Intern",
         accessRole: opsAccount?.role || "Member",
         accountStatus: opsAccount ? (opsAccount.active ? "Active" : "Suspended") : "Pending",
-        department: intern.department || "Unassigned",
+        department: resolveDepartment(intern).department,
         position: intern.position || "Intern",
         reportsTo: managerIds.get(supervisorKey),
         role: "Intern",
@@ -372,6 +385,7 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
         source: "Supabase",
         employmentStatus: intern.employment_status || "Unknown",
         supervisorName: intern.supervisor_name || "",
+        departmentReviewRequired: resolveDepartment(intern).reviewRequired,
       };
     });
 
@@ -401,7 +415,7 @@ app.post("/api/people", requireAuth, requireAccount, async (request, response) =
 
   const name = String(request.body.name || "").trim().slice(0, 160);
   const email = String(request.body.email || "").trim().toLowerCase().slice(0, 254);
-  const department = String(request.body.department || "").trim().slice(0, 120);
+  const department = validateDepartment(request.body.department);
   const employmentType = String(request.body.employmentType || "");
   const accessRole = String(request.body.accessRole || "");
   const accountStatus = String(request.body.accountStatus || "");
@@ -411,6 +425,9 @@ app.post("/api/people", requireAuth, requireAccount, async (request, response) =
   }
   if (!["Employee", "Intern"].includes(employmentType)) {
     return response.status(400).json({ error: "Choose Employee or Intern." });
+  }
+  if (employmentType === "Intern" && !department) {
+    return response.status(400).json({ error: "Choose an official department or Unassigned." });
   }
   if (appRole === "Manager" && employmentType !== "Intern") {
     return response.status(403).json({ error: "Managers can only add interns in their own team." });
@@ -473,7 +490,7 @@ app.post("/api/people", requireAuth, requireAccount, async (request, response) =
       `OPS-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
       name,
       email,
-      appRole === "Manager" ? String(request.body.department || request.appAccount.department || "").trim().slice(0, 120) : department,
+      appRole === "Manager" ? validateDepartment(request.body.department || request.appAccount.department) : department,
       accountStatus === "Active" ? "Active" : "Inactive",
       supervisorName,
       supervisorEmail,
@@ -498,11 +515,14 @@ app.patch("/api/people/:id", requireAuth, requireAccount, async (request, respon
   const id = Number(rawId);
   const name = String(request.body.name || "").trim().slice(0, 160);
   const email = String(request.body.email || "").trim().toLowerCase().slice(0, 254);
-  const department = String(request.body.department || "").trim().slice(0, 120);
+  const department = validateDepartment(request.body.department);
   const accessRole = String(request.body.accessRole || "");
   const accountStatus = String(request.body.accountStatus || "");
   const reportsTo = String(request.body.reportsTo || "");
   if (!name || !email) return response.status(400).json({ error: "Name and email are required." });
+  if (kind === "intern" && !department) {
+    return response.status(400).json({ error: "Choose an official department or Unassigned." });
+  }
 
   try {
     if (kind === "account") {
@@ -575,7 +595,7 @@ app.patch("/api/people/:id", requireAuth, requireAccount, async (request, respon
           updated_at = now()
       WHERE id = $7 AND archived_at IS NULL
       RETURNING id
-    `, [name, email, department || "Unassigned", accountStatus === "Active" ? "Active" : "Inactive", supervisorName, supervisorEmail, id]);
+    `, [name, email, department, accountStatus === "Active" ? "Active" : "Inactive", supervisorName, supervisorEmail, id]);
     if (!result.rowCount) return response.status(404).json({ error: "Intern record not found." });
     return response.json({ ok: true });
   } catch (error) {

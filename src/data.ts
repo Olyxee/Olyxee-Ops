@@ -2,7 +2,7 @@ export type EmploymentType="Employee"|"Intern";
 export type AccessRole="Superadmin"|"Admin"|"Manager"|"Member";
 export type AccountStatus="Active"|"Pending"|"Suspended";
 export type Status="Inbox"|"Planned"|"Available"|"Assigned"|"In Progress"|"Blocked"|"In Review"|"Done"|"Cancelled"|"Backlog"|"In progress"|"In review";
-export type User={id:string;name:string;email:string;employmentType:EmploymentType;accessRole:AccessRole;accountStatus:AccountStatus;department:string;position?:string;reportsTo?:string;avatarUrl?:string;contactDetails?:string;githubUsername?:string;role?:string;active?:boolean;hasOpsAccess?:boolean;opsRole?:AccessRole;opsActive?:boolean};
+export type User={id:string;name:string;email:string;employmentType:EmploymentType;accessRole:AccessRole;accountStatus:AccountStatus;department:string;position?:string;reportsTo?:string;avatarUrl?:string;contactDetails?:string;githubUsername?:string;role?:string;active?:boolean;hasOpsAccess?:boolean;opsRole?:AccessRole;opsActive?:boolean;departmentReviewRequired?:boolean};
 export type Availability="Available"|"Busy"|"Offline";
 export type StaffStatus={userId:string;availability:Availability;start:string;end:string;note:string;updatedAt:string};
 export type Blocker={reason:string;need:string;waitingFor:string;severity:"Low"|"Medium"|"High"|"Critical";reportedBy:string;createdAt:string;resolvedAt?:string};
@@ -25,4 +25,10 @@ export const seedAccess:Access[]=[];
 export const seedAudit:Audit[]=[];
 export const seedNotices:Notice[]=[];
 export const seedWeeklyObjectives:WeeklyObjective[]=[];
-export const departments:[string,string,string][]=[];
+export const departments:[string,string,string][]=[
+  ["Research & Development (R&D)","Unassigned","Software, product, research engineering, and prototyping."],
+  ["AI Engineering","Unassigned","Machine learning, applied AI, agents, models, and AI integrations."],
+  ["Data & Security","Unassigned","Data platforms, analytics, governance, cybersecurity, and protection."],
+  ["Sales & Marketing","Unassigned","Growth, sales, partnerships, customer success, and communications."],
+  ["Business Operations","Unassigned","Operations, finance, people, administration, legal, and coordination."],
+];
