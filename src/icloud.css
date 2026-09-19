@@ -2814,3 +2814,6 @@ body h1,body h2,body h3,body h4,body h5,body h6,body .title,body .panel-title,bo
 
 /* Restrained semantic color for Home weekly review status. */
 .workspace-review-home .workspace-objectives>button{--objective-color:#8e8e93;padding-left:14px!important;box-shadow:inset 3px 0 var(--objective-color)}.workspace-review-home .workspace-objectives>button.workspace-objective-in-progress{--objective-color:#007aff}.workspace-review-home .workspace-objectives>button.workspace-objective-at-risk{--objective-color:#ff9500}.workspace-review-home .workspace-objectives>button.workspace-objective-complete{--objective-color:#34c759}.workspace-review-home .workspace-objective-state{color:var(--objective-color)!important;font-weight:600}.workspace-review-home .workspace-objective-state:before{width:7px;height:7px;flex:0 0 7px;border-radius:50%;background:var(--objective-color);content:""}.workspace-review-home .workspace-objectives>button:hover{background:color-mix(in srgb,var(--objective-color) 7%,#fff)!important}
+
+/* Rounded project artwork without a visible frame. */
+.workspace-projects .workspace-project-grid .project-logo{overflow:hidden!important;border:0!important;border-radius:18px!important;background:transparent!important}
