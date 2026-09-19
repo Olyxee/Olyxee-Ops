@@ -25,9 +25,16 @@ const peoplePool = process.env.EXTERNAL_DATABASE_URL
       connectionTimeoutMillis: 10_000,
     })
   : null;
-const appPool = process.env.OPS_DATABASE_URL
+const opsConnectionString = process.env.OPS_DATABASE_URL
+  ? (() => {
+      const value = new URL(process.env.OPS_DATABASE_URL);
+      if (value.hostname.includes("pooler.supabase.com") && value.port === "5432") value.port = "6543";
+      return value.toString();
+    })()
+  : null;
+const appPool = opsConnectionString
   ? new pg.Pool({
-      connectionString: process.env.OPS_DATABASE_URL,
+      connectionString: opsConnectionString,
       ssl: { rejectUnauthorized: false },
       max: 2,
       idleTimeoutMillis: 30_000,
@@ -152,36 +159,41 @@ app.get("/api/auth/session", (request, response) => {
 });
 
 app.post("/api/auth/login", async (request, response) => {
-  if (!appPool) return response.status(503).json({ error: "Ops database is not configured." });
-  const email = String(request.body.email || "").trim().toLowerCase();
-  const password = String(request.body.password || "");
-  if (!email || !password) return response.status(400).json({ error: "Email and password are required." });
-  const attemptKey = `${request.ip || "unknown"}:${email}`;
-  const now = Date.now();
-  const attempts = loginAttempts.get(attemptKey);
-  if (attempts?.blockedUntil > now) {
-    return response.status(429).json({ error: "Too many sign-in attempts. Try again later." });
+  try {
+    if (!appPool) return response.status(503).json({ error: "Ops database is not configured." });
+    const email = String(request.body.email || "").trim().toLowerCase();
+    const password = String(request.body.password || "");
+    if (!email || !password) return response.status(400).json({ error: "Email and password are required." });
+    const attemptKey = `${request.ip || "unknown"}:${email}`;
+    const now = Date.now();
+    const attempts = loginAttempts.get(attemptKey);
+    if (attempts?.blockedUntil > now) {
+      return response.status(429).json({ error: "Too many sign-in attempts. Try again later." });
+    }
+    const result = await appPool.query(`
+      SELECT id, password_hash, active
+      FROM public.ops_users
+      WHERE email = $1
+    `, [email]);
+    const account = result.rows[0];
+    const valid = await bcrypt.compare(password, account?.password_hash || dummyPasswordHash);
+    if (!account?.active || !valid) {
+      const count = (attempts?.count || 0) + 1;
+      loginAttempts.set(attemptKey, {
+        count,
+        blockedUntil: count >= 5 ? now + 15 * 60 * 1000 : 0,
+      });
+      return response.status(401).json({ error: "Invalid email or password." });
+    }
+    loginAttempts.delete(attemptKey);
+    await new Promise((resolve, reject) => request.session.regenerate((error) => error ? reject(error) : resolve()));
+    request.session.userId = account.id;
+    await new Promise((resolve, reject) => request.session.save((error) => error ? reject(error) : resolve()));
+    return response.json({ ok: true });
+  } catch (error) {
+    console.error("Sign-in service error:", error instanceof Error ? error.message : "Unknown error");
+    return response.status(503).json({ error: "Sign-in is temporarily unavailable. Please try again." });
   }
-  const result = await appPool.query(`
-    SELECT id, password_hash, active
-    FROM public.ops_users
-    WHERE email = $1
-  `, [email]);
-  const account = result.rows[0];
-  const valid = await bcrypt.compare(password, account?.password_hash || dummyPasswordHash);
-  if (!account?.active || !valid) {
-    const count = (attempts?.count || 0) + 1;
-    loginAttempts.set(attemptKey, {
-      count,
-      blockedUntil: count >= 5 ? now + 15 * 60 * 1000 : 0,
-    });
-    return response.status(401).json({ error: "Invalid email or password." });
-  }
-  loginAttempts.delete(attemptKey);
-  await new Promise((resolve, reject) => request.session.regenerate((error) => error ? reject(error) : resolve()));
-  request.session.userId = account.id;
-  await new Promise((resolve, reject) => request.session.save((error) => error ? reject(error) : resolve()));
-  return response.json({ ok: true });
 });
 
 app.post("/api/auth/logout", (request, response) => {
@@ -398,19 +410,9 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
     const role = request.appAccount.app_role;
     const ownEmail = String(request.appAccount.email).toLowerCase();
     const current = people.find((person) => String(person.email).toLowerCase() === ownEmail);
-    const visiblePeople = ["Superadmin", "Admin"].includes(role)
+    const visiblePeople = ["Superadmin", "Admin", "Manager"].includes(role)
       ? people
-      : role === "Manager"
-        ? people.filter((person) => (
-            person.id === current?.id
-            || person.reportsTo === current?.id
-            || (
-              current?.department
-              && current.department !== UNASSIGNED_DEPARTMENT
-              && person.department === current.department
-            )
-          ))
-        : people.filter((person) => person.id === current?.id);
+      : people.filter((person) => person.id === current?.id);
     return response.json({ connected: true, source: "Supabase", people: visiblePeople });
   } catch (error) {
     console.error("People query failed:", error instanceof Error ? error.message : "Unknown error");
@@ -820,8 +822,8 @@ app.post("/api/people/:id/ops-access", requireAuth, requireAccount, async (reque
 
     const randomBytes = new Uint8Array(9);
     crypto.getRandomValues(randomBytes);
-    const temporaryPassword = `${Buffer.from(randomBytes).toString("base64url")}!7a`;
-    const passwordHash = await bcrypt.hash(temporaryPassword, 12);
+    const generatedPassword = `${Buffer.from(randomBytes).toString("base64url")}!7a`;
+    const passwordHash = await bcrypt.hash(generatedPassword, 12);
     const role = person.role === "Manager" ? "Manager" : "Member";
     const accountResult = await appPool.query(`
       INSERT INTO public.ops_users (email, password_hash, display_name, role, active)
@@ -836,7 +838,7 @@ app.post("/api/people/:id/ops-access", requireAuth, requireAccount, async (reque
     return response.json({
       name: person.name || person.email,
       email: String(person.email).trim().toLowerCase(),
-      temporaryPassword,
+      password: generatedPassword,
       role: accountResult.rows[0].role,
     });
   } catch (error) {
@@ -1296,23 +1298,78 @@ app.put("/api/state/:key", requireAuth, requireAccount, async (request, response
   } else if (appRole === "Member") {
     return response.status(403).json({ error: "Members can update only their own work status." });
   }
-  if (request.params.key === "projects" && request.appAccount.app_role !== "Superadmin") {
+  let stateValue = request.body.value;
+  if (request.params.key === "projects") {
     const current = await appPool.query("SELECT state_value FROM workspace_state WHERE state_key = 'projects'");
-    const existingAssignments = new Map((current.rows[0]?.state_value || []).map((project) => [project.id, JSON.stringify(project.assigneeIds || [])]));
-    const assignmentsChanged = (request.body.value || []).some((project) =>
+    const existingProjects = Array.isArray(current.rows[0]?.state_value) ? current.rows[0].state_value : [];
+    const incomingProjects = Array.isArray(request.body.value) ? request.body.value : [];
+    const existingAssignments = new Map(existingProjects.map((project) => [project.id, JSON.stringify(project.assigneeIds || [])]));
+    const assignmentsChanged = incomingProjects.some((project) =>
       existingAssignments.has(project.id)
         ? existingAssignments.get(project.id) !== JSON.stringify(project.assigneeIds || [])
         : (project.assigneeIds || []).length > 0
     );
-    if (assignmentsChanged) return response.status(403).json({ error: "Only the Superadmin can assign people to projects." });
+    if (request.appAccount.app_role !== "Superadmin" && assignmentsChanged) {
+      return response.status(403).json({ error: "Only the Superadmin can assign people to projects." });
+    }
+    const mergedProjects = new Map(existingProjects.map((project) => [project.id, project]));
+    incomingProjects.forEach((project) => mergedProjects.set(project.id, project));
+    stateValue = [...mergedProjects.values()];
   }
   await appPool.query(`
     INSERT INTO workspace_state (state_key, state_value, updated_by)
     VALUES ($1, $2::jsonb, $3)
     ON CONFLICT (state_key) DO UPDATE
     SET state_value = EXCLUDED.state_value, updated_by = EXCLUDED.updated_by, updated_at = now()
-  `, [request.params.key, JSON.stringify(request.body.value), request.appAccount.id]);
+  `, [request.params.key, JSON.stringify(stateValue), request.appAccount.id]);
   return response.json({ ok: true });
+});
+
+app.post("/api/projects", requireAuth, requireAccount, requireAdmin, async (request, response) => {
+  const name = String(request.body.name || "").trim().slice(0, 160);
+  const description = String(request.body.description || "").trim().slice(0, 1000);
+  const githubUrl = String(request.body.githubUrl || "").trim();
+  const assigneeIds = Array.isArray(request.body.assigneeIds) ? [...new Set(request.body.assigneeIds.map(String))] : [];
+  if (!name) return response.status(400).json({ error: "Enter a project name." });
+  if (!/^https?:\/\/(www\.)?github\.com\/.+/i.test(githubUrl)) return response.status(400).json({ error: "Enter a valid GitHub repository URL." });
+  if (request.appAccount.app_role !== "Superadmin" && assigneeIds.length) {
+    return response.status(403).json({ error: "Only the Superadmin can assign people to projects." });
+  }
+  const project = {
+    id: crypto.randomUUID(),
+    name,
+    description: description || "Project workspace",
+    githubUrl,
+    assigneeIds,
+    resources: [],
+    active: true,
+    status: "Active",
+  };
+  const client = await appPool.connect();
+  try {
+    await client.query("BEGIN");
+    const current = await client.query("SELECT state_value FROM workspace_state WHERE state_key = 'projects' FOR UPDATE");
+    const projects = Array.isArray(current.rows[0]?.state_value) ? current.rows[0].state_value : [];
+    if (projects.some((item) => String(item.name).trim().toLowerCase() === name.toLowerCase())) {
+      await client.query("ROLLBACK");
+      return response.status(409).json({ error: "A project with this name already exists." });
+    }
+    projects.push(project);
+    await client.query(`
+      INSERT INTO workspace_state (state_key, state_value, updated_by)
+      VALUES ('projects', $1::jsonb, $2)
+      ON CONFLICT (state_key) DO UPDATE
+      SET state_value = EXCLUDED.state_value, updated_by = EXCLUDED.updated_by, updated_at = now()
+    `, [JSON.stringify(projects), request.appAccount.id]);
+    await client.query("COMMIT");
+    return response.status(201).json({ project });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Project creation failed:", error instanceof Error ? error.message : "Unknown error");
+    return response.status(503).json({ error: "Could not create this project." });
+  } finally {
+    client.release();
+  }
 });
 
 app.patch("/api/projects/:id", requireAuth, requireAccount, requireAdmin, async (request, response) => {
