@@ -390,7 +390,11 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
     });
 
     response.set("Cache-Control", "private, max-age=30");
-    const people = [...managers, ...interns].filter((person) => person.active !== false);
+    const hiddenLegacyInternNames = new Set(["alisha fatima", "mosa maseko", "neo letswalo"]);
+    const people = [...managers, ...interns].filter((person) => (
+      person.employmentType !== "Intern"
+      || !hiddenLegacyInternNames.has(String(person.name || "").trim().toLowerCase())
+    ));
     const role = request.appAccount.app_role;
     const ownEmail = String(request.appAccount.email).toLowerCase();
     const current = people.find((person) => String(person.email).toLowerCase() === ownEmail);
