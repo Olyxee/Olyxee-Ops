@@ -2041,8 +2041,8 @@ body .app.workspace-shell .workspace-welcome {
     grid-auto-rows: 300px;
     grid-template-areas:
       "welcome welcome welcome welcome tasks tasks tasks tasks tasks tasks tasks tasks"
-      "projects projects projects projects projects projects projects projects departments departments departments departments"
-      "people people people people review review review review review review review review" !important;
+      "people people people people people people people people departments departments departments departments"
+      "projects projects projects projects review review review review review review review review" !important;
   }
 
   .workspace-people .workspace-list {
@@ -2069,8 +2069,8 @@ body .app.workspace-shell .workspace-welcome {
     grid-auto-rows: 290px;
     grid-template-areas:
       "welcome welcome welcome welcome welcome welcome tasks tasks tasks tasks tasks tasks"
-      "projects projects projects projects projects projects departments departments departments departments departments departments"
-      "people people people people people people review review review review review review" !important;
+      "people people people people people people departments departments departments departments departments departments"
+      "projects projects projects projects projects projects review review review review review review" !important;
   }
 
   .workspace-board:not(.workspace-board-member) > .workspace-stack > .workspace-card {
@@ -2090,7 +2090,7 @@ body .app.workspace-shell .workspace-welcome {
   }
 
   .workspace-board:not(.workspace-board-member) .workspace-projects {
-    grid-area: 2 / 1 / 3 / 9 !important;
+    grid-area: 3 / 1 / 4 / 5 !important;
   }
 
   .workspace-board:not(.workspace-board-member) .workspace-departments {
@@ -2098,7 +2098,7 @@ body .app.workspace-shell .workspace-welcome {
   }
 
   .workspace-board:not(.workspace-board-member) .workspace-people {
-    grid-area: 3 / 1 / 4 / 5 !important;
+    grid-area: 2 / 1 / 3 / 9 !important;
   }
 
   .workspace-board:not(.workspace-board-member) .workspace-review {
