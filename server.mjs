@@ -1245,12 +1245,33 @@ app.get("/api/state/:key", requireAuth, requireAccount, async (request, response
 app.put("/api/state/:key", requireAuth, requireAccount, async (request, response) => {
   if (!stateKeys.has(request.params.key)) return response.status(404).json({ error: "Unknown state collection." });
   const appRole = request.appAccount.app_role;
-  if (!["Superadmin", "Admin", "Manager"].includes(appRole)) {
+  if (!["Superadmin", "Admin", "Manager", "Member"].includes(appRole)) {
     return response.status(403).json({ error: "You do not have permission to update workspace state." });
   }
-  if (appRole === "Manager") {
+  if (["Manager", "Member"].includes(appRole) && request.params.key === "staff-statuses") {
+    if (!Array.isArray(request.body.value)) {
+      return response.status(400).json({ error: "Staff statuses must be provided as a list." });
+    }
+    const externalPerson = await resolveExternalPerson(request.appAccount.email);
+    const userId = externalPerson?.external_id;
+    if (!userId) return response.status(403).json({ error: "Your staff profile could not be resolved." });
+    const current = await appPool.query("SELECT state_value FROM workspace_state WHERE state_key = 'staff-statuses'");
+    const currentStatuses = Array.isArray(current.rows[0]?.state_value) ? current.rows[0].state_value : [];
+    const currentByUserId = new Map(currentStatuses.map((status) => [status.userId, status]));
+    const incomingByUserId = new Map(request.body.value.map((status) => [status.userId, status]));
+    const changedOtherStatus = currentStatuses.some((status) =>
+      status.userId !== userId
+      && JSON.stringify(incomingByUserId.get(status.userId)) !== JSON.stringify(status)
+    );
+    const invalidNewStatus = request.body.value.some((status) =>
+      !currentByUserId.has(status.userId) && status.userId !== userId
+    );
+    if (changedOtherStatus || invalidNewStatus) {
+      return response.status(403).json({ error: "You can update only your own work status." });
+    }
+  } else if (appRole === "Manager") {
     if (request.params.key !== "objectives") {
-      return response.status(403).json({ error: "Managers can update only their own weekly objectives." });
+      return response.status(403).json({ error: "Managers can update only their own weekly objectives and work status." });
     }
     if (!Array.isArray(request.body.value)) {
       return response.status(400).json({ error: "Weekly objectives must be provided as a list." });
@@ -1272,6 +1293,8 @@ app.put("/api/state/:key", requireAuth, requireAccount, async (request, response
     if (changedOtherManagerObjective || invalidNewObjective) {
       return response.status(403).json({ error: "Managers can create and update only their own weekly objectives." });
     }
+  } else if (appRole === "Member") {
+    return response.status(403).json({ error: "Members can update only their own work status." });
   }
   if (request.params.key === "projects" && request.appAccount.app_role !== "Superadmin") {
     const current = await appPool.query("SELECT state_value FROM workspace_state WHERE state_key = 'projects'");
