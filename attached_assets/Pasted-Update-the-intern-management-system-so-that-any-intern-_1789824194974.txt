@@ -1,0 +1,104 @@
+Update the intern management system so that any intern currently assigned to an **Unknown**, **Unassigned**, empty, null, or invalid department is automatically reassigned to the most relevant valid department based on their role, title, skills, and current responsibilities.
+
+Use these official departments:
+
+1. **Research & Development (R&D)**
+
+   * Software Engineering
+   * Full-Stack Engineering
+   * Frontend Engineering
+   * Backend Engineering
+   * Product Engineering
+   * Research Engineering
+   * Technical Research
+   * Prototyping and experimentation
+
+2. **AI Engineering**
+
+   * AI Engineering
+   * Machine Learning Engineering
+   * LLM / Agent Engineering
+   * Applied AI
+   * AI integrations
+   * Model development
+   * MLOps where primarily AI-focused
+
+3. **Data & Security**
+
+   * Data Engineering
+   * Data Science
+   * ETL / Data Pipelines
+   * Databases
+   * Data Governance
+   * Cybersecurity
+   * Security Engineering
+   * Access Control
+   * Data Protection
+
+4. **Sales & Marketing**
+
+   * Sales
+   * Marketing
+   * Business Development
+   * Partnerships
+   * Customer Success
+   * Communications
+
+5. **Business Operations**
+
+   * Operations
+   * Finance
+   * HR / People
+   * Administration
+   * Legal / Compliance
+   * Project coordination
+
+### Reassignment logic
+
+For every existing intern:
+
+* If their current department is `Unknown`, `Unassigned`, blank, null, missing, deprecated, or does not match one of the official departments above, determine the correct department from their role/title.
+* Preserve interns who already have a valid department unless their department is clearly inconsistent with their role.
+* Do not delete or duplicate any intern records.
+* Do not modify unrelated intern information such as name, email, start date, end date, projects, notes, or account permissions.
+
+Examples:
+
+* `AI Engineering Intern` → **AI Engineering**
+* `Machine Learning Intern` → **AI Engineering**
+* `Data Engineering Intern` → **Data & Security**
+* `Cybersecurity Intern` → **Data & Security**
+* `Software Engineering Intern` → **Research & Development (R&D)**
+* `Frontend Intern` → **Research & Development (R&D)**
+* `Backend Intern` → **Research & Development (R&D)**
+* `Research Engineer Intern` → **Research & Development (R&D)**
+* `Marketing Intern` → **Sales & Marketing**
+* `Business Development Intern` → **Sales & Marketing**
+* `Operations Intern` → **Business Operations**
+
+### Implementation requirements
+
+Create a reusable department-classification function rather than hardcoding individual intern names.
+
+Use role/title keyword matching with normalized lowercase text. Make the mapping easy to extend later.
+
+If an intern's role cannot be confidently mapped, keep them in an explicit **Unassigned** state and flag them for Supaadmin review instead of guessing.
+
+Update both:
+
+* existing database records where appropriate;
+* the UI so no intern is displayed under an `Unknown Department` section when their role can clearly determine the department.
+
+Add a migration/backfill script for existing intern records.
+
+The migration must:
+
+* be safe to run more than once;
+* not create duplicates;
+* log which interns were changed;
+* record the previous department and new department;
+* skip records that do not require changes.
+
+After migration, verify that every active intern belongs to one of the five official departments or is explicitly marked `Unassigned`.
+
+Also update department dropdowns, filters, profile views, forms, and dashboards so they only use these official department names consistently throughout the application.
