@@ -1491,9 +1491,7 @@ i {
 body .app.workspace-shell {
   min-height: 100dvh;
   background-color: var(--ops-canvas);
-  background-image:
-    linear-gradient(180deg, rgba(239, 246, 246, .62), rgba(239, 245, 244, .76)),
-    url("../attached_assets/image_1789783340211.png");
+  background-image: url("../attached_assets/image_1789783340211.png");
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
@@ -1809,9 +1807,7 @@ body .app.workspace-shell .workspace-welcome {
 
 .login {
   background-color: #eef5f3;
-  background-image:
-    linear-gradient(145deg, rgba(238, 245, 243, .72) 0%, rgba(247, 248, 248, .78) 58%, rgba(233, 240, 240, .74) 100%),
-    url("../attached_assets/image_1789783340211.png");
+  background-image: url("../attached_assets/image_1789783340211.png");
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
