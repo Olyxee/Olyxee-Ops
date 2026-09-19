@@ -169,6 +169,21 @@ body .app.workspace-shell .workspace-topbar {
   font-size: 16px;
 }
 
+.workspace-brand {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 9px;
+}
+
+.workspace-brand img {
+  width: 29px;
+  height: 29px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
 .workspace-brand span {
   display: none;
 }
