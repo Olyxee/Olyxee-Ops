@@ -2040,9 +2040,9 @@ body .app.workspace-shell .workspace-welcome {
   .workspace-board:not(.workspace-board-member) {
     grid-auto-rows: 340px;
     grid-template-areas:
-      "welcome welcome welcome welcome tasks tasks tasks tasks tasks tasks tasks tasks"
-      "projects projects projects projects people people people people people people people people"
-      "departments departments departments departments review review review review review review review review" !important;
+      "welcome welcome welcome welcome welcome welcome tasks tasks tasks tasks tasks tasks"
+      "projects projects projects projects projects projects people people people people people people"
+      "departments departments departments departments departments departments review review review review review review" !important;
   }
 
   .workspace-people .workspace-list {
@@ -2057,6 +2057,12 @@ body .app.workspace-shell .workspace-welcome {
     padding: 11px 2px;
     border-right: 0;
   }
+
+  .workspace-board:not(.workspace-board-member) > .workspace-stack > .workspace-card {
+    height: 340px;
+    min-height: 340px;
+    overflow: hidden;
+  }
 }
 
 @media (min-width: 701px) and (max-width: 1080px) {
@@ -2064,8 +2070,14 @@ body .app.workspace-shell .workspace-welcome {
     grid-auto-rows: 320px;
     grid-template-areas:
       "welcome welcome welcome welcome welcome welcome tasks tasks tasks tasks tasks tasks"
-      "projects projects projects projects people people people people people people people people"
-      "departments departments departments departments review review review review review review review review" !important;
+      "projects projects projects projects projects projects people people people people people people"
+      "departments departments departments departments departments departments review review review review review review" !important;
+  }
+
+  .workspace-board:not(.workspace-board-member) > .workspace-stack > .workspace-card {
+    height: 320px;
+    min-height: 320px;
+    overflow: hidden;
   }
 }
 
