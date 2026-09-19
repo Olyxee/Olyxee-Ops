@@ -395,8 +395,8 @@ app.post("/api/people", requireAuth, requireAccount, async (request, response) =
   const accessRole = String(request.body.accessRole || "");
   const accountStatus = String(request.body.accountStatus || "");
   let reportsTo = String(request.body.reportsTo || "");
-  if (!name || !email || !email.endsWith("@olyxee.com")) {
-    return response.status(400).json({ error: "A valid Olyxee name and email are required." });
+  if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return response.status(400).json({ error: "A valid name and email are required." });
   }
   if (!["Employee", "Intern"].includes(employmentType)) {
     return response.status(400).json({ error: "Choose Employee or Intern." });

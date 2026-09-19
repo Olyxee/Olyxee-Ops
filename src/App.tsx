@@ -298,7 +298,7 @@ function ProjectDetail({project,tasks,team,onBack,onOpen}:{project:Project;tasks
   const [opsActive,setOpsActive]=useState(person?.opsActive!==false);
   const [savingAccount,setSavingAccount]=useState(false);
   const [deletingAccount,setDeletingAccount]=useState(false);
-  const emailValid=email.endsWith("@olyxee.com");
+   const emailValid=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   const managers=team.filter(member=>isManager(member)&&accountOf(member)==="Active");
   const accessOptions:AccessRole[]=livePerson?["Manager","Member"]:administrator?["Superadmin","Admin","Manager","Member"]:["Member"];
   const provision=async()=>{
@@ -335,7 +335,7 @@ function ProjectDetail({project,tasks,team,onBack,onOpen}:{project:Project;tasks
   return <Modal title={editing?"Manage team member":"Add team member"} onClose={onClose} footer={<><button className="btn" onClick={onClose}>Close</button><button className="btn primary" disabled={!name.trim()||!emailValid} onClick={()=>onSave({...person,id:person?.id||"",name,email,department,employmentType,accessRole,accountStatus,reportsTo} as User)}>{editing?"Save changes":"Add person"}</button></>}>
     <div className="form-grid">
       <label className="form-label">Full name<input className="input" value={name} onChange={event=>setName(event.target.value)} placeholder="Full name"/></label>
-      <label className="form-label">Company email<input className="input" value={email} onChange={event=>setEmail(event.target.value)} placeholder="name@olyxee.com"/>{email&&!emailValid&&<span style={{color:"#9a453d"}}>Use an approved @olyxee.com address.</span>}</label>
+       <label className="form-label">Email address<input className="input" type="email" value={email} onChange={event=>setEmail(event.target.value)} placeholder="name@example.com"/>{email&&!emailValid&&<span style={{color:"#9a453d"}}>Enter a valid email address.</span>}</label>
       <label className="form-label">Department<select className="select" value={department} disabled={!administrator||livePerson&&!intern} onChange={event=>setDepartment(event.target.value)}><option value="">Select a department</option>{departmentOptions.map(option=><option key={option}>{option}</option>)}</select></label>
       <label className="form-label">Employment type<select className="select" value={employmentType} disabled={livePerson||!administrator} onChange={event=>setEmploymentType(event.target.value as EmploymentType)}>{["Employee","Intern"].map(value=><option key={value}>{value}</option>)}</select></label>
       <label className="form-label">{livePerson?"People directory role":"Access role"}<select className="select" value={accessRole} disabled={!administrator||livePerson&&intern} onChange={event=>setAccessRole(event.target.value as AccessRole)}>{accessOptions.map(value=><option key={value}>{value}</option>)}</select></label>
