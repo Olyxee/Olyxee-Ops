@@ -262,7 +262,7 @@ function ProjectDetail({user,project,tasks,team,onBack,onOpen,onProjectUpdated,o
     const [commit,setCommit]=useState(true);
     const [file,setFile]=useState("");
     const departmentOptions=[...new Set(team.map(person=>person.department).filter(Boolean))];
-    const people=team.filter(person=>person.active!==false&&person.department===department&&(user.role==="Super Admin"||person.reportsTo===user.id));
+    const people=team.filter(person=>person.active!==false&&person.department===department&&(isAdmin(user)||person.id===user.id||person.reportsTo===user.id));
     const save=()=>onSave({id:"",title:title.trim(),project,department,createdBy:user.id,status:available?"Available":"Planned",assignee:available?undefined:assignee||undefined,priority,due,createdDate:currentDate(),description:desc.trim(),criteria:[],dependencies:[],comments:[],activity:["Task created"],attachments:file?[file]:[],weeklyCommitment:commit,available});
     return <Modal title="Create task" onClose={onClose} footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn primary" disabled={!title.trim()||!project||!due} onClick={save}>Create task</button></>}>
       <div className="form-grid">
