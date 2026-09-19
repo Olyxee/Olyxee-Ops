@@ -58,8 +58,8 @@ export default function App(){
       return manager?[department[0],manager.name,department[2]] as [string,string,string]:department;
     }).filter(Boolean) as [string,string,string][];
   },[departmentsData,team]);
-  const allowed:View[]=accessOf(active)==="Member"?["Tasks","Projects","Notifications","Settings"]:isManager(active)?["Overview","Tasks","Projects","People","Blockers","Weekly Review","Departments","Notifications","Settings"]:["Overview","Tasks","Projects","People","Departments","Blockers","Weekly Review","Notifications","Settings"];
-  const visibleView=allowed.includes(view)?view:(accessOf(active)==="Member"?"Tasks":"Overview");
+  const allowed:View[]=accessOf(active)==="Member"?["Overview","Tasks","Notifications","Settings"]:isManager(active)?["Overview","Tasks","Projects","People","Blockers","Weekly Review","Departments","Notifications","Settings"]:["Overview","Tasks","Projects","People","Departments","Blockers","Weekly Review","Notifications","Settings"];
+  const visibleView=allowed.includes(view)?view:"Overview";
    const visibleTasks=tasks;
   const searchResults=useMemo(()=>{
     const query=searchQuery.trim().toLowerCase(); if(!query)return [];
@@ -83,7 +83,7 @@ export default function App(){
   const selectView=(v:View)=>{setView(v);setTaskId(null);setProjectId(null);setDepartmentId(null);setProfileOpen(false);setNotificationsOpen(false);setSearchQuery("");window.scrollTo({top:0,behavior:"smooth"})};
   const openDepartment=(department:string)=>{setView("Departments");setTaskId(null);setProjectId(null);setDepartmentId(department);setProfileOpen(false);setNotificationsOpen(false);setSearchQuery("");window.scrollTo({top:0,behavior:"smooth"})};
   const openSearchResult=(result:(typeof searchResults)[number])=>{setSearchQuery("");if(result.kind==="task"){setView("Tasks");setProjectId(null);setTaskId(result.target)}else if(result.kind==="project"){setView("Projects");setTaskId(null);setProjectId(result.target)}else selectView(result.target as View)};
-  useEffect(()=>{const controller=new AbortController();fetch("/api/me",{signal:controller.signal}).then(async response=>{if(!response.ok)throw new Error((await response.json()).error||"Your account could not be loaded.");return response.json() as Promise<User>}).then(person=>{setUser(person);setTeam([person]);setView(accessOf(person)==="Member"?"Tasks":"Overview")}).catch(error=>{if(error?.name!=="AbortError")setAccountError(error.message)});return()=>controller.abort()},[]);
+  useEffect(()=>{const controller=new AbortController();fetch("/api/me",{signal:controller.signal}).then(async response=>{if(!response.ok)throw new Error((await response.json()).error||"Your account could not be loaded.");return response.json() as Promise<User>}).then(person=>{setUser(person);setTeam([person]);setView("Overview")}).catch(error=>{if(error?.name!=="AbortError")setAccountError(error.message)});return()=>controller.abort()},[]);
   useEffect(()=>{if(!user)return;setLoading(true);const timer=window.setTimeout(()=>setLoading(false),260);return()=>window.clearTimeout(timer)},[user?.id,view,taskId]);
   useEffect(()=>{if(!user)return;const controller=new AbortController();setDatabasePeopleError("");fetch("/api/people",{signal:controller.signal}).then(async response=>{if(!response.ok)throw new Error("Live people records are unavailable");return response.json() as Promise<{people:DatabasePerson[]}>}).then(result=>{setDatabasePeople(result.people);setTeam(()=>{const merged:User[]=[...result.people];if(!merged.some(person=>person.id===user.id))merged.unshift(user);return merged})}).catch(error=>{if(error?.name!=="AbortError")setDatabasePeopleError("Could not load people from Supabase.")});return()=>controller.abort()},[user?.id]);
   useEffect(()=>{if(!user)return;loadTasks().catch(error=>flash(error instanceof Error?error.message:"Unable to load tasks."))},[user?.id]);
