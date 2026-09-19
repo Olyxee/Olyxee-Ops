@@ -351,6 +351,49 @@ body .app.workspace-shell .workspace-topbar {
   flex: 0 0 auto;
 }
 
+.availability {
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.availability.available {
+  border-color: #b7e3c7;
+  background: #e9f8ee;
+  color: #227a43;
+}
+
+.availability.available i,
+.availability-dot.available {
+  background: #2ca65a;
+  box-shadow: 0 0 0 3px rgba(44, 166, 90, 0.12);
+}
+
+.availability.busy {
+  border-color: #f0b9b5;
+  background: #fdebea;
+  color: #b42318;
+}
+
+.availability.busy i,
+.availability-dot.busy {
+  background: #df3f36;
+  box-shadow: 0 0 0 3px rgba(223, 63, 54, 0.12);
+}
+
+.availability.offline {
+  border-color: #d7dfe2;
+  background: #f0f3f4;
+  color: #687980;
+}
+
+.availability.offline i,
+.availability-dot.offline {
+  background: #89979d;
+  box-shadow: none;
+}
+
 .profile-ios-actions {
   overflow: hidden;
   border: 1px solid rgba(170, 203, 219, 0.5);
