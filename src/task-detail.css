@@ -613,7 +613,7 @@
   --task-soft: #f4f7f7;
   --task-accent: #16877c;
   --task-accent-soft: #e6f3f0;
-  max-width: 940px;
+  max-width: 720px;
   margin: 0 auto;
   color: var(--task-ink);
 }
@@ -664,7 +664,7 @@
 }
 
 .task-detail-intern .task-ownership {
-  display: grid;
+  display: none;
   flex: 0 0 180px;
   gap: 7px;
   padding-top: 12px;
@@ -681,7 +681,7 @@
 }
 
 .task-detail-intern .task-detail-summary {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: none;
   gap: 0;
   margin: 18px 0;
   overflow: hidden;
@@ -707,7 +707,7 @@
 }
 
 .task-detail-intern .task-collaboration {
-  gap: 12px;
+  display: none;
   margin-bottom: 18px;
   padding: 13px 15px;
   border: 1px solid #cfe4e1;
@@ -735,8 +735,8 @@
 
 .task-detail-intern .task-workspace-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 255px;
-  gap: 18px;
+  grid-template-columns: 1fr;
+  gap: 12px;
   align-items: start;
 }
 
@@ -758,15 +758,23 @@
 }
 
 .task-detail-intern .task-main {
+  grid-row: 2;
+  gap: 0;
   padding: 0 !important;
-  border: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
+  overflow: hidden;
 }
 
 .task-detail-intern .task-description-card,
 .task-detail-intern .task-main > .task-section {
-  padding: 18px;
+  padding: 20px;
+  border: 0 !important;
+  border-bottom: 1px solid var(--task-line) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.task-detail-intern .task-main > .task-section:last-child {
+  border-bottom: 0 !important;
 }
 
 .task-detail-intern .task-description-card {
@@ -827,8 +835,7 @@
 
 .task-detail-intern .task-delivery-section {
   min-height: 0;
-  border-color: #cfe4e1 !important;
-  background: #f7fbfa !important;
+  background: var(--task-surface) !important;
 }
 
 .task-detail-intern .task-pr-submit {
@@ -840,8 +847,7 @@
 }
 
 .task-detail-intern .task-side {
-  display: grid;
-  gap: 12px;
+  display: contents;
 }
 
 .task-detail-intern .task-side > .panel {
@@ -849,10 +855,9 @@
 }
 
 .task-detail-intern .task-side > .panel:first-child {
-  position: sticky;
-  top: 16px;
+  grid-row: 1;
   border-color: #cfe4e1 !important;
-  background: #f7fbfa !important;
+  background: var(--task-accent-soft) !important;
 }
 
 .task-detail-intern .task-side .form-grid {
@@ -914,6 +919,55 @@
   border-radius: 9px;
   background: #f4faf8;
   box-shadow: none;
+}
+
+.task-detail-intern details > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 54px;
+  padding: 0 20px;
+  color: #40545a;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  list-style: none;
+}
+
+.task-detail-intern details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.task-detail-intern details > summary > span {
+  min-width: 23px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--task-soft);
+  color: var(--task-muted);
+  font-size: 9px;
+  text-align: center;
+}
+
+.task-detail-intern .task-secondary-section {
+  padding: 0 !important;
+}
+
+.task-detail-intern .task-secondary-content {
+  padding: 0 20px 20px;
+}
+
+.task-detail-intern .task-secondary-content > .task-section-heading {
+  display: none;
+}
+
+.task-detail-intern .task-activity-panel {
+  grid-row: 3;
+  padding: 0;
+}
+
+.task-detail-intern .task-activity-panel .task-activity {
+  padding: 0 20px 18px;
 }
 
 @media (max-width: 760px) {
