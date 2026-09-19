@@ -374,6 +374,7 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
     const interns = internResult.rows.map((intern) => {
       const active = String(intern.employment_status || "").toLowerCase() === "active";
       const supervisorKey = String(intern.supervisor_email || "").toLowerCase();
+      const supervisorNameKey = String(intern.supervisor_name || "").trim().toLowerCase();
       const opsAccount = opsAccounts.get(String(intern.email || "").toLowerCase());
       const opsProfile = opsAccount?.profile_data || {};
       return {
@@ -385,7 +386,7 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
         accountStatus: opsAccount ? (opsAccount.active ? "Active" : "Suspended") : "Pending",
         department: resolveDepartment(intern).department,
         position: intern.position || "Intern",
-        reportsTo: intern.supervisor_account_id ? `account-${intern.supervisor_account_id}` : managerIds.get(supervisorKey),
+        reportsTo: intern.supervisor_account_id ? `account-${intern.supervisor_account_id}` : managerIds.get(supervisorKey) || managerIds.get(supervisorNameKey),
         role: "Intern",
         avatarUrl: opsProfile.avatarUrl,
         contactDetails: opsProfile.contactDetails,
@@ -957,8 +958,13 @@ async function getManagerReportIds(identity) {
            i.supervisor_account_id IS NULL
            AND lower(trim(coalesce(i.supervisor_email, ''))) = lower(trim(coalesce(manager.email, '')))
          )
+         OR (
+           i.supervisor_account_id IS NULL
+           AND lower(trim(coalesce(i.supervisor_name, ''))) = lower(trim(coalesce(manager.display_name, '')))
+         )
       WHERE i.archived_at IS NULL
         AND lower(coalesce(i.employment_status, '')) = 'active'
+         AND manager.active = true
         AND lower(manager.email) = lower($1)
       UNION ALL
       SELECT 'account-' || staff.id::text AS id
