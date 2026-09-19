@@ -525,22 +525,8 @@ body .app.workspace-shell .workspace-topbar {
     padding-top: 26px;
   }
 
-  .workspace-board,
-  .workspace-board:not(.workspace-board-member) {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    grid-template-areas:
-      "welcome tasks"
-      "projects projects"
-      "people departments"
-      "review review";
+  .workspace-board {
     gap: 16px !important;
-  }
-
-  .workspace-board-member {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    grid-template-areas:
-      "welcome tasks"
-      "projects projects";
   }
 
   .workspace-tasks .workspace-list {
