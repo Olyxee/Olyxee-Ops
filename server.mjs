@@ -948,32 +948,31 @@ async function getTaskIdentity(request) {
 
 async function getManagerReportIds(identity) {
   if (!peoplePool || identity.role !== "Manager") return [];
+  const managerIdMatch = /^account-(\d+)$/.exec(identity.externalId || "");
+  const managerAccountId = managerIdMatch ? Number(managerIdMatch[1]) : null;
   const result = await peoplePool.query(`
-    SELECT report.id FROM (
+    SELECT DISTINCT report.id FROM (
       SELECT 'intern-' || i.id::text AS id
       FROM public.interns i
-       JOIN public.workspace_accounts manager
-         ON i.supervisor_account_id = manager.id
+      JOIN public.workspace_accounts manager
+        ON i.supervisor_account_id = manager.id
+         OR lower(trim(coalesce(i.supervisor_email, ''))) = lower(trim(coalesce(manager.email, '')))
          OR (
-           i.supervisor_account_id IS NULL
-           AND lower(trim(coalesce(i.supervisor_email, ''))) = lower(trim(coalesce(manager.email, '')))
-         )
-         OR (
-           i.supervisor_account_id IS NULL
-           AND lower(trim(coalesce(i.supervisor_name, ''))) = lower(trim(coalesce(manager.display_name, '')))
+           lower(trim(coalesce(i.supervisor_name, ''))) = lower(trim(coalesce(manager.display_name, '')))
          )
       WHERE i.archived_at IS NULL
         AND lower(coalesce(i.employment_status, '')) = 'active'
-         AND manager.active = true
-        AND lower(manager.email) = lower($1)
+        AND manager.active = true
+        AND (manager.id = $1 OR lower(trim(manager.email)) = lower(trim($2)))
       UNION ALL
       SELECT 'account-' || staff.id::text AS id
       FROM public.workspace_accounts staff
       JOIN public.workspace_accounts manager ON staff.reports_to_account_id = manager.id
       WHERE staff.active = true
-        AND lower(manager.email) = lower($1)
+        AND manager.active = true
+        AND (manager.id = $1 OR lower(trim(manager.email)) = lower(trim($2)))
     ) report
-  `, [requestEmail(identity)]);
+  `, [managerAccountId, requestEmail(identity)]);
   return result.rows.map((row) => row.id);
 }
 
