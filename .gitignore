@@ -2,4 +2,7 @@ node_modules
 dist
 screenshots/
 .env
+.env.local
+.env.*.local
+!.env.example
 .DS_Store
