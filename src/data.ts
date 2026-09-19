@@ -1,6 +1,6 @@
 export type Role="Super Admin"|"Manager"|"Member"|"Intern";
 export type Status="Inbox"|"Planned"|"Available"|"Assigned"|"In Progress"|"Blocked"|"In Review"|"Done"|"Cancelled"|"Backlog"|"In progress"|"In review";
-export type User={id:string;name:string;email:string;role:Role;department:string;reportsTo?:string;active?:boolean;avatarUrl?:string};
+export type User={id:string;name:string;email:string;role:Role;department:string;reportsTo?:string;active?:boolean;avatarUrl?:string;contactDetails?:string;githubUsername?:string};
 export type Availability="Available"|"Busy"|"Offline";
 export type StaffStatus={userId:string;availability:Availability;start:string;end:string;note:string;updatedAt:string};
 export type Blocker={reason:string;need:string;waitingFor:string;severity:"Low"|"Medium"|"High"|"Critical";reportedBy:string;createdAt:string;resolvedAt?:string};
