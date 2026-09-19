@@ -185,6 +185,114 @@ body .app.workspace-shell .workspace-topbar {
   border-radius: 10px;
 }
 
+.profile-menu-ios {
+  width: 286px;
+  padding: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: 18px;
+  background: rgba(244, 250, 253, 0.88);
+  box-shadow: 0 22px 55px rgba(10, 63, 96, 0.24);
+  backdrop-filter: blur(24px) saturate(145%);
+  -webkit-backdrop-filter: blur(24px) saturate(145%);
+}
+
+.profile-ios-account {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 12px 17px;
+  text-align: center;
+}
+
+.profile-ios-account .avatar {
+  margin-bottom: 10px;
+  border: 3px solid rgba(255, 255, 255, 0.72);
+  box-shadow: 0 5px 16px rgba(15, 73, 105, 0.16);
+}
+
+.profile-ios-account > b {
+  color: #153347;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+}
+
+.profile-ios-account > span {
+  max-width: 100%;
+  margin-top: 3px;
+  overflow: hidden;
+  color: #67808e;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-ios-account > small {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 9px;
+  color: #4f6f7e;
+  font-size: 10px;
+}
+
+.profile-ios-account .availability-dot {
+  display: inline-block;
+  flex: 0 0 auto;
+}
+
+.profile-ios-actions {
+  overflow: hidden;
+  border: 1px solid rgba(170, 203, 219, 0.5);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.profile-ios-actions > button {
+  width: 100%;
+  min-height: 50px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 11px;
+  border: 0;
+  border-bottom: 1px solid rgba(192, 213, 223, 0.58);
+  background: transparent;
+  color: #183746;
+  text-align: left;
+}
+
+.profile-ios-actions > button:last-child {
+  border-bottom: 0;
+}
+
+.profile-ios-actions > button:hover,
+.profile-ios-actions > button:focus-visible {
+  background: rgba(219, 239, 248, 0.72);
+  outline: none;
+}
+
+.profile-ios-actions > button:active {
+  background: rgba(204, 229, 241, 0.86);
+  transform: scale(0.985);
+}
+
+.profile-ios-actions > button > b {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.profile-ios-actions > button > svg {
+  color: #7c929d;
+}
+
+.profile-ios-actions .profile-action-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+}
+
 @media (max-width: 1080px) {
   .workspace-content {
     padding-top: 26px;
