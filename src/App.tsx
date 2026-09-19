@@ -26,6 +26,7 @@ export default function App(){
  const updateTask=(id:string,patch:Partial<Task>)=>{setTasks(ts=>ts.map(t=>t.id===id?{...t,...patch}:t));log(`Updated task ${id}`);flash("Task updated");};
  const selectView=(v:View)=>{setView(v);setTaskId(null);setMobile(false)};
   useEffect(()=>{if(!user)return;setLoading(true);const timer=window.setTimeout(()=>setLoading(false),260);return()=>window.clearTimeout(timer)},[user?.id,view,taskId]);
+  useEffect(()=>{setTeam(current=>{let changed=false;const next=current.map(person=>{const shouldManage=["u2","u6","u7"].includes(person.id)||String(person.role)==="Department Admin";const role=shouldManage?"Manager":person.role;const email=person.id==="u1"?"info@olyxee.com":person.email;const reportsTo=person.id==="u5"?"u7":shouldManage?"u1":person.reportsTo;if(role!==person.role||email!==person.email||reportsTo!==person.reportsTo){changed=true;return {...person,role:role as Role,email,reportsTo}}return person});return changed?next:current})},[]);
   if(!user)return <Login onSelect={u=>{setUser(u);setView(u.role==="Intern"?"My Work":"Overview")}}/>;
   if(loading)return <LoadingShell user={active}/>;
  const selected=visibleTasks.find(t=>t.id===taskId);
