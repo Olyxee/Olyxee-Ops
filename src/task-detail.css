@@ -601,3 +601,366 @@
     grid-column: auto;
   }
 }
+
+/* Member task detail: a calm, native-feeling work surface.
+   The existing data/actions stay intact; this layer changes the visual rhythm
+   from dashboard tiles to one obvious next step at a time. */
+.task-detail-intern {
+  --task-ink: #182b32;
+  --task-muted: #718087;
+  --task-line: #dfe5e7;
+  --task-surface: #fff;
+  --task-soft: #f4f7f7;
+  --task-accent: #16877c;
+  --task-accent-soft: #e6f3f0;
+  max-width: 940px;
+  margin: 0 auto;
+  color: var(--task-ink);
+}
+
+.task-detail-intern > .btn:first-child {
+  min-height: 34px;
+  margin: 0 0 20px;
+  padding: 0 12px;
+  border: 1px solid var(--task-line);
+  border-radius: 9px;
+  background: var(--task-surface);
+  color: #506269;
+  font-size: 11px;
+  box-shadow: 0 1px 2px rgba(22, 43, 50, .04);
+}
+
+.task-detail-intern > .btn:first-child:hover {
+  border-color: #b8cbc9;
+  background: var(--task-soft);
+}
+
+.task-detail-intern .task-workspace-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 0 2px 22px;
+  border-bottom: 1px solid var(--task-line);
+}
+
+.task-detail-intern .task-workspace-head .eyebrow {
+  color: var(--task-accent);
+  font-size: 10px;
+  letter-spacing: .08em;
+}
+
+.task-detail-intern .task-workspace-head .title {
+  max-width: 680px;
+  margin: 8px 0 12px;
+  color: var(--task-ink);
+  font-size: clamp(25px, 4vw, 38px);
+  line-height: 1.08;
+  letter-spacing: -.045em;
+}
+
+.task-detail-intern .task-workspace-head .inline {
+  gap: 10px;
+}
+
+.task-detail-intern .task-ownership {
+  display: grid;
+  flex: 0 0 180px;
+  gap: 7px;
+  padding-top: 12px;
+  color: var(--task-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.task-detail-intern .task-ownership b {
+  display: block;
+  margin-top: 2px;
+  color: var(--task-ink);
+  font-size: 11px;
+}
+
+.task-detail-intern .task-detail-summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin: 18px 0;
+  overflow: hidden;
+  border: 1px solid var(--task-line);
+  border-radius: 12px;
+  background: var(--task-surface);
+  box-shadow: 0 2px 7px rgba(28, 48, 53, .035);
+}
+
+.task-detail-intern .task-detail-summary > span {
+  padding: 13px 15px;
+  border-right: 1px solid var(--task-line);
+}
+
+.task-detail-intern .task-detail-summary small {
+  color: #8a969a;
+  font-size: 9px;
+}
+
+.task-detail-intern .task-detail-summary b {
+  color: var(--task-ink);
+  font-size: 12px;
+}
+
+.task-detail-intern .task-collaboration {
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 13px 15px;
+  border: 1px solid #cfe4e1;
+  border-radius: 12px;
+  background: var(--task-accent-soft);
+  box-shadow: none;
+}
+
+.task-detail-intern .task-collaboration-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: #d3ebe6;
+  color: var(--task-accent);
+}
+
+.task-detail-intern .task-collaboration small {
+  color: #6a8581;
+}
+
+.task-detail-intern .task-collaboration b,
+.task-detail-intern .task-collaboration > p {
+  color: #315c57;
+}
+
+.task-detail-intern .task-workspace-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 255px;
+  gap: 18px;
+  align-items: start;
+}
+
+.task-detail-intern .task-main {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  min-width: 0;
+}
+
+.task-detail-intern .task-main,
+.task-detail-intern .task-main > .task-section,
+.task-detail-intern .task-description-card,
+.task-detail-intern .task-side > .panel {
+  border: 1px solid var(--task-line) !important;
+  border-radius: 12px !important;
+  background: var(--task-surface) !important;
+  box-shadow: 0 2px 8px rgba(28, 48, 53, .035) !important;
+}
+
+.task-detail-intern .task-main {
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.task-detail-intern .task-description-card,
+.task-detail-intern .task-main > .task-section {
+  padding: 18px;
+}
+
+.task-detail-intern .task-description-card {
+  min-height: auto;
+}
+
+.task-detail-intern .task-description-card .task-section-heading > span,
+.task-detail-intern .task-section-heading > span {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--task-soft);
+  color: var(--task-accent);
+}
+
+.task-detail-intern .task-section-heading {
+  margin-bottom: 12px;
+}
+
+.task-detail-intern .task-section-heading h3,
+.task-detail-intern .task-main > .task-section > h3,
+.task-detail-intern .task-side h3 {
+  color: var(--task-ink);
+  font-size: 14px;
+  letter-spacing: -.02em;
+}
+
+.task-detail-intern .task-description-card > p {
+  margin: 13px 0 0;
+  color: #43565d;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.task-detail-intern .task-main > .task-section:nth-child(2) {
+  min-height: 0;
+}
+
+.task-detail-intern .task-checklist {
+  display: grid;
+  gap: 0;
+  margin: 0 -5px 12px;
+}
+
+.task-detail-intern .task-checklist label {
+  min-height: 43px;
+  padding: 8px 5px;
+  border-bottom: 1px solid #edf0f0;
+  color: #40545a;
+  font-size: 12px;
+}
+
+.task-detail-intern .task-checklist input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--task-accent);
+}
+
+.task-detail-intern .task-delivery-section {
+  min-height: 0;
+  border-color: #cfe4e1 !important;
+  background: #f7fbfa !important;
+}
+
+.task-detail-intern .task-pr-submit {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid #d6e7e4;
+  border-radius: 10px;
+  background: var(--task-surface);
+}
+
+.task-detail-intern .task-side {
+  display: grid;
+  gap: 12px;
+}
+
+.task-detail-intern .task-side > .panel {
+  padding: 16px;
+}
+
+.task-detail-intern .task-side > .panel:first-child {
+  position: sticky;
+  top: 16px;
+  border-color: #cfe4e1 !important;
+  background: #f7fbfa !important;
+}
+
+.task-detail-intern .task-side .form-grid {
+  gap: 9px;
+}
+
+.task-detail-intern .task-next-step-copy {
+  margin: -5px 0 13px;
+  color: #607278;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.task-detail-intern .task-side .btn,
+.task-detail-intern .task-pr-submit .btn,
+.task-detail-intern .task-update-form .btn {
+  min-height: 36px;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 650;
+  transition: transform .16s ease, background .16s ease, border-color .16s ease;
+}
+
+.task-detail-intern .task-side .btn.primary,
+.task-detail-intern .task-pr-submit .btn.primary {
+  background: var(--task-accent);
+  border-color: var(--task-accent);
+}
+
+.task-detail-intern .task-side .btn:active,
+.task-detail-intern .task-pr-submit .btn:active,
+.task-detail-intern .task-update-form .btn:active {
+  transform: scale(.98);
+}
+
+.task-detail-intern .task-side .btn.danger {
+  color: #9b4b45;
+  border-color: #e3c5c1;
+  background: #fff8f7;
+}
+
+.task-detail-intern .task-update-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 15px;
+  padding-top: 14px;
+  border-top: 1px solid #e8eded;
+}
+
+.task-detail-intern .task-feed article {
+  padding: 12px 0;
+  border-bottom: 1px solid #edf0f0;
+}
+
+.task-detail-intern .task-feed article.manager-comment {
+  padding: 12px;
+  border: 1px solid #d5e5e2;
+  border-left: 3px solid var(--task-accent);
+  border-radius: 9px;
+  background: #f4faf8;
+  box-shadow: none;
+}
+
+@media (max-width: 760px) {
+  .task-detail-intern .task-workspace-head {
+    display: block;
+  }
+
+  .task-detail-intern .task-ownership {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding-top: 16px;
+  }
+
+  .task-detail-intern .task-detail-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .task-detail-intern .task-detail-summary > span:nth-child(2) {
+    border-right: 0;
+  }
+
+  .task-detail-intern .task-detail-summary > span:nth-child(-n+2) {
+    border-bottom: 1px solid var(--task-line);
+  }
+
+  .task-detail-intern .task-workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .task-detail-intern .task-side {
+    display: contents;
+  }
+
+  .task-detail-intern .task-side > .panel:first-child {
+    grid-row: 1;
+  }
+
+  .task-detail-intern .task-main {
+    grid-row: 2;
+  }
+
+  .task-detail-intern .task-side > .panel:last-child {
+    grid-row: 3;
+  }
+
+  .task-detail-intern .task-side > .panel:first-child {
+    position: static;
+  }
+}
