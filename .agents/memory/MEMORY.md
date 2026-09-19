@@ -1,0 +1,1 @@
+- [Staff data access](staff-data-access.md) — expose aggregate metrics only until verified authentication protects person-level staff records.

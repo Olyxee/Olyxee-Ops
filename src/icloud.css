@@ -63,6 +63,108 @@ body .app.workspace-shell {
   color: #3f6c82;
 }
 
+.live-staff-summary {
+  overflow: hidden;
+  margin-bottom: 18px;
+  border: 1px solid rgba(151, 198, 219, 0.58);
+  border-radius: 15px;
+  background: rgba(232, 247, 253, 0.86);
+  box-shadow: 0 8px 24px rgba(26, 91, 121, 0.08);
+}
+
+.live-staff-head {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(162, 201, 218, 0.42);
+}
+
+.live-staff-head > span,
+.live-staff-head > small {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.live-staff-head > span {
+  color: #1e5169;
+  font-size: 12px;
+}
+
+.live-staff-head > small {
+  color: #4f7484;
+  font-size: 10px;
+}
+
+.live-staff-head > small i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #43a26f;
+  box-shadow: 0 0 0 3px rgba(67, 162, 111, 0.12);
+}
+
+.live-staff-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.live-staff-metrics > div {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  padding: 16px;
+  border-right: 1px solid rgba(178, 207, 220, 0.42);
+}
+
+.live-staff-metrics > div:last-child {
+  border-right: 0;
+}
+
+.live-staff-metrics span {
+  overflow: hidden;
+  color: #607b87;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.live-staff-metrics strong {
+  color: #173c4d;
+  font-size: 24px;
+  letter-spacing: -0.04em;
+}
+
+.live-staff-summary > p {
+  margin: 0;
+  padding: 10px 16px;
+  color: #5f7985;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.staff-database-notice {
+  margin-bottom: 18px;
+}
+
+.loading-live-summary {
+  min-height: 125px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  align-items: center;
+  gap: 18px;
+  padding: 24px;
+}
+
+.loading-live-summary .loading-bar {
+  height: 54px;
+  border-radius: 10px;
+}
+
 /* Loading state mirrors the live workspace layout */
 .loading-topbar {
   pointer-events: none;
@@ -1019,6 +1121,33 @@ body .app.workspace-shell .workspace-topbar {
 }
 
 @media (max-width: 700px) {
+  .live-staff-head {
+    align-items: flex-start;
+    flex-direction: column;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .live-staff-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .live-staff-metrics > div {
+    border-bottom: 1px solid rgba(178, 207, 220, 0.42);
+  }
+
+  .live-staff-metrics > div:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .live-staff-metrics > div:last-child {
+    border-bottom: 0;
+  }
+
+  .loading-live-summary {
+    grid-template-columns: 1fr;
+  }
+
   .loading-board {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
