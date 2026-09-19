@@ -13,7 +13,7 @@ export type Notice={id:string;userId:string;title:string;body:string;read:boolea
 export type ObjectiveStatus="Not started"|"In progress"|"At risk"|"Complete";
 export type WeeklyObjective={id:string;title:string;description:string;managerId:string;priority:"Critical"|"High"|"Medium"|"Low";dueDate:string;status:ObjectiveStatus;createdBy:string;createdDate:string};
 export type Access={id:string;requester:string;department:string;resourceType:string;system:string;relatedTask:string;reason:string;status:"Pending"|"Approved"|"Rejected";date:string};
-export type ProjectResource={id:string;name:string;kind:"document"|"image"};
+export type ProjectResource={id:string;name:string;kind:"document"|"image";url?:string};
 export type Project={id:string;name:string;description:string;githubUrl:string;assigneeIds:string[];resources:ProjectResource[];active:boolean;status:"Active"|"Archived";logoUrl?:string};
 
 export const users:User[]=[];

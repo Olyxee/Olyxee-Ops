@@ -305,7 +305,7 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
         ORDER BY active DESC, display_name
       `),
       appPool.query(`
-        SELECT email, role, active
+        SELECT email, role, active, profile_data
         FROM public.ops_users
       `),
     ]);
@@ -324,9 +324,10 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
       );
       const isManager = account.manage_interns || account.manage_projects;
       const opsAccount = opsAccounts.get(String(account.email || "").toLowerCase());
+      const opsProfile = opsAccount?.profile_data || {};
       return {
         id: `account-${account.id}`,
-        name: account.display_name || account.email,
+        name: opsProfile.displayName || account.display_name || account.email,
         email: account.email,
         employmentType: "Employee",
         accessRole: opsAccount?.role || (isManager ? "Manager" : "Member"),
@@ -334,6 +335,9 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
         department: matchingIntern?.department || "Operations",
         position: isManager ? "Department Manager" : "Team Member",
         role: isManager ? "Manager" : "Member",
+        avatarUrl: opsProfile.avatarUrl,
+        contactDetails: opsProfile.contactDetails,
+        githubUsername: opsProfile.githubUsername,
         active: Boolean(account.active),
         hasOpsAccess: Boolean(opsAccount),
         opsRole: opsAccount?.role,
@@ -346,9 +350,10 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
       const active = String(intern.employment_status || "").toLowerCase() === "active";
       const supervisorKey = String(intern.supervisor_email || intern.supervisor_name || "").toLowerCase();
       const opsAccount = opsAccounts.get(String(intern.email || "").toLowerCase());
+      const opsProfile = opsAccount?.profile_data || {};
       return {
         id: `intern-${intern.id}`,
-        name: intern.full_name,
+        name: opsProfile.displayName || intern.full_name,
         email: intern.email || "",
         employmentType: "Intern",
         accessRole: opsAccount?.role || "Member",
@@ -357,6 +362,9 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
         position: intern.position || "Intern",
         reportsTo: managerIds.get(supervisorKey),
         role: "Intern",
+        avatarUrl: opsProfile.avatarUrl,
+        contactDetails: opsProfile.contactDetails,
+        githubUsername: opsProfile.githubUsername,
         active,
         hasOpsAccess: Boolean(opsAccount),
         opsRole: opsAccount?.role,
@@ -704,7 +712,7 @@ app.delete("/api/people/:id/ops-account", requireAuth, requireAccount, async (re
   }
 });
 
-app.get("/api/state/:key", requireAuth, requireAccount, requireAdmin, async (request, response) => {
+app.get("/api/state/:key", requireAuth, requireAccount, async (request, response) => {
   if (!stateKeys.has(request.params.key)) return response.status(404).json({ error: "Unknown state collection." });
   const result = await appPool.query("SELECT state_value FROM workspace_state WHERE state_key = $1", [request.params.key]);
   if (!result.rows[0]) return response.status(404).json({ error: "State collection has not been initialized." });
@@ -713,6 +721,16 @@ app.get("/api/state/:key", requireAuth, requireAccount, requireAdmin, async (req
 
 app.put("/api/state/:key", requireAuth, requireAccount, requireAdmin, async (request, response) => {
   if (!stateKeys.has(request.params.key)) return response.status(404).json({ error: "Unknown state collection." });
+  if (request.params.key === "projects" && request.appAccount.app_role !== "Superadmin") {
+    const current = await appPool.query("SELECT state_value FROM workspace_state WHERE state_key = 'projects'");
+    const existingAssignments = new Map((current.rows[0]?.state_value || []).map((project) => [project.id, JSON.stringify(project.assigneeIds || [])]));
+    const assignmentsChanged = (request.body.value || []).some((project) =>
+      existingAssignments.has(project.id)
+        ? existingAssignments.get(project.id) !== JSON.stringify(project.assigneeIds || [])
+        : (project.assigneeIds || []).length > 0
+    );
+    if (assignmentsChanged) return response.status(403).json({ error: "Only the Superadmin can assign people to projects." });
+  }
   await appPool.query(`
     INSERT INTO workspace_state (state_key, state_value, updated_by)
     VALUES ($1, $2::jsonb, $3)
@@ -720,6 +738,23 @@ app.put("/api/state/:key", requireAuth, requireAccount, requireAdmin, async (req
     SET state_value = EXCLUDED.state_value, updated_by = EXCLUDED.updated_by, updated_at = now()
   `, [request.params.key, JSON.stringify(request.body.value), request.appAccount.id]);
   return response.json({ ok: true });
+});
+
+app.post("/api/projects/:id/resources", requireAuth, requireAccount, async (request, response) => {
+  const { name, kind, url } = request.body || {};
+  if (!name || !["document", "image"].includes(kind) || !url) return response.status(400).json({ error: "A valid uploaded resource is required." });
+  const result = await appPool.query("SELECT state_value FROM workspace_state WHERE state_key = 'projects'");
+  const projects = result.rows[0]?.state_value || [];
+  const project = projects.find((item) => item.id === request.params.id);
+  if (!project) return response.status(404).json({ error: "Project not found." });
+  const resource = { id: crypto.randomUUID(), name: String(name).slice(0, 255), kind, url };
+  project.resources = [...(project.resources || []), resource];
+  await appPool.query(`
+    UPDATE workspace_state
+    SET state_value = $1::jsonb, updated_by = $2, updated_at = now()
+    WHERE state_key = 'projects'
+  `, [JSON.stringify(projects), request.appAccount.id]);
+  return response.status(201).json({ resource });
 });
 
 app.post("/api/assets", requireAuth, requireAccount, upload.single("file"), async (request, response) => {
@@ -750,8 +785,8 @@ app.get("/api/assets/:id", requireAuth, requireAccount, async (request, response
     SELECT storage_path, mime_type, original_filename
     FROM public.app_assets
     WHERE id = $1
-      AND (owner_user_id = $2 OR $3 = ANY(ARRAY['Superadmin', 'Admin']))
-  `, [request.params.id, request.appAccount.id, request.appAccount.app_role]);
+      AND $2 IS NOT NULL
+  `, [request.params.id, request.appAccount.id]);
   const asset = result.rows[0];
   if (!asset) return response.status(404).json({ error: "Asset not found." });
   response.type(asset.mime_type);
