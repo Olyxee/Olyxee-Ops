@@ -2036,6 +2036,41 @@ body .app.workspace-shell .workspace-welcome {
   background: rgba(247, 251, 250, .58);
 }
 
+@media (min-width: 1081px) {
+  .workspace-board:not(.workspace-board-member) {
+    grid-template-areas:
+      "welcome welcome welcome welcome tasks tasks tasks tasks tasks tasks tasks tasks"
+      "projects projects projects projects people people people people people people people people"
+      "departments departments departments departments review review review review review review review review" !important;
+  }
+
+  .workspace-people .workspace-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 24px;
+    padding: 8px 20px 14px;
+  }
+
+  .workspace-people .workspace-list > button {
+    min-width: 0;
+    padding-right: 8px;
+  }
+
+  .workspace-people .workspace-list > button:nth-child(odd) {
+    padding-right: 18px;
+    border-right: 1px solid #e6edeb;
+  }
+}
+
+@media (min-width: 701px) and (max-width: 1080px) {
+  .workspace-board:not(.workspace-board-member) {
+    grid-template-areas:
+      "welcome welcome welcome welcome welcome welcome tasks tasks tasks tasks tasks tasks"
+      "projects projects projects projects people people people people people people people people"
+      "departments departments departments departments review review review review review review review review" !important;
+  }
+}
+
 @media (max-width: 560px) {
   .department-card-actions {
     grid-template-columns: 1fr 1fr;
