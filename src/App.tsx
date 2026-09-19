@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, Archive, ArrowLeft, Bell, BriefcaseBusiness, Building2, Check, ChevronRight, CircleHelp, ClipboardList, Clock3, FileCheck2, FileText, GitPullRequest, Image, LayoutDashboard, LogOut, Menu, Pencil, Plus, Search, Settings, Upload, UserPlus, UserRound, Users, X } from "lucide-react";
 import { Audit, departments, seedProjects, seedTasks, seedAudit, seedNotices, seedWeeklyObjectives, seedStaffStatuses, Project, ProjectResource, Task, User, users, Notice, AccessRole, EmploymentType, AccountStatus, WeeklyObjective, ObjectiveStatus, StaffStatus, Availability } from "./data";
 import { OFFICIAL_DEPARTMENTS, UNASSIGNED_DEPARTMENT } from "../shared/departments.mjs";
@@ -26,8 +26,9 @@ function ProjectLogo({project,size=44}:{project:Project;size?:number}){return pr
 function AvatarStack({people}:{people:User[]}){return <div className="avatar-stack" aria-label={`${people.length} assigned people`}>{people.slice(0,4).map((person,index)=><span key={person.id} style={{zIndex:4-index}}><Avatar person={person} size={25}/></span>)}{people.length>4&&<span className="avatar-more">+{people.length-4}</span>}</div>}
 function useStore<T>(key:string, initial:T){
   const [value,setValue]=useState<T>(initial); const [hydrated,setHydrated]=useState(false);
+  const skipInitialPersist=useRef(true);
   useEffect(()=>{const controller=new AbortController();fetch(`/api/state/${key}`,{signal:controller.signal}).then(async response=>{if(response.status===404){await fetch(`/api/state/${key}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({value:initial}),signal:controller.signal});return initial}if(!response.ok)throw new Error("Could not load workspace data");return (await response.json()).value as T}).then(next=>{setValue(next);setHydrated(true)}).catch(error=>{if(error?.name!=="AbortError")console.error(error)});return()=>controller.abort()},[key]);
-  useEffect(()=>{if(!hydrated)return;const timer=window.setTimeout(()=>fetch(`/api/state/${key}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({value})}).catch(console.error),250);return()=>window.clearTimeout(timer)},[key,value,hydrated]);
+  useEffect(()=>{if(!hydrated)return;if(skipInitialPersist.current){skipInitialPersist.current=false;return}const timer=window.setTimeout(()=>fetch(`/api/state/${key}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({value})}).catch(console.error),250);return()=>window.clearTimeout(timer)},[key,value,hydrated]);
   return [value,setValue] as const
 }
 

@@ -7,4 +7,4 @@ For permission checks, resolve an intern's supervisor by matching the account ID
 
 **Why:** Some active intern records contain only a supervisor name, while others use an account ID or email, and legacy records can contain conflicting populated fields. Treating email or name only as fallbacks when the account ID is empty still rejects valid Manager assignments.
 
-**How to apply:** Any feature that scopes interns to a Manager—task assignment, reviews, people lists, or reporting—must use the same three-format resolution and require an active Manager and active, non-archived intern.
+**How to apply:** Any feature that scopes interns to a Manager—task assignment, reviews, people lists, or reporting—must use the same three-format resolution. For task assignment, a non-archived report is active when either the People record or their Ops account is active.

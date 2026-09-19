@@ -961,7 +961,6 @@ async function getManagerReportIds(identity) {
            lower(trim(coalesce(i.supervisor_name, ''))) = lower(trim(coalesce(manager.display_name, '')))
          )
       WHERE i.archived_at IS NULL
-        AND lower(coalesce(i.employment_status, '')) = 'active'
         AND manager.active = true
         AND (manager.id = $1 OR lower(trim(manager.email)) = lower(trim($2)))
       UNION ALL
@@ -1007,18 +1006,30 @@ function canReviewTask(task, identity) {
     || (identity.role === "Manager" && identity.reportIds.includes(task.assignee_external_id));
 }
 
-async function isActiveExternalPerson(externalId) {
-  if (!externalId || !peoplePool) return false;
+async function isAssignablePerson(externalId) {
+  if (!externalId || !peoplePool || !appPool) return false;
   const result = await peoplePool.query(`
-    SELECT 1 FROM (
-      SELECT 'account-' || id::text AS id FROM public.workspace_accounts WHERE active = true
+    SELECT id, email, externally_active FROM (
+      SELECT 'account-' || id::text AS id, email, active AS externally_active
+      FROM public.workspace_accounts
       UNION ALL
-      SELECT 'intern-' || id::text FROM public.interns
-      WHERE archived_at IS NULL AND lower(coalesce(employment_status, '')) = 'active'
+      SELECT 'intern-' || id::text, email, lower(coalesce(employment_status, '')) = 'active'
+      FROM public.interns
+      WHERE archived_at IS NULL
     ) people
     WHERE id = $1
   `, [externalId]);
-  return Boolean(result.rowCount);
+  const person = result.rows[0];
+  if (!person) return false;
+  if (person.externally_active) return true;
+  if (!person.email) return false;
+  const opsAccount = await appPool.query(`
+    SELECT 1
+    FROM public.ops_users
+    WHERE lower(trim(email)) = lower(trim($1))
+      AND active = true
+  `, [person.email]);
+  return Boolean(opsAccount.rowCount);
 }
 
 async function loadTask(taskId, identity) {
@@ -1107,7 +1118,7 @@ app.post("/api/tasks", requireAuth, requireAccount, async (request, response) =>
   if (identity.role === "Manager" && assignee && assignee !== identity.externalId && !identity.reportIds.includes(assignee)) {
     return response.status(403).json({ error: "Managers can only assign tasks to themselves or active direct reports." });
   }
-  if (assignee && !(await isActiveExternalPerson(assignee))) return response.status(400).json({ error: "Choose an active assignee." });
+  if (assignee && !(await isAssignablePerson(assignee))) return response.status(400).json({ error: "Choose an active assignee." });
   const client = await appPool.connect();
   try {
     await client.query("BEGIN");
@@ -1156,7 +1167,7 @@ app.patch("/api/tasks/:id", requireAuth, requireAccount, async (request, respons
   if (metadataRequested && (!taskPriorities.includes(priority) || !/^\d{4}-\d{2}-\d{2}$/.test(dueDate) || !project || !department)) {
     return response.status(400).json({ error: "Choose valid task metadata and a due date." });
   }
-  if (metadataRequested && assignee && !(await isActiveExternalPerson(assignee))) {
+  if (metadataRequested && assignee && !(await isAssignablePerson(assignee))) {
     return response.status(400).json({ error: "Choose an active assignee." });
   }
   const blockerReason = nextStatus === "Blocked" ? String(request.body.blockerReason || "").trim().slice(0, 1000) : task.blocker_reason;
