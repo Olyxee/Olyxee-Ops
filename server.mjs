@@ -91,7 +91,7 @@ async function resolveExternalPerson(email) {
         email,
         'Employee' AS employment_type,
         CASE WHEN manage_interns OR manage_projects THEN 'Manager' ELSE 'Member' END AS access_role,
-        'Operations' AS department,
+        coalesce(nullif(trim(department), ''), 'Unassigned') AS department,
         active
       FROM public.workspace_accounts
       WHERE lower(email) = lower($1)
@@ -313,7 +313,8 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
           display_name,
           manage_interns,
           manage_projects,
-          active
+          active,
+          department
         FROM public.workspace_accounts
         ORDER BY active DESC, display_name
       `),
@@ -331,10 +332,6 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
     }
 
     const managers = accountResult.rows.map((account) => {
-      const matchingIntern = internResult.rows.find((intern) =>
-        String(intern.supervisor_email || "").toLowerCase() === String(account.email || "").toLowerCase()
-        || String(intern.supervisor_name || "").toLowerCase() === String(account.display_name || "").toLowerCase()
-      );
       const isManager = account.manage_interns || account.manage_projects;
       const opsAccount = opsAccounts.get(String(account.email || "").toLowerCase());
       const opsProfile = opsAccount?.profile_data || {};
@@ -345,7 +342,7 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
         employmentType: "Employee",
         accessRole: opsAccount?.role || (isManager ? "Manager" : "Member"),
         accountStatus: opsAccount ? (opsAccount.active ? "Active" : "Suspended") : "Pending",
-        department: matchingIntern?.department || "Operations",
+        department: validateDepartment(account.department) || UNASSIGNED_DEPARTMENT,
         position: isManager ? "Department Manager" : "Team Member",
         role: isManager ? "Manager" : "Member",
         avatarUrl: opsProfile.avatarUrl,
@@ -532,6 +529,9 @@ app.patch("/api/people/:id", requireAuth, requireAccount, async (request, respon
       if (!["Manager", "Member"].includes(accessRole)) {
         return response.status(400).json({ error: "Employee access role must be Manager or Member." });
       }
+      if (!department) {
+        return response.status(400).json({ error: "Choose an official department or Unassigned." });
+      }
       const result = await peoplePool.query(`
         UPDATE public.workspace_accounts
         SET display_name = $1,
@@ -539,10 +539,11 @@ app.patch("/api/people/:id", requireAuth, requireAccount, async (request, respon
             manage_interns = $3,
             manage_projects = $3,
             active = $4,
+            department = $5,
             updated_at = now()
-        WHERE id = $5
+        WHERE id = $6
         RETURNING id
-      `, [name, email, accessRole === "Manager", accountStatus === "Active", id]);
+      `, [name, email, accessRole === "Manager", accountStatus === "Active", department, id]);
       if (!result.rowCount) return response.status(404).json({ error: "Employee account not found." });
       return response.json({ ok: true });
     }
