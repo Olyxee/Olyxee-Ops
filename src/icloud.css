@@ -558,7 +558,17 @@ body .app.workspace-shell .workspace-topbar .top-actions {
 
 .workspace-brand b {
   color: #102b3d;
-  font-size: 16px;
+  font-family: "DM Sans", Inter, ui-sans-serif, sans-serif;
+  font-size: 17px;
+  font-weight: 750;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+
+.workspace-brand b span {
+  display: inline;
+  color: #527888;
+  font-weight: 600;
 }
 
 .workspace-brand {
@@ -566,17 +576,32 @@ body .app.workspace-shell .workspace-topbar .top-actions {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 9px;
+  gap: 11px;
+  border-radius: 13px;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.workspace-brand:hover {
+  opacity: 0.88;
+}
+
+.workspace-brand:active {
+  transform: scale(0.98);
 }
 
 .workspace-brand img {
-  width: 29px;
-  height: 29px;
+  width: 35px;
+  height: 35px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.68);
+  box-shadow: 0 5px 14px rgba(18, 80, 112, 0.13), inset 0 1px 0 rgba(255, 255, 255, 0.9);
   object-fit: contain;
   flex: 0 0 auto;
 }
 
-.workspace-brand span {
+.workspace-brand > span {
   display: none;
 }
 
