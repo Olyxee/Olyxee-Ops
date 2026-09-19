@@ -48,7 +48,7 @@ function Login({onSelect}:{onSelect:(u:User)=>void}){return <div className="logi
 function LoadingShell({user}:{user:User}){return <div className="app"><aside className="sidebar"><div className="brand">OLYXEE OPS<span>INTERNAL OPERATING SYSTEM</span></div>{["Overview","Tasks","Projects","People","Blockers","Friday Review"].map(label=><div className="skeleton-nav" key={label}><span className="skeleton skeleton-icon"/><span className="skeleton skeleton-nav-text"/></div>)}</aside><main className="main"><header className="topbar"><span className="skeleton skeleton-crumb"/><span className="skeleton skeleton-avatar"/></header><div className="content"><div className="skeleton skeleton-eyebrow"/><div className="skeleton skeleton-heading"/><div className="skeleton skeleton-subtitle"/><div className="grid stats">{[1,2,3,4].map(item=><div className="panel stat" key={item}><span className="skeleton skeleton-stat-label"/><span className="skeleton skeleton-stat-number"/><span className="skeleton skeleton-stat-note"/></div>)}</div><div className="grid cols"><SkeletonPanel rows={4}/><SkeletonPanel rows={4}/></div><span className="sr-only">Loading {user.name}'s workspace</span></div></main></div>}
 function SkeletonPanel({rows}:{rows:number}){return <div className="panel"><div className="panel-head"><span className="skeleton skeleton-panel-title"/></div><div className="list">{Array.from({length:rows},(_,index)=><div className="row" key={index}><div className="row-main"><span className="skeleton skeleton-row-title"/><span className="skeleton skeleton-row-meta"/></div><span className="skeleton skeleton-badge"/></div>)}</div></div>}
 function Header({eyebrow,title,subtitle,action}:{eyebrow:string;title:string;subtitle?:string;action?:React.ReactNode}){return <div className="page-head"><div><div className="eyebrow">{eyebrow}</div><h1 className="title">{title}</h1>{subtitle&&<p className="subtitle">{subtitle}</p>}</div>{action}</div>}
-function Status({s}:{s:string}){let c=s==="Done"||s==="Approved"?"green":s==="Blocked"||s==="Rejected"?"red":s==="In Review"||s==="Pending"?"amber":"gray";return <span className={`badge ${c}`}>{s}</span>}
+function Status({s}:{s:string}){let c=["Done","Approved","Complete"].includes(s)?"green":["Blocked","Rejected","At risk"].includes(s)?"red":["In Review","Pending","In progress"].includes(s)?"amber":"gray";return <span className={`badge ${c}`}>{s}</span>}
 function StatusPill({status}:{status?:StaffStatus}){const value=status?.availability||"Offline";return <span className={`availability ${value.toLowerCase()}`}><i/>{value}</span>}
 function ViewContent(p:{view:View;user:User;team?:User[];statuses:StaffStatus[];tasks:Task[];allTasks:Task[];projectsData:Project[];audit:Audit[];notices?:Notice[];objectives:WeeklyObjective[];can:(x:string)=>boolean;onOpen:(id:string)=>void;onProject:(id:string)=>void;onView:(v:View)=>void;onModal:(x:"task"|"person"|"blocker"|"project"|"objective"|null)=>void;onManage:(u:User)=>void;update:(id:string,x:Partial<Task>)=>void;setTasks:React.Dispatch<React.SetStateAction<Task[]>>;setObjectives:React.Dispatch<React.SetStateAction<WeeklyObjective[]>>;log:(s:string)=>void;flash:(s:string)=>void}){
     const {view,user,tasks,audit}=p; const mine=tasks.filter(t=>t.assignee===user.id); const [peopleFilter,setPeopleFilter]=useState<"All"|"Manager"|"Intern">("All"); const [selectedDepartment,setSelectedDepartment]=useState<string|null>(null);
@@ -94,19 +94,27 @@ function ViewContent(p:{view:View;user:User;team?:User[];statuses:StaffStatus[];
        const department=visibleDepartments.find(d=>d[0]===selectedDepartment);
        if(!department)return null;
        const departmentTaskList=departmentTasks(selectedDepartment);
-       const completed=departmentTaskList.filter(task=>task.status==="Done").length;
-       const open=departmentTaskList.filter(task=>!["Done","Cancelled"].includes(task.status)).length;
-       const blocked=departmentTaskList.filter(task=>task.status==="Blocked").length;
-       const completion=departmentTaskList.length?Math.round(completed/departmentTaskList.length*100):0;
+        const weeklyTasks=departmentTaskList.filter(task=>task.weeklyCommitment);
+        const delivered=weeklyTasks.filter(task=>task.status==="Done").length;
+        const inReview=weeklyTasks.filter(task=>task.status==="In Review").length;
+        const blocked=weeklyTasks.filter(task=>task.status==="Blocked").length;
+        const completion=weeklyTasks.length?Math.round(delivered/weeklyTasks.length*100):0;
+        const managerIds=directory.filter(person=>person.department===selectedDepartment&&person.role==="Manager").map(person=>person.id);
+        const departmentObjectives=p.objectives.filter(objective=>user.role==="Manager"?objective.managerId===user.id:managerIds.includes(objective.managerId));
+        const contributionPeople=user.role==="Manager"?directory.filter(person=>person.reportsTo===user.id):departmentPeople(selectedDepartment);
        return <div className="department-detail">
          <button className="btn department-back" onClick={()=>setSelectedDepartment(null)}><ArrowLeft size={14}/> All departments</button>
-         <Header eyebrow="Department workspace" title={selectedDepartment} subtitle={`${department[1]} · A focused view of delivery health and current work.`}/>
+          <Header eyebrow="Department workspace" title={selectedDepartment} subtitle={`${department[1]} · Weekly objectives, delivery performance, and team contribution.`}/>
          <div className="department-overview">
-           <div><span className="stat-label">Completion</span><strong>{completion}%</strong><div className="department-progress"><span style={{width:`${completion}%`}}/></div></div>
-           <div><span className="stat-label">Open work</span><strong>{open}</strong><span className="row-meta">not done or cancelled</span></div>
+            <div><span className="stat-label">Weekly delivery</span><strong>{completion}%</strong><div className="department-progress"><span style={{width:`${completion}%`}}/></div></div>
+            <div><span className="stat-label">Delivered</span><strong>{delivered} / {weeklyTasks.length}</strong><span className="row-meta">weekly commitments complete</span></div>
+            <div><span className="stat-label">In review</span><strong>{inReview}</strong><span className="row-meta">{inReview?"waiting for a decision":"nothing waiting"}</span></div>
            <div><span className="stat-label">Blockers</span><strong className={blocked?"metric-alert":""}>{blocked}</strong><span className="row-meta">{blocked?"needs attention":"clear for now"}</span></div>
-           <div><span className="stat-label">People</span><strong>{departmentPeople(selectedDepartment).length}</strong><span className="row-meta">active department members</span></div>
          </div>
+          <div className="grid cols department-insights">
+            <div className="panel"><div className="panel-head"><span className="panel-title">Weekly objectives</span><span className="mono">{departmentObjectives.length} priorities</span></div><div className="list">{departmentObjectives.map(objective=><div className="row" key={objective.id}><div className="row-main"><div className="row-title">{objective.title}</div><div className="row-meta">{user.role==="Super Admin"?owner(objective.managerId):"Assigned to you"} · {objective.priority} priority · Due {objective.dueDate}</div></div><Status s={objective.status}/></div>)}{!departmentObjectives.length&&<div className="empty"><strong>No weekly objectives</strong>No manager objective is assigned to this department.</div>}</div></div>
+            <div className="panel"><div className="panel-head"><span className="panel-title">{user.role==="Manager"?"Staff contribution":"Team contribution"}</span><span className="mono">{contributionPeople.length} people</span></div><div className="list">{contributionPeople.map(person=>{const status=p.statuses.find(item=>item.userId===person.id);const done=p.allTasks.filter(task=>task.assignee===person.id&&task.status==="Done").length;return <div className="row" key={person.id}><div className="inline"><Avatar person={person}/><div><div className="row-title">{person.name}</div><div className="row-meta">{done} completed tasks · {status?.start||"—"}–{status?.end||"—"}</div></div></div><StatusPill status={status}/></div>})}{!contributionPeople.length&&<div className="empty"><strong>No staff assigned</strong>There are no contribution records for this department.</div>}</div></div>
+          </div>
          <div className="panel department-work">
            <div className="panel-head"><span className="panel-title">Department tasks</span><span className="mono">{departmentTaskList.length} total</span></div>
            <div className="list">{departmentTaskList.map(task=><button className="row department-task-row" key={task.id} onClick={()=>p.onOpen(task.id)}>
