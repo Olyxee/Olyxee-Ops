@@ -36,7 +36,7 @@ const upload = multer({
     callback(allowed ? null : new Error("Unsupported file type."), allowed);
   },
 });
-const stateKeys = new Set(["tasks", "projects", "audit", "notices", "objectives", "staff-statuses"]);
+const stateKeys = new Set(["tasks", "projects", "audit", "notices", "objectives", "staff-statuses", "departments"]);
 const loginAttempts = new Map();
 const dummyPasswordHash = await bcrypt.hash(crypto.randomUUID(), 12);
 
@@ -378,6 +378,99 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
   } catch (error) {
     console.error("People query failed:", error instanceof Error ? error.message : "Unknown error");
     return response.status(503).json({ error: "Live people records are temporarily unavailable." });
+  }
+});
+
+app.post("/api/people", requireAuth, requireAccount, async (request, response) => {
+  if (!peoplePool) return response.status(503).json({ error: "People database is not configured." });
+  const appRole = request.appAccount.app_role;
+  if (!["Superadmin", "Admin", "Manager"].includes(appRole)) {
+    return response.status(403).json({ error: "Forbidden" });
+  }
+
+  const name = String(request.body.name || "").trim().slice(0, 160);
+  const email = String(request.body.email || "").trim().toLowerCase().slice(0, 254);
+  const department = String(request.body.department || "").trim().slice(0, 120);
+  const employmentType = String(request.body.employmentType || "");
+  const accessRole = String(request.body.accessRole || "");
+  const accountStatus = String(request.body.accountStatus || "");
+  let reportsTo = String(request.body.reportsTo || "");
+  if (!name || !email || !email.endsWith("@olyxee.com")) {
+    return response.status(400).json({ error: "A valid Olyxee name and email are required." });
+  }
+  if (!["Employee", "Intern"].includes(employmentType)) {
+    return response.status(400).json({ error: "Choose Employee or Intern." });
+  }
+  if (appRole === "Manager" && employmentType !== "Intern") {
+    return response.status(403).json({ error: "Managers can only add interns in their own team." });
+  }
+
+  try {
+    const duplicate = await peoplePool.query(`
+      SELECT 1 FROM public.workspace_accounts WHERE lower(email) = lower($1)
+      UNION ALL
+      SELECT 1 FROM public.interns WHERE archived_at IS NULL AND lower(email) = lower($1)
+      LIMIT 1
+    `, [email]);
+    if (duplicate.rowCount) return response.status(409).json({ error: "A person with this email already exists." });
+
+    if (employmentType === "Employee") {
+      if (!["Superadmin", "Admin"].includes(appRole)) {
+        return response.status(403).json({ error: "Only administrators can add employees." });
+      }
+      const result = await peoplePool.query(`
+        INSERT INTO public.workspace_accounts
+          (email, display_name, manage_interns, manage_projects, active, created_by)
+        VALUES ($1, $2, $3, $3, $4, $5)
+        RETURNING id
+      `, [email, name, accessRole === "Manager", accountStatus === "Active", request.appAccount.email]);
+      return response.status(201).json({ ok: true, id: `account-${result.rows[0].id}` });
+    }
+
+    if (appRole === "Manager") {
+      const manager = await peoplePool.query(`
+        SELECT id, email, display_name
+        FROM public.workspace_accounts
+        WHERE lower(email) = lower($1) AND active = true
+        LIMIT 1
+      `, [request.appAccount.email]);
+      if (!manager.rowCount) return response.status(403).json({ error: "Your manager record was not found." });
+      reportsTo = `account-${manager.rows[0].id}`;
+    }
+
+    let supervisorName = "";
+    let supervisorEmail = "";
+    if (reportsTo) {
+      const managerMatch = /^account-(\d+)$/.exec(reportsTo);
+      if (!managerMatch) return response.status(400).json({ error: "Invalid manager selection." });
+      const manager = await peoplePool.query(`
+        SELECT display_name, email
+        FROM public.workspace_accounts
+        WHERE id = $1 AND active = true
+      `, [Number(managerMatch[1])]);
+      if (!manager.rowCount) return response.status(400).json({ error: "Selected manager is unavailable." });
+      supervisorName = manager.rows[0].display_name || manager.rows[0].email;
+      supervisorEmail = manager.rows[0].email;
+    }
+
+    const result = await peoplePool.query(`
+      INSERT INTO public.interns
+        (intern_number, full_name, email, department, employment_status, supervisor_name, supervisor_email)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING id
+    `, [
+      `OPS-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
+      name,
+      email,
+      appRole === "Manager" ? String(request.body.department || request.appAccount.department || "").trim().slice(0, 120) : department,
+      accountStatus === "Active" ? "Active" : "Inactive",
+      supervisorName,
+      supervisorEmail,
+    ]);
+    return response.status(201).json({ ok: true, id: `intern-${result.rows[0].id}` });
+  } catch (error) {
+    console.error("Person creation failed:", error instanceof Error ? error.message : "Unknown error");
+    return response.status(500).json({ error: "Could not add this person." });
   }
 });
 

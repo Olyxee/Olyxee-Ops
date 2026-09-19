@@ -595,7 +595,7 @@ body .app.workspace-shell .workspace-topbar .top-actions {
   height: 37px;
   padding: 0;
   border: 0;
-  border-radius: 0;
+  border-radius: 10px;
   background: transparent;
   box-shadow: none;
   object-fit: contain;
@@ -1984,7 +1984,7 @@ body .app.workspace-shell .workspace-welcome {
   width: 72px !important;
   height: 72px !important;
   border: 0;
-  border-radius: 0;
+  border-radius: 18px;
   background: transparent;
   box-shadow: none;
 }
@@ -2012,4 +2012,36 @@ body .app.workspace-shell .workspace-welcome {
   aspect-ratio: 1;
   object-fit: cover;
   object-position: center;
+}
+
+.department-card {
+  overflow: hidden;
+}
+
+.department-card-open {
+  width: 100%;
+  padding: 20px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.department-card-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid rgba(156, 190, 187, .24);
+  background: rgba(247, 251, 250, .58);
+}
+
+@media (max-width: 560px) {
+  .department-card-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .department-card-actions .select {
+    grid-column: 1 / -1;
+  }
 }
