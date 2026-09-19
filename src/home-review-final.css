@@ -7,6 +7,34 @@
   background: #fff !important;
   box-shadow: 0 8px 24px rgba(31,31,35,.06) !important;
 }
+
+/* Let Manager Home rows grow with the chart and objective list. */
+@media (min-width: 701px) {
+  .workspace-board:not(.workspace-board-member) {
+    grid-auto-rows: auto !important;
+    grid-template-rows: auto auto auto auto !important;
+    align-items: start !important;
+  }
+
+  .workspace-board:not(.workspace-board-member) > .workspace-stack,
+  .workspace-board:not(.workspace-board-member) > .workspace-stack > .workspace-card {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  .workspace-board:not(.workspace-board-member) .workspace-review-home {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .workspace-board:not(.workspace-board-member) .workspace-departments {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+}
 .workspace-review-home .review-home-head { min-height: 72px !important; background: #fbfbfc !important; }
 .workspace-review-home .review-home-head > div:first-child { gap: 11px; }
 .workspace-review-home .review-home-icon { background: #e9f1ef !important; color: #4d7770 !important; }
