@@ -21,7 +21,10 @@ function Login() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      const result = await response.json();
+      const responseType = response.headers.get("content-type") || "";
+      const result = responseType.includes("application/json")
+        ? await response.json()
+        : { error: response.ok ? "" : `The server returned ${response.status || "an invalid response"}. Check the deployment API configuration.` };
       if (!response.ok) throw new Error(result.error || "Sign in failed.");
       window.location.assign("/");
     } catch (loginError) {
@@ -58,7 +61,10 @@ function Root() {
   const [authenticated, setAuthenticated] = useState<boolean|null>(null);
   useEffect(()=>{
     fetch("/api/auth/session")
-      .then(response=>response.json())
+      .then(async response=>{
+        if(!response.ok||!(response.headers.get("content-type")||"").includes("application/json"))return {authenticated:false};
+        return response.json();
+      })
       .then(result=>setAuthenticated(Boolean(result.authenticated)))
       .catch(()=>setAuthenticated(false));
   },[]);

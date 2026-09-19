@@ -830,6 +830,10 @@ if (isProduction) {
   app.use(vite.middlewares);
 }
 
-app.listen(port, "0.0.0.0", () => {
-  console.log(`Olyxee Ops listening on port ${port}`);
-});
+if (!process.env.VERCEL) {
+  app.listen(port, "0.0.0.0", () => {
+    console.log(`Olyxee Ops listening on port ${port}`);
+  });
+}
+
+export default app;
