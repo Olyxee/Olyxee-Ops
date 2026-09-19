@@ -6,6 +6,8 @@ export type Comment={id:string;author:string;text:string;createdAt:string};
 export type Task={id:string;title:string;project:string;department?:string;createdBy?:string;status:Status;assignee?:string;priority:"Critical"|"High"|"Medium"|"Low";createdDate?:string;startDate?:string;due:string;targetWeek?:string;description:string;criteria:string[];dependencies?:string[];comments?:Comment[];activity?:string[];reviewState?:"Not submitted"|"Awaiting review"|"Changes requested"|"Approved";attachments?:string[];pr?:string;blocker?:Blocker;weeklyCommitment?:boolean;available?:boolean;merged?:boolean};
 export type Audit={id:string;actor:string;action:string;time:string};
 export type Notice={id:string;userId:string;title:string;body:string;read:boolean;time:string};
+export type ObjectiveStatus="Not started"|"In progress"|"At risk"|"Complete";
+export type WeeklyObjective={id:string;title:string;description:string;managerId:string;priority:"Critical"|"High"|"Medium"|"Low";dueDate:string;status:ObjectiveStatus;createdBy:string;createdDate:string};
 export type Access={id:string;requester:string;department:string;resourceType:string;system:string;relatedTask:string;reason:string;status:"Pending"|"Approved"|"Rejected";date:string};
 export type ProjectResource={id:string;name:string;kind:"document"|"image"};
 export type Project={id:string;name:string;description:string;githubUrl:string;assigneeIds:string[];resources:ProjectResource[];active:boolean;status:"Active"|"Archived"};
@@ -49,4 +51,8 @@ export const seedAccess:Access[]=[
  {id:"AR-29",requester:"u5",department:"Data",resourceType:"Environment",system:"Staging customs service",relatedTask:"OLX-104",reason:"Required to validate customs automation.",status:"Pending",date:"15 Sep 2026"}];
 export const seedAudit:Audit[]=[{id:"a1",actor:"Morgan Lee",action:"Created week 38 commitments",time:"14 Sep, 09:00"},{id:"a2",actor:"Alisha Fatima",action:"Submitted OLX-101 for review",time:"15 Sep, 16:22"},{id:"a3",actor:"Noah Williams",action:"Started OLX-102",time:"16 Sep, 09:14"},{id:"a4",actor:"System",action:"GitHub evidence synced for OLX-105",time:"16 Sep, 08:51"}];
 export const seedNotices:Notice[]=[{id:"n2",userId:"u2",title:"Work submitted",body:"OLX-101 is ready for review.",read:false,time:"2 hours ago"},{id:"n3",userId:"u5",title:"Task blocked",body:"OLX-104 needs customs credentials.",read:false,time:"Yesterday"}];
+export const seedWeeklyObjectives:WeeklyObjective[]=[
+ {id:"WO-01",title:"Stabilise Orgni team sync",description:"Ship a dependable sync path with clear failure handling and an operator-ready handoff.",managerId:"u2",priority:"Critical",dueDate:"2026-09-18",status:"In progress",createdBy:"u1",createdDate:"2026-09-14"},
+ {id:"WO-02",title:"Close the customs workflow gap",description:"Unblock staging access and validate the exception path before the weekly close.",managerId:"u7",priority:"High",dueDate:"2026-09-18",status:"At risk",createdBy:"u1",createdDate:"2026-09-15"}
+];
 export const departments=[["AI Engineering","Alisha Fatima","5 members"],["Product Engineering","Priya Nair","6 members"],["Data","Tomás Reed","4 members"],["Operations","Morgan Lee","3 members"]];
