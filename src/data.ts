@@ -1,6 +1,6 @@
 export type Role="Super Admin"|"Manager"|"Member"|"Intern";
 export type Status="Inbox"|"Planned"|"Available"|"Assigned"|"In Progress"|"Blocked"|"In Review"|"Done"|"Cancelled"|"Backlog"|"In progress"|"In review";
-export type User={id:string;name:string;email:string;role:Role;department:string;reportsTo?:string;active?:boolean};
+export type User={id:string;name:string;email:string;role:Role;department:string;reportsTo?:string;active?:boolean;avatarUrl?:string};
 export type Availability="Available"|"Busy"|"Offline";
 export type StaffStatus={userId:string;availability:Availability;start:string;end:string;note:string;updatedAt:string};
 export type Blocker={reason:string;need:string;waitingFor:string;severity:"Low"|"Medium"|"High"|"Critical";reportedBy:string;createdAt:string;resolvedAt?:string};
@@ -12,7 +12,7 @@ export type ObjectiveStatus="Not started"|"In progress"|"At risk"|"Complete";
 export type WeeklyObjective={id:string;title:string;description:string;managerId:string;priority:"Critical"|"High"|"Medium"|"Low";dueDate:string;status:ObjectiveStatus;createdBy:string;createdDate:string};
 export type Access={id:string;requester:string;department:string;resourceType:string;system:string;relatedTask:string;reason:string;status:"Pending"|"Approved"|"Rejected";date:string};
 export type ProjectResource={id:string;name:string;kind:"document"|"image"};
-export type Project={id:string;name:string;description:string;githubUrl:string;assigneeIds:string[];resources:ProjectResource[];active:boolean;status:"Active"|"Archived"};
+export type Project={id:string;name:string;description:string;githubUrl:string;assigneeIds:string[];resources:ProjectResource[];active:boolean;status:"Active"|"Archived";logoUrl?:string};
 export const users:User[]=[
   {id:"u1",name:"Morgan Lee",email:"info@olyxee.com",role:"Super Admin",department:"Operations",active:true},
   {id:"u2",name:"Alisha Fatima",email:"alisha@olyxee.com",role:"Manager",department:"AI Engineering",reportsTo:"u1",active:true},
