@@ -29,7 +29,7 @@ const appPool = process.env.OPS_DATABASE_URL
   ? new pg.Pool({
       connectionString: process.env.OPS_DATABASE_URL,
       ssl: { rejectUnauthorized: false },
-      max: 5,
+      max: 2,
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 10_000,
     })
