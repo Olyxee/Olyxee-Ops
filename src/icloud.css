@@ -1966,26 +1966,27 @@ body .app.workspace-shell .workspace-welcome {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  border: 1px solid rgba(255, 255, 255, .56);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, .34);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--ops-ink);
   text-align: center;
 }
 
 .workspace-projects .workspace-project-grid > button:hover {
   padding: 12px 8px;
-  border-color: rgba(255, 255, 255, .88);
-  background: rgba(255, 255, 255, .58);
-  box-shadow: 0 10px 24px rgba(35, 73, 80, .12);
-  transform: translateY(-2px);
+  background: transparent;
+  box-shadow: none;
+  transform: translateY(-4px) scale(1.035);
 }
 
 .workspace-projects .workspace-project-grid .project-logo {
   width: 72px !important;
   height: 72px !important;
-  border-radius: 20px;
-  box-shadow: 0 8px 18px rgba(39, 73, 80, .16);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .workspace-projects .workspace-project-grid > button > b {
