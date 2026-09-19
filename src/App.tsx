@@ -415,19 +415,19 @@ function ProjectDetail({user,project,tasks,team,onBack,onOpen,onProjectUpdated,o
       </dl>
      </div>:<>
      <div className={`person-modal-switcher ${canProvision?"has-access":"two-tabs"}`} role="group" aria-label="Person details sections">
-       <button type="button" className={activePanel==="identity"?"active":""} aria-label="Identity: name and contact" aria-pressed={activePanel==="identity"} onClick={()=>setActivePanel("identity")}><span className="person-modal-tab-index">01</span><span><b>Identity</b><small>Name and contact</small></span></button>
-       <button type="button" className={activePanel==="organisation"?"active":""} aria-label="Organisation: role and reporting" aria-pressed={activePanel==="organisation"} onClick={()=>setActivePanel("organisation")}><span className="person-modal-tab-index">02</span><span><b>Organisation</b><small>Role and reporting</small></span></button>
-       {editing&&canProvision&&<button type="button" className={activePanel==="access"?"active":""} aria-label="Access: Ops account controls" aria-pressed={activePanel==="access"} onClick={()=>setActivePanel("access")}><span className="person-modal-tab-index">03</span><span><b>Access</b><small>Ops account controls</small></span></button>}
+       <button type="button" className={activePanel==="identity"?"active":""} aria-label="Identity: name and contact" aria-pressed={activePanel==="identity"} onClick={()=>setActivePanel("identity")}><span><b>Identity</b><small>Name and contact</small></span></button>
+       <button type="button" className={activePanel==="organisation"?"active":""} aria-label="Organisation: role and reporting" aria-pressed={activePanel==="organisation"} onClick={()=>setActivePanel("organisation")}><span><b>Organisation</b><small>Role and reporting</small></span></button>
+       {editing&&canProvision&&<button type="button" className={activePanel==="access"?"active":""} aria-label="Access: Ops account controls" aria-pressed={activePanel==="access"} onClick={()=>setActivePanel("access")}><span><b>Access</b><small>Ops account controls</small></span></button>}
      </div>
      {activePanel==="identity"&&<div className="person-modal-section person-modal-section-active">
-      <div className="person-modal-section-head"><span><b>Profile</b><small>Basic contact details</small></span><i>01</i></div>
+      <div className="person-modal-section-head"><span><b>Profile</b><small>Basic contact details</small></span></div>
       <div className="person-modal-fields person-modal-fields-profile">
         <label className="form-label">Full name<input className="input" value={name} onChange={event=>setName(event.target.value)} placeholder="Full name"/></label>
         <label className="form-label">Email address<input className="input" type="email" value={email} onChange={event=>setEmail(event.target.value)} placeholder="name@example.com"/>{email&&!emailValid&&<span className="person-field-error">Enter a valid email address.</span>}</label>
       </div>
      </div>}
      {activePanel==="organisation"&&<div className="person-modal-section person-modal-section-active">
-      <div className="person-modal-section-head"><span><b>Role & organisation</b><small>Where this person sits in Olyxee</small></span><i>02</i></div>
+      <div className="person-modal-section-head"><span><b>Role & organisation</b><small>Where this person sits in Olyxee</small></span></div>
       <div className="person-modal-fields">
         <label className="form-label">Department<select className="select" value={department} disabled={!administrator} onChange={event=>setDepartment(event.target.value)}><option value="">Select a department</option>{departmentOptions.map(option=><option key={option}>{option}</option>)}</select></label>
         <label className="form-label">Employment type<select className="select" value={employmentType} disabled={livePerson||!administrator} onChange={event=>setEmploymentType(event.target.value as EmploymentType)}>{["Employee","Intern"].map(value=><option key={value}>{value}</option>)}</select></label>
