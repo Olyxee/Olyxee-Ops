@@ -203,80 +203,102 @@
 }
 
 .workspace-board-member .workspace-tasks .workspace-list {
-  gap: 11px;
-  padding: 16px;
+  gap: 0;
+  margin: 14px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #e1e4e7;
+  border-radius: 14px;
+  background: #fff;
 }
 
 .workspace-board-member .workspace-tasks .workspace-list > button {
-  --intern-task-accent: #287dc1;
-  --intern-task-border: #a9cce9;
-  --intern-task-surface: #e6f3ff;
+  --intern-task-accent: #5c7785;
   position: relative;
-  min-height: 76px;
-  padding: 13px 14px 13px 19px !important;
+  min-height: 68px;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px 11px 40px !important;
   overflow: hidden;
-  border: 1px solid var(--intern-task-border) !important;
-  border-radius: 16px !important;
-  background:
-    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--intern-task-accent) 13%, transparent), transparent 42%),
-    linear-gradient(135deg, color-mix(in srgb, var(--intern-task-surface) 90%, white), rgba(255,255,255,.8)) !important;
-  box-shadow:
-    0 8px 20px color-mix(in srgb, var(--intern-task-accent) 12%, transparent),
-    inset 0 1px 0 rgba(255,255,255,.9) !important;
-  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  border: 0 !important;
+  border-bottom: 1px solid #eceef0 !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  text-align: left;
+  transition: background-color .16s ease, transform .16s ease;
+}
+
+.workspace-board-member .workspace-tasks .workspace-list > button:last-of-type {
+  border-bottom: 0 !important;
 }
 
 .workspace-board-member .workspace-tasks .workspace-list > button::before {
   position: absolute;
-  top: 16px;
-  bottom: 16px;
-  left: 6px;
-  width: 4px;
-  border-radius: 999px;
+  top: 50%;
+  left: 17px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
   background: var(--intern-task-accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--intern-task-accent) 13%, transparent);
+  transform: translateY(-50%);
   content: "";
 }
 
 .workspace-board-member .workspace-tasks .workspace-list > button:hover {
-  border-color: color-mix(in srgb, var(--intern-task-accent) 55%, white) !important;
-  box-shadow:
-    0 13px 27px color-mix(in srgb, var(--intern-task-accent) 17%, transparent),
-    inset 0 1px 0 rgba(255,255,255,.96) !important;
-  transform: translateY(-2px);
+  background: #f6f7f8 !important;
+}
+
+.workspace-board-member .workspace-tasks .workspace-list > button:active {
+  background: #eceef0 !important;
+  transform: scale(.99) !important;
 }
 
 .workspace-board-member .workspace-tasks .workspace-list > .workspace-task-submitted-for-review {
-  --intern-task-accent: #a76d19;
-  --intern-task-border: #e5c995;
-  --intern-task-surface: #fff2d9;
+  --intern-task-accent: #b47a20;
 }
 
 .workspace-board-member .workspace-tasks .workspace-list > .workspace-task-blocked {
-  --intern-task-accent: #b95047;
-  --intern-task-border: #e3aaa5;
-  --intern-task-surface: #ffe5e2;
+  --intern-task-accent: #c24f47;
 }
 
 .workspace-board-member .workspace-tasks .workspace-list > .workspace-task-in-progress {
-  --intern-task-accent: #6d55aa;
-  --intern-task-border: #c8b9e6;
-  --intern-task-surface: #eee7ff;
+  --intern-task-accent: #178b82;
 }
 
 .workspace-board-member .workspace-tasks .workspace-list > button b {
-  color: #172330 !important;
+  display: block;
+  overflow: hidden;
+  color: #1d252b !important;
   font-size: 13px;
+  font-weight: 650;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .workspace-board-member .workspace-tasks .workspace-list > button small {
-  color: #61758a !important;
+  display: block;
+  margin-top: 5px;
+  overflow: hidden;
+  color: #7b8288 !important;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .workspace-board-member .workspace-tasks .workspace-list > button .badge {
-  border: 1px solid color-mix(in srgb, var(--intern-task-accent) 24%, transparent);
-  background: rgba(255,255,255,.7) !important;
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--intern-task-accent) 11%, #fff) !important;
   color: color-mix(in srgb, var(--intern-task-accent) 88%, #1d1d1f) !important;
-  box-shadow: 0 2px 7px color-mix(in srgb, var(--intern-task-accent) 9%, transparent);
+  box-shadow: none;
+  font-size: 9px;
 }
 
 .workspace-board-member .workspace-project-grid {
