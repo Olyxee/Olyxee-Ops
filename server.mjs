@@ -502,37 +502,41 @@ app.post("/api/people", requireAuth, requireAccount, async (request, response) =
       return response.status(201).json({ ok: true, id: `account-${result.rows[0].id}` });
     }
 
-    const internDepartment = appRole === "Manager"
-      ? validateDepartment(request.appAccount.department)
-      : department;
+    let internDepartment = department;
+    let departmentManager;
     if (appRole === "Manager") {
       const manager = await peoplePool.query(`
-        SELECT id, email, display_name
+        SELECT id, email, display_name, department
         FROM public.workspace_accounts
         WHERE lower(email) = lower($1)
           AND active = true
-          AND department = $2
           AND (manage_interns = true OR manage_projects = true)
         LIMIT 1
-      `, [request.appAccount.email, internDepartment]);
+      `, [request.appAccount.email]);
       if (!manager.rowCount) return response.status(403).json({ error: "Your active department manager record was not found." });
+      internDepartment = validateDepartment(manager.rows[0].department);
+      if (!internDepartment) return response.status(400).json({ error: "Your Manager account must be assigned to an official department before adding an Intern." });
+      departmentManager = manager.rows[0];
     }
 
-    const departmentManager = await peoplePool.query(`
-      SELECT id, display_name, email
-      FROM public.workspace_accounts
-      WHERE active = true
-        AND department = $1
-        AND (manage_interns = true OR manage_projects = true)
-      ORDER BY manage_interns DESC, id
-      LIMIT 1
-    `, [internDepartment]);
-    if (!departmentManager.rowCount) {
-      return response.status(400).json({ error: `Assign an active Manager to ${internDepartment} before adding an Intern.` });
+    if (!departmentManager) {
+      const managerResult = await peoplePool.query(`
+        SELECT id, display_name, email
+        FROM public.workspace_accounts
+        WHERE active = true
+          AND department = $1
+          AND (manage_interns = true OR manage_projects = true)
+        ORDER BY manage_interns DESC, id
+        LIMIT 1
+      `, [internDepartment]);
+      if (!managerResult.rowCount) {
+        return response.status(400).json({ error: `Assign an active Manager to ${internDepartment} before adding an Intern.` });
+      }
+      departmentManager = managerResult.rows[0];
     }
-    const supervisorAccountId = departmentManager.rows[0].id;
-    const supervisorName = departmentManager.rows[0].display_name || departmentManager.rows[0].email;
-    const supervisorEmail = departmentManager.rows[0].email;
+    const supervisorAccountId = departmentManager.id;
+    const supervisorName = departmentManager.display_name || departmentManager.email;
+    const supervisorEmail = departmentManager.email;
 
     const result = await peoplePool.query(`
       INSERT INTO public.interns
