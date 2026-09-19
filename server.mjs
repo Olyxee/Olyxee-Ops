@@ -764,8 +764,8 @@ app.delete("/api/people/:id", requireAuth, requireAccount, async (request, respo
 });
 
 app.post("/api/people/:id/ops-access", requireAuth, requireAccount, async (request, response) => {
-  if (request.appAccount.app_role !== "Superadmin") {
-    return response.status(403).json({ error: "Only the Superadmin can create Ops login credentials." });
+  if (!["Superadmin", "Manager"].includes(request.appAccount.app_role)) {
+    return response.status(403).json({ error: "You do not have permission to create Ops login credentials." });
   }
   if (!peoplePool || !appPool) return response.status(503).json({ error: "Required databases are not configured." });
 
@@ -777,19 +777,38 @@ app.post("/api/people/:id/ops-access", requireAuth, requireAccount, async (reque
   try {
     const personResult = kind === "intern"
       ? await peoplePool.query(`
-          SELECT full_name AS name, email, 'Member' AS role
+          SELECT full_name AS name, email, 'Member' AS role, department, supervisor_account_id
           FROM public.interns
           WHERE id = $1 AND archived_at IS NULL
         `, [id])
       : await peoplePool.query(`
           SELECT display_name AS name, email,
-                 CASE WHEN manage_interns OR manage_projects THEN 'Manager' ELSE 'Member' END AS role
+                 CASE WHEN manage_interns OR manage_projects THEN 'Manager' ELSE 'Member' END AS role,
+                 department, reports_to_account_id AS supervisor_account_id
           FROM public.workspace_accounts
           WHERE id = $1
         `, [id]);
     const person = personResult.rows[0];
     if (!person) return response.status(404).json({ error: "Person not found." });
     if (!person.email) return response.status(400).json({ error: "Add an email address before creating Ops access." });
+    if (request.appAccount.app_role === "Superadmin" && person.role !== "Manager") {
+      return response.status(403).json({ error: "The Superadmin can create login details only for Managers." });
+    }
+    if (request.appAccount.app_role === "Manager") {
+      const managerResult = await peoplePool.query(`
+        SELECT id, department
+        FROM public.workspace_accounts
+        WHERE lower(email) = lower($1)
+          AND (manage_interns = true OR manage_projects = true)
+        LIMIT 1
+      `, [request.appAccount.email]);
+      const manager = managerResult.rows[0];
+      const sameDepartment = manager && String(manager.department || "").trim().toLowerCase() === String(person.department || "").trim().toLowerCase();
+      const directReport = manager && Number(person.supervisor_account_id) === Number(manager.id);
+      if (!manager || person.role === "Manager" || (!sameDepartment && !directReport)) {
+        return response.status(403).json({ error: "Managers can create login details only for interns and staff in their own department." });
+      }
+    }
 
     const randomBytes = new Uint8Array(9);
     crypto.getRandomValues(randomBytes);
