@@ -1,12 +1,10 @@
 import express from "express";
 import pg from "pg";
-import cors from "cors";
 import multer from "multer";
-import { clerkMiddleware, getAuth } from "@clerk/express";
-import { createClerkClient } from "@clerk/backend";
-import { publishableKeyFromHost } from "@clerk/shared/keys";
+import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
+import bcrypt from "bcryptjs";
 import { Client as ObjectStorageClient } from "@replit/object-storage";
-import { CLERK_PROXY_PATH, clerkProxyMiddleware, getClerkProxyHost } from "./server/clerkProxyMiddleware.mjs";
 
 const app = express();
 const port = Number(process.env.PORT || 5000);
@@ -21,8 +19,15 @@ const peoplePool = process.env.EXTERNAL_DATABASE_URL
       connectionTimeoutMillis: 10_000,
     })
   : null;
-const appPool = process.env.DATABASE_URL ? new pg.Pool({ connectionString: process.env.DATABASE_URL }) : null;
-const clerkClient = process.env.CLERK_SECRET_KEY ? createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY }) : null;
+const appPool = process.env.OPS_DATABASE_URL
+  ? new pg.Pool({
+      connectionString: process.env.OPS_DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+      max: 10,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 10_000,
+    })
+  : null;
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
@@ -32,22 +37,34 @@ const upload = multer({
   },
 });
 const stateKeys = new Set(["tasks", "projects", "audit", "notices", "objectives", "staff-statuses"]);
+const loginAttempts = new Map();
+const dummyPasswordHash = await bcrypt.hash(crypto.randomUUID(), 12);
 
 app.disable("x-powered-by");
-app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
-app.use(cors({ credentials: true, origin: true }));
 app.use(express.json({ limit: "2mb" }));
-app.use(
-  clerkMiddleware((request) => ({
-    publishableKey: publishableKeyFromHost(getClerkProxyHost(request) ?? "", process.env.CLERK_PUBLISHABLE_KEY),
-  })),
-);
+if (appPool) {
+  if (!process.env.SESSION_SECRET) throw new Error("SESSION_SECRET is required when Ops authentication is enabled.");
+  const PgSession = connectPgSimple(session);
+  app.set("trust proxy", 1);
+  app.use(session({
+    store: new PgSession({ pool: appPool, tableName: "ops_sessions", createTableIfMissing: false }),
+    name: "olyxee.sid",
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    rolling: true,
+    cookie: {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: isProduction,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    },
+  }));
+}
 
 const requireAuth = (request, response, next) => {
-  const auth = getAuth(request);
-  const userId = auth?.sessionClaims?.userId || auth?.userId;
+  const userId = request.session?.userId;
   if (!userId) return response.status(401).json({ error: "Unauthorized" });
-  request.clerkUserId = userId;
   return next();
 };
 
@@ -82,57 +99,94 @@ async function resolveExternalPerson(email) {
   return result.rows[0] || null;
 }
 
-async function getAppAccount(clerkUserId) {
-  if (!appPool || !clerkClient) throw new Error("Application database or authentication is not configured.");
-  const existing = await appPool.query("SELECT * FROM app_accounts WHERE clerk_user_id = $1", [clerkUserId]);
-  if (existing.rows[0]) return existing.rows[0];
-
-  const clerkUser = await clerkClient.users.getUser(clerkUserId);
-  const primaryEmail = clerkUser.emailAddresses.find((item) => item.id === clerkUser.primaryEmailAddressId)?.emailAddress
-    || clerkUser.emailAddresses[0]?.emailAddress;
-  if (!primaryEmail) throw new Error("Your login does not have an email address.");
-
-  const [person, grantResult] = await Promise.all([
-    resolveExternalPerson(primaryEmail),
-    appPool.query("SELECT app_role FROM app_access_grants WHERE lower(email) = lower($1) AND active = true", [primaryEmail]),
-  ]);
-  const grant = grantResult.rows[0];
-  if (!person && !grant) {
-    const error = new Error("No matching person record was found.");
+async function getAppAccount(userId) {
+  if (!appPool) throw new Error("Application database is not configured.");
+  const result = await appPool.query(`
+    SELECT id, email, display_name, role AS app_role, active, profile_data
+    FROM public.ops_users
+    WHERE id = $1
+  `, [userId]);
+  if (!result.rows[0]?.active) {
+    const error = new Error("Account is unavailable.");
     error.statusCode = 403;
     throw error;
   }
-
-  const appRole = grant?.app_role || person.access_role;
-  const inserted = await appPool.query(`
-    INSERT INTO app_accounts (clerk_user_id, email, external_person_id, app_role)
-    VALUES ($1, $2, $3, $4)
-    RETURNING *
-  `, [clerkUserId, primaryEmail.toLowerCase(), person?.external_id || null, appRole]);
-  return inserted.rows[0];
+  return result.rows[0];
 }
 
 const requireAccount = async (request, response, next) => {
   try {
-    request.appAccount = await getAppAccount(request.clerkUserId);
+    request.appAccount = await getAppAccount(request.session.userId);
     return next();
   } catch (error) {
     return response.status(error.statusCode || 503).json({ error: error.message || "Account unavailable." });
   }
 };
 
+const requireAdmin = (request, response, next) => {
+  if (!["Superadmin", "Admin"].includes(request.appAccount?.app_role)) {
+    return response.status(403).json({ error: "Forbidden" });
+  }
+  return next();
+};
+
 app.get("/api/health", (_request, response) => {
-  response.json({ ok: true, appDatabaseConfigured: Boolean(appPool), peopleDatabaseConfigured: Boolean(peoplePool), authConfigured: Boolean(clerkClient) });
+  response.json({ ok: true, appDatabaseConfigured: Boolean(appPool), peopleDatabaseConfigured: Boolean(peoplePool), authConfigured: Boolean(appPool && process.env.SESSION_SECRET) });
+});
+
+app.get("/api/auth/session", (request, response) => {
+  return response.json({ authenticated: Boolean(request.session?.userId) });
+});
+
+app.post("/api/auth/login", async (request, response) => {
+  if (!appPool) return response.status(503).json({ error: "Ops database is not configured." });
+  const email = String(request.body.email || "").trim().toLowerCase();
+  const password = String(request.body.password || "");
+  if (!email || !password) return response.status(400).json({ error: "Email and password are required." });
+  const attemptKey = `${request.ip || "unknown"}:${email}`;
+  const now = Date.now();
+  const attempts = loginAttempts.get(attemptKey);
+  if (attempts?.blockedUntil > now) {
+    return response.status(429).json({ error: "Too many sign-in attempts. Try again later." });
+  }
+  const result = await appPool.query(`
+    SELECT id, password_hash, active
+    FROM public.ops_users
+    WHERE email = $1
+  `, [email]);
+  const account = result.rows[0];
+  const valid = await bcrypt.compare(password, account?.password_hash || dummyPasswordHash);
+  if (!account?.active || !valid) {
+    const count = (attempts?.count || 0) + 1;
+    loginAttempts.set(attemptKey, {
+      count,
+      blockedUntil: count >= 5 ? now + 15 * 60 * 1000 : 0,
+    });
+    return response.status(401).json({ error: "Invalid email or password." });
+  }
+  loginAttempts.delete(attemptKey);
+  await new Promise((resolve, reject) => request.session.regenerate((error) => error ? reject(error) : resolve()));
+  request.session.userId = account.id;
+  await new Promise((resolve, reject) => request.session.save((error) => error ? reject(error) : resolve()));
+  return response.json({ ok: true });
+});
+
+app.post("/api/auth/logout", (request, response) => {
+  if (!request.session) return response.json({ ok: true });
+  request.session.destroy((error) => {
+    if (error) return response.status(503).json({ error: "Could not end the session." });
+    response.clearCookie("olyxee.sid");
+    return response.json({ ok: true });
+  });
 });
 
 app.get("/api/me", requireAuth, requireAccount, async (request, response) => {
   const account = request.appAccount;
-  const clerkUser = await clerkClient.users.getUser(request.clerkUserId);
   const person = await resolveExternalPerson(account.email);
   const profile = account.profile_data || {};
   return response.json({
     id: person?.external_id || `account-${account.id}`,
-    name: person?.name || [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") || account.email,
+    name: person?.name || account.display_name || account.email,
     email: account.email,
     employmentType: person?.employment_type || "Employee",
     accessRole: account.app_role,
@@ -153,7 +207,7 @@ app.patch("/api/me/profile", requireAuth, requireAccount, async (request, respon
     githubUsername: typeof request.body.githubUsername === "string" ? request.body.githubUsername.slice(0, 40) : undefined,
   };
   const result = await appPool.query(`
-    UPDATE app_accounts
+    UPDATE public.ops_users
     SET profile_data = $1::jsonb, updated_at = now()
     WHERE id = $2
     RETURNING profile_data
@@ -313,16 +367,15 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
   }
 });
 
-app.get("/api/state/:key", requireAuth, requireAccount, async (request, response) => {
+app.get("/api/state/:key", requireAuth, requireAccount, requireAdmin, async (request, response) => {
   if (!stateKeys.has(request.params.key)) return response.status(404).json({ error: "Unknown state collection." });
   const result = await appPool.query("SELECT state_value FROM workspace_state WHERE state_key = $1", [request.params.key]);
   if (!result.rows[0]) return response.status(404).json({ error: "State collection has not been initialized." });
   return response.json({ value: result.rows[0].state_value });
 });
 
-app.put("/api/state/:key", requireAuth, requireAccount, async (request, response) => {
+app.put("/api/state/:key", requireAuth, requireAccount, requireAdmin, async (request, response) => {
   if (!stateKeys.has(request.params.key)) return response.status(404).json({ error: "Unknown state collection." });
-  if (!["Superadmin", "Admin", "Manager", "Member"].includes(request.appAccount.app_role)) return response.status(403).json({ error: "Forbidden" });
   await appPool.query(`
     INSERT INTO workspace_state (state_key, state_value, updated_by)
     VALUES ($1, $2::jsonb, $3)
@@ -346,23 +399,29 @@ app.post("/api/assets", requireAuth, requireAccount, upload.single("file"), asyn
   }
   const uploaded = await objectStorage.uploadFromBytes(objectKey, request.file.buffer, { compress: false });
   if (!uploaded.ok) return response.status(503).json({ error: "File storage is temporarily unavailable." });
+  const externalPerson = await resolveExternalPerson(request.appAccount.email);
   const result = await appPool.query(`
-    INSERT INTO app_assets (owner_account_id, external_person_id, asset_kind, object_key, original_filename, mime_type, byte_size)
+    INSERT INTO public.app_assets (owner_user_id, external_person_id, asset_kind, storage_path, original_filename, mime_type, byte_size)
     VALUES ($1, $2, $3, $4, $5, $6, $7)
     RETURNING id
-  `, [request.appAccount.id, request.appAccount.external_person_id, kind, objectKey, request.file.originalname, request.file.mimetype, request.file.size]);
+  `, [request.appAccount.id, externalPerson?.external_id || null, kind, objectKey, request.file.originalname, request.file.mimetype, request.file.size]);
   return response.status(201).json({ id: result.rows[0].id, url: `/api/assets/${result.rows[0].id}` });
 });
 
 app.get("/api/assets/:id", requireAuth, requireAccount, async (request, response) => {
-  const result = await appPool.query("SELECT object_key, mime_type, original_filename FROM app_assets WHERE id = $1", [request.params.id]);
+  const result = await appPool.query(`
+    SELECT storage_path, mime_type, original_filename
+    FROM public.app_assets
+    WHERE id = $1
+      AND (owner_user_id = $2 OR $3 = ANY(ARRAY['Superadmin', 'Admin']))
+  `, [request.params.id, request.appAccount.id, request.appAccount.app_role]);
   const asset = result.rows[0];
   if (!asset) return response.status(404).json({ error: "Asset not found." });
   response.type(asset.mime_type);
   response.set("Cache-Control", "private, max-age=3600");
   response.set("Content-Disposition", `inline; filename="${asset.original_filename.replace(/"/g, "")}"`);
   const objectStorage = new ObjectStorageClient();
-  return objectStorage.downloadAsStream(asset.object_key).pipe(response);
+  return objectStorage.downloadAsStream(asset.storage_path).pipe(response);
 });
 
 if (isProduction) {

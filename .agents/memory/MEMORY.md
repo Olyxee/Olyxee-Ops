@@ -1,2 +1,1 @@
-- [Staff data access](staff-data-access.md) — live staff rows are enabled for Superadmin testing; real authentication is still required before production.
 - [Database boundary](database-boundary.md) — Ops data belongs in the clean app database; external Supabase remains people-only.
