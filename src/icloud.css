@@ -2549,8 +2549,8 @@ body .app.workspace-shell .workspace-topbar::after {
 }
 
 .workspace-profile-identity .avatar {
-  width: 88px !important;
-  height: 88px !important;
+  width: 112px !important;
+  height: 112px !important;
   border-width: 4px;
 }
 
@@ -2562,7 +2562,7 @@ body .app.workspace-shell .workspace-topbar::after {
   margin: 7px 0 3px;
   overflow: hidden;
   color: #173544;
-  font-size: 21px;
+  font-size: 24px;
   letter-spacing: -.025em;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2782,6 +2782,44 @@ body .app.workspace-shell .workspace-topbar::after {
   }
 }
 
+/* Weekly Review second pass: a stronger, unmistakable iOS productivity hierarchy. */
+body .workspace-section:has(.weekly-review-page){padding:0!important;border:0!important;background:#f5f5f7!important;box-shadow:none!important}
+body .workspace-section:has(.weekly-review-page) .weekly-review-page{max-width:1120px;padding:10px 0 52px}
+body .weekly-review-page .weekly-review-hero{position:relative;align-items:center;margin:0 0 20px;padding:28px 30px;border:1px solid #dedee3;border-radius:20px;background:#fff;box-shadow:0 6px 18px rgba(31,31,35,.055)}
+body .weekly-review-page .weekly-review-hero:after{content:"";position:absolute;right:28px;bottom:0;width:94px;height:3px;border-radius:4px;background:#8a9a96}
+body .weekly-review-page .weekly-review-hero h1{font-size:42px;letter-spacing:-.075em}
+body .weekly-review-page .weekly-review-hero p{font-size:14px;color:#686a70}
+body .weekly-review-page .review-new-objective{min-height:44px;padding:0 17px;border-radius:10px!important;background:#525b61!important;border-color:#525b61!important;box-shadow:0 4px 10px rgba(51,55,58,.14)!important;font-size:12px}
+body .weekly-review-page .review-health{grid-template-columns:210px minmax(0,1fr) 180px;gap:26px;padding:22px 25px;margin-bottom:28px;border-radius:16px;background:#fff;box-shadow:0 5px 14px rgba(31,31,35,.045)}
+body .weekly-review-page .review-health-intro strong{font-size:34px}
+body .weekly-review-page .review-health-track{height:12px;background:#e6e6ea}
+body .weekly-review-page .review-health-track>span{background:#697a75}
+body .weekly-review-page .review-section-head{margin-bottom:16px;padding:0 3px}
+body .weekly-review-page .review-section-head h2{font-size:25px;letter-spacing:-.055em}
+body .weekly-review-page .review-section-note{font-size:12px;color:#777980}
+body .weekly-review-page .review-count{padding:7px 11px;border:1px solid #dedee2;border-radius:999px;background:#fff;color:#696b71}
+body .weekly-review-page .review-objective-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}
+body .weekly-review-page .review-objective-card{min-height:205px;padding:20px;border:1px solid #d9dadd;border-top:4px solid #c7c8cd;border-radius:15px;box-shadow:0 4px 12px rgba(31,31,35,.045);transition:transform .18s ease,box-shadow .18s ease}
+body .weekly-review-page .review-objective-card:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(31,31,35,.09)}
+body .weekly-review-page .review-objective-card h3{margin-top:21px;font-size:18px}
+body .weekly-review-page .review-objective-card p{font-size:12px}
+body .weekly-review-page .review-agenda{margin-top:38px;padding-top:27px;border-top:1px solid #d9dade}
+body .weekly-review-page .review-metrics{margin-bottom:17px;border-radius:15px;box-shadow:0 3px 10px rgba(31,31,35,.035)}
+body .weekly-review-page .review-metric{min-height:86px;padding:18px 19px}
+body .weekly-review-page .review-metric strong{font-size:28px}
+body .weekly-review-page .review-decision-grid{gap:15px}
+body .weekly-review-page .review-decision-panel{border:1px solid #d9dadd!important;box-shadow:0 4px 12px rgba(31,31,35,.045)!important}
+body .weekly-review-page .review-decision-panel .panel-head{min-height:54px;padding:0 17px;background:#fff;border-bottom:1px solid #e5e5e8}
+body .weekly-review-page .review-task-row{min-height:96px!important;padding:16px 17px!important;gap:16px}
+body .weekly-review-page .review-task-row:hover{background:#f2f2f5}
+body .weekly-review-page .review-task-row .row-title{font-size:13px;font-weight:700;line-height:1.3}
+body .weekly-review-page .review-task-row .row-meta{margin-top:6px;font-size:10px}
+body .weekly-review-page .review-task-action{gap:8px}
+body .weekly-review-page .review-task-action>span{display:inline-flex;align-items:center;gap:3px;padding:8px 0;font-size:10px}
+@media(max-width:820px){body .weekly-review-page .review-health{grid-template-columns:165px minmax(0,1fr) 155px}body .weekly-review-page .review-objective-grid,body .weekly-review-page .review-decision-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){body .workspace-section:has(.weekly-review-page){padding:0!important}body .workspace-section:has(.weekly-review-page) .weekly-review-page{padding:0 0 34px}body .weekly-review-page .weekly-review-hero{align-items:flex-start;margin:0 -1px 16px;padding:22px 19px;border-radius:15px}body .weekly-review-page .weekly-review-hero h1{font-size:34px}body .weekly-review-page .weekly-review-hero:after{right:19px}body .weekly-review-page .review-health{grid-template-columns:1fr;padding:18px;margin-bottom:23px;border-radius:14px}body .weekly-review-page .review-health-caption{grid-column:auto}body .weekly-review-page .review-objective-grid,body .weekly-review-page .review-decision-grid{grid-template-columns:1fr}body .weekly-review-page .review-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}body .weekly-review-page .review-task-row{min-height:104px!important}}
+
+/* Original tuned rules retained below for shared workspace widgets. */
 /* Weekly Review: an intentionally quiet, information-dense iOS-style surface. */
 .weekly-review-page{max-width:1040px;margin:0 auto;padding:4px 0 34px;color:#25262a}
 .weekly-review-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding:10px 2px 28px}
@@ -2859,3 +2897,22 @@ body .workspace-section .btn.primary,body .workspace-section button.primary,body
 /* Managers see department delivery progress instead of the admin directory list. */
 .manager-department-performance{display:block;width:100%;padding:22px 24px 24px;border:0;background:#fff;color:#1d1d1f;text-align:left;cursor:pointer}.manager-department-performance:hover{background:#f7f7f8}.manager-department-progress-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px}.manager-department-progress-head span{display:grid;gap:4px}.manager-department-progress-head small{color:#8a8a8f;font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase}.manager-department-progress-head b{font-size:17px;line-height:1.2}.manager-department-progress-head strong{font-size:30px;line-height:1;letter-spacing:-.04em}.manager-department-progress-track{height:8px;margin:18px 0 10px;overflow:hidden;border-radius:999px;background:#e5e5ea}.manager-department-progress-track span{display:block;height:100%;border-radius:inherit;background:#3a3a3c;transition:width .25s ease}.manager-department-performance>p{margin:0;color:#6e6e73;font-size:12px}.manager-department-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:20px}.manager-department-metrics>span{display:grid;gap:4px;padding:13px 14px;border:1px solid #dedee2;border-radius:10px;background:#fafafa}.manager-department-metrics small{color:#8a8a8f;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}.manager-department-metrics b{font-size:19px}.manager-department-metrics .needs-attention{border-color:#b8b8bd;background:#f1f1f3}@media(max-width:560px){.manager-department-performance{padding:18px}.manager-department-metrics{gap:7px}.manager-department-metrics>span{padding:11px}}
 .manager-department-chart{margin-top:22px;padding-top:16px;border-top:1px solid #e5e5e7}.manager-department-chart-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:10px}.manager-department-chart-head span{color:#3b3b3d;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}.manager-department-chart-head small{color:#8a8a8f;font-size:10px}.manager-department-chart-plot{position:relative;height:92px}.manager-department-chart-plot svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}.manager-department-chart-grid{position:absolute;inset:4px 0 8px;display:grid;grid-template-rows:repeat(4,1fr);pointer-events:none}.manager-department-chart-grid i{display:block;border-top:1px dashed #e7e7e9}.manager-department-chart-labels{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-top:3px}.manager-department-chart-labels span{min-width:0;display:grid;gap:3px}.manager-department-chart-labels b{color:#454548;font-size:11px}.manager-department-chart-labels small{overflow:hidden;color:#96969b;font-size:9px;text-overflow:ellipsis;white-space:nowrap}.manager-department-chart-empty{padding:18px 0 4px;color:#8a8a8f;font-size:11px}@media(max-width:560px){.manager-department-chart{margin-top:18px}.manager-department-chart-labels{gap:5px}.manager-department-chart-labels small{font-size:8px}}
+.manager-department-chart-area{fill:rgba(59,59,61,.08);stroke:none}.manager-department-chart-line{fill:none;stroke:#3b3b3d;stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}.manager-department-chart-current{fill:#3b3b3d;stroke:#fff;stroke-width:3}.manager-department-chart-scale{position:absolute;inset:0 0 auto;display:flex;justify-content:space-between;color:#a0a0a5;font-size:9px;pointer-events:none}.manager-department-metrics{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:15px}.manager-department-metrics>span{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 11px;border-radius:8px}.manager-department-metrics small{font-size:9px}.manager-department-metrics b{font-size:16px}
+
+/* Final Weekly Review priority overrides. */
+body .workspace-section:has(.weekly-review-page){padding:0!important;border:0!important;background:#f5f5f7!important;box-shadow:none!important}
+body .weekly-review-page{max-width:1120px!important;padding:10px 0 52px!important}
+body .weekly-review-page .weekly-review-hero{align-items:center!important;margin:0 0 20px!important;padding:28px 30px!important;border:1px solid #dedee3!important;border-radius:20px!important;background:#fff!important;box-shadow:0 6px 18px rgba(31,31,35,.055)!important}
+body .weekly-review-page .weekly-review-hero h1{font-size:42px!important}
+body .weekly-review-page .review-new-objective{min-height:44px!important;padding:0 17px!important;background:#525b61!important;border-color:#525b61!important}
+body .weekly-review-page .review-health{grid-template-columns:210px minmax(0,1fr) 180px!important;gap:26px!important;padding:22px 25px!important;border-radius:16px!important;box-shadow:0 5px 14px rgba(31,31,35,.045)!important}
+body .weekly-review-page .review-health-track{height:12px!important}
+body .weekly-review-page .review-section-head h2{font-size:25px!important}
+body .weekly-review-page .review-objective-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:15px!important}
+body .weekly-review-page .review-objective-card{min-height:205px!important;padding:20px!important;border-radius:15px!important;box-shadow:0 4px 12px rgba(31,31,35,.045)!important}
+body .weekly-review-page .review-agenda{margin-top:38px!important;padding-top:27px!important;border-top:1px solid #d9dade!important}
+body .weekly-review-page .review-metric{min-height:86px!important;padding:18px 19px!important}
+body .weekly-review-page .review-decision-grid{gap:15px!important}
+body .weekly-review-page .review-task-row{min-height:96px!important;padding:16px 17px!important}
+@media(max-width:820px){body .weekly-review-page .review-health{grid-template-columns:165px minmax(0,1fr) 155px!important}body .weekly-review-page .review-objective-grid,body .weekly-review-page .review-decision-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:560px){body .workspace-section:has(.weekly-review-page){padding:0!important}body .weekly-review-page{padding:0 0 34px!important}body .weekly-review-page .weekly-review-hero{align-items:flex-start!important;padding:22px 19px!important;border-radius:15px!important}body .weekly-review-page .weekly-review-hero h1{font-size:34px!important}body .weekly-review-page .review-health{grid-template-columns:1fr!important;padding:18px!important}body .weekly-review-page .review-objective-grid,body .weekly-review-page .review-decision-grid{grid-template-columns:1fr!important}body .weekly-review-page .review-metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important}body .weekly-review-page .review-task-row{min-height:104px!important}}

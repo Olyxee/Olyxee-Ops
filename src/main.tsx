@@ -4,6 +4,7 @@ import App from "./App";
 import "./index.css";
 import "./icloud.css";
 import "./logo-overrides.css";
+import "./home-card-overrides.css";
 
 function Login() {
   const [email, setEmail] = useState("info@olyxee.com");
