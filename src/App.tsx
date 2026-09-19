@@ -316,7 +316,7 @@ function ProjectDetail({user,project,tasks,team,onBack,onOpen,onProjectUpdated,o
   const [savingAccount,setSavingAccount]=useState(false);
   const [deletingAccount,setDeletingAccount]=useState(false);
   const [deletingPerson,setDeletingPerson]=useState(false);
-  const [editMode,setEditMode]=useState(!person);
+  const [editMode]=useState(true);
    const [activePanel,setActivePanel]=useState<"identity"|"organisation"|"access">("identity");
    const emailValid=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
    const managers=team.filter(member=>isManager(member)&&accountOf(member)==="Active");
@@ -369,11 +369,39 @@ function ProjectDetail({user,project,tasks,team,onBack,onOpen,onProjectUpdated,o
   const emailShare=credentials?`mailto:${encodeURIComponent(credentials.email)}?subject=${encodeURIComponent("Your Olyxee Ops Account")}&body=${encodeURIComponent(shareMessage)}`:"#";
   const whatsappShare=credentials?`https://wa.me/?text=${encodeURIComponent(shareMessage)}`:"#";
   const savePerson=()=>onSave({...person,id:person?.id||"",name,email,department,employmentType,accessRole,accountStatus,reportsTo} as User);
-   const footer=editMode?<><button className="btn" onClick={()=>editing?setEditMode(false):onClose()}>Cancel</button><button className="btn primary" disabled={!name.trim()||!emailValid||accessRole==="Manager"&&!reportsTo} onClick={savePerson}>{editing?"Save changes":"Add person"}</button></>:<><button className="btn" onClick={onClose}>Close</button>{administrator&&<button className="btn primary" onClick={()=>setEditMode(true)}>Manage person</button>}</>;
-  return <Modal title={editing?(editMode?"Edit person":"Person profile"):"Add team member"} className="person-modal" onClose={onClose} footer={footer}>
-    <div className="person-modal-intro"><span className="person-modal-kicker">{editing?"TEAM DIRECTORY":"NEW TEAM MEMBER"}</span><p>{editing?(editMode?"Update this person’s directory record and account settings.":"View this person’s role, reporting line, and account status."):"Set up the directory record first; access can be provisioned when ready."}</p></div>
+   const footer=<><button className="btn" onClick={onClose}>Cancel</button><button className="btn primary" disabled={!name.trim()||!emailValid||accessRole==="Manager"&&!reportsTo} onClick={savePerson}>{editing?"Save changes":"Add person"}</button></>;
+   return <Modal title={editing?(editMode?"Edit person":"Person profile"):"Add team member"} className={`person-modal ${editing?"":"person-modal-add"}`} onClose={onClose} footer={footer}>
      <div className="person-modal-content">
-    {!editMode&&person?<div className="person-profile-view">
+     {!editing?<div className="person-add-form">
+       <p className="person-add-copy">Add their details and place them in the correct team.</p>
+       <div className="person-add-fields">
+         <label className="form-label person-field-wide">Full name<input className="input" autoFocus value={name} onChange={event=>setName(event.target.value)} placeholder="Full name"/></label>
+         <label className="form-label person-field-wide">Email address<input className="input" type="email" value={email} onChange={event=>setEmail(event.target.value)} placeholder="name@example.com"/>{email&&!emailValid&&<span className="person-field-error">Enter a valid email address.</span>}</label>
+         <label className="form-label">Department<select className="select" value={department} disabled={!administrator} onChange={event=>setDepartment(event.target.value)}><option value="">Select department</option>{departmentOptions.map(option=><option key={option}>{option}</option>)}</select></label>
+         <label className="form-label">Employment<select className="select" value={employmentType} disabled={!administrator} onChange={event=>setEmploymentType(event.target.value as EmploymentType)}>{["Employee","Intern"].map(value=><option key={value}>{value}</option>)}</select></label>
+         <label className="form-label">Access role<select className="select" value={accessRole} disabled={!administrator} onChange={event=>setAccessRole(event.target.value as AccessRole)}>{accessOptions.map(value=><option key={value}>{value}</option>)}</select></label>
+         <label className="form-label">Account status<select className="select" value={accountStatus} onChange={event=>setAccountStatus(event.target.value as AccountStatus)}>{["Active","Suspended"].map(value=><option key={value}>{value}</option>)}</select></label>
+         {accessRole==="Member"&&<label className="form-label person-field-wide">Reports to<select className="select" value={reportsTo} disabled={!administrator} onChange={event=>setReportsTo(event.target.value)}><option value="">Unassigned</option>{managers.filter(manager=>administrator||manager.id===user.id).map(manager=><option key={manager.id} value={manager.id}>{manager.name}</option>)}</select></label>}
+         {accessRole==="Manager"&&<label className="form-label person-field-wide">Reports to<select className="select" value={reportsTo} disabled><option value="">{superadmins.length?"Select active Superadmin":"No active Superadmin available"}</option>{superadmins.map(superadmin=><option key={superadmin.id} value={superadmin.id}>{superadmin.name}</option>)}</select></label>}
+       </div>
+       <p className="person-add-footnote">Sign-in access can be created after the team member is added.</p>
+     </div>:editMode?<div className="person-edit-form">
+       <div className="person-edit-identity"><Avatar person={person!} size={44}/><span><b>{person!.name}</b><small>{person!.email}</small></span></div>
+       <div className="person-add-fields">
+         <label className="form-label person-field-wide">Full name<input className="input" value={name} onChange={event=>setName(event.target.value)} placeholder="Full name"/></label>
+         <label className="form-label person-field-wide">Email address<input className="input" type="email" value={email} onChange={event=>setEmail(event.target.value)} placeholder="name@example.com"/>{email&&!emailValid&&<span className="person-field-error">Enter a valid email address.</span>}</label>
+         <label className="form-label">Department<select className="select" value={department} disabled={!administrator} onChange={event=>setDepartment(event.target.value)}><option value="">Select department</option>{departmentOptions.map(option=><option key={option}>{option}</option>)}</select></label>
+         <label className="form-label">Employment<select className="select" value={employmentType} disabled={livePerson||!administrator} onChange={event=>setEmploymentType(event.target.value as EmploymentType)}>{["Employee","Intern"].map(value=><option key={value}>{value}</option>)}</select></label>
+         <label className="form-label">{livePerson?"Directory role":"Access role"}<select className="select" value={accessRole} disabled={!administrator||livePerson&&intern} onChange={event=>setAccessRole(event.target.value as AccessRole)}>{accessOptions.map(value=><option key={value}>{value}</option>)}</select></label>
+         <label className="form-label">{livePerson?"Employment status":"Account status"}<select className="select" value={accountStatus} onChange={event=>setAccountStatus(event.target.value as AccountStatus)}>{["Active","Suspended"].map(value=><option key={value}>{value}</option>)}</select></label>
+         {accessRole==="Member"&&<label className="form-label person-field-wide">Reports to<select className="select" value={reportsTo} disabled={!administrator} onChange={event=>setReportsTo(event.target.value)}><option value="">Unassigned</option>{managers.filter(manager=>manager.id!==person?.id&&(administrator||manager.id===user.id)).map(manager=><option key={manager.id} value={manager.id}>{manager.name}</option>)}</select></label>}
+         {accessRole==="Manager"&&<label className="form-label person-field-wide">Reports to<select className="select" value={reportsTo} disabled><option value="">{superadmins.length?"Select active Superadmin":"No active Superadmin available"}</option>{superadmins.filter(superadmin=>superadmin.id!==person?.id).map(superadmin=><option key={superadmin.id} value={superadmin.id}>{superadmin.name}</option>)}</select></label>}
+       </div>
+       {canProvision&&<details className="person-account-disclosure"><summary>Account access</summary><div className="person-account-content">
+         {person?.hasOpsAccess?<><div className="account-management-grid"><label className="form-label">Ops role<select className="select" value={opsRole} onChange={event=>setOpsRole(event.target.value as AccessRole)}>{["Admin","Manager","Member"].map(value=><option key={value}>{value}</option>)}</select></label><label className="form-label">Sign-in access<select className="select" value={opsActive?"Active":"Suspended"} onChange={event=>setOpsActive(event.target.value==="Active")}><option>Active</option><option>Suspended</option></select></label></div><div className="account-management-actions"><button className="btn" type="button" disabled={savingAccount||deletingAccount} onClick={saveOpsAccount}>{savingAccount?"Saving…":"Save account access"}</button><button className="btn" type="button" disabled={savingAccount||deletingAccount} onClick={deleteOpsAccount}>{deletingAccount?"Deleting…":"Delete login"}</button></div></>:<button className="btn" type="button" disabled={provisioning} onClick={provision}>{provisioning?"Creating…":"Create Ops login"}</button>}
+         <div className="person-delete-row"><span><b>Delete person</b><small>Removes their directory record and login.</small></span><button className="btn" type="button" disabled={deletingPerson||deletingAccount||savingAccount} onClick={deletePerson}>{deletingPerson?"Deleting…":"Delete"}</button></div>
+       </div></details>}
+     </div>:!editMode&&person?<div className="person-profile-view">
       <div className="person-profile-identity"><Avatar person={person} size={72}/><div><h3>{person.name}</h3><p>{person.email||"No email recorded"}</p><span className={`people-status ${accountOf(person).toLowerCase()}`}>{accountOf(person)}</span></div></div>
       <dl className="person-profile-details">
         <div><dt>Employment</dt><dd>{employmentOf(person)}</dd></div>
