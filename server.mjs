@@ -299,7 +299,8 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
           department,
           employment_status,
           supervisor_name,
-          supervisor_email
+          supervisor_email,
+          supervisor_account_id
         FROM public.interns
         WHERE archived_at IS NULL
         ORDER BY
@@ -340,7 +341,7 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
         name: opsProfile.displayName || account.display_name || account.email,
         email: account.email,
         employmentType: "Employee",
-        accessRole: opsAccount?.role || (isManager ? "Manager" : "Member"),
+        accessRole: isManager ? "Manager" : "Member",
         accountStatus: opsAccount ? (opsAccount.active ? "Active" : "Suspended") : "Pending",
         department: validateDepartment(account.department) || UNASSIGNED_DEPARTMENT,
         position: isManager ? "Department Manager" : "Team Member",
@@ -358,7 +359,7 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
 
     const interns = internResult.rows.map((intern) => {
       const active = String(intern.employment_status || "").toLowerCase() === "active";
-      const supervisorKey = String(intern.supervisor_email || intern.supervisor_name || "").toLowerCase();
+      const supervisorKey = String(intern.supervisor_email || "").toLowerCase();
       const opsAccount = opsAccounts.get(String(intern.email || "").toLowerCase());
       const opsProfile = opsAccount?.profile_data || {};
       return {
@@ -370,7 +371,7 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
         accountStatus: opsAccount ? (opsAccount.active ? "Active" : "Suspended") : "Pending",
         department: resolveDepartment(intern).department,
         position: intern.position || "Intern",
-        reportsTo: managerIds.get(supervisorKey),
+        reportsTo: intern.supervisor_account_id ? `account-${intern.supervisor_account_id}` : managerIds.get(supervisorKey),
         role: "Intern",
         avatarUrl: opsProfile.avatarUrl,
         contactDetails: opsProfile.contactDetails,
@@ -465,6 +466,7 @@ app.post("/api/people", requireAuth, requireAccount, async (request, response) =
 
     let supervisorName = "";
     let supervisorEmail = "";
+    let supervisorAccountId = null;
     if (reportsTo) {
       const managerMatch = /^account-(\d+)$/.exec(reportsTo);
       if (!managerMatch) return response.status(400).json({ error: "Invalid manager selection." });
@@ -474,14 +476,15 @@ app.post("/api/people", requireAuth, requireAccount, async (request, response) =
         WHERE id = $1 AND active = true
       `, [Number(managerMatch[1])]);
       if (!manager.rowCount) return response.status(400).json({ error: "Selected manager is unavailable." });
+      supervisorAccountId = Number(managerMatch[1]);
       supervisorName = manager.rows[0].display_name || manager.rows[0].email;
       supervisorEmail = manager.rows[0].email;
     }
 
     const result = await peoplePool.query(`
       INSERT INTO public.interns
-        (intern_number, full_name, email, department, employment_status, supervisor_name, supervisor_email)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+        (intern_number, full_name, email, department, employment_status, supervisor_name, supervisor_email, supervisor_account_id)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING id
     `, [
       `OPS-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
@@ -491,6 +494,7 @@ app.post("/api/people", requireAuth, requireAccount, async (request, response) =
       accountStatus === "Active" ? "Active" : "Inactive",
       supervisorName,
       supervisorEmail,
+      supervisorAccountId,
     ]);
     return response.status(201).json({ ok: true, id: `intern-${result.rows[0].id}` });
   } catch (error) {
@@ -572,6 +576,7 @@ app.patch("/api/people/:id", requireAuth, requireAccount, async (request, respon
 
     let supervisorName = "";
     let supervisorEmail = "";
+    let supervisorAccountId = null;
     if (reportsTo) {
       const managerMatch = /^account-(\d+)$/.exec(reportsTo);
       if (!managerMatch) return response.status(400).json({ error: "Invalid manager selection." });
@@ -581,6 +586,7 @@ app.patch("/api/people/:id", requireAuth, requireAccount, async (request, respon
         WHERE id = $1 AND active = true
       `, [Number(managerMatch[1])]);
       if (!manager.rowCount) return response.status(400).json({ error: "Selected manager is unavailable." });
+      supervisorAccountId = Number(managerMatch[1]);
       supervisorName = manager.rows[0].display_name || manager.rows[0].email;
       supervisorEmail = manager.rows[0].email;
     }
@@ -593,10 +599,11 @@ app.patch("/api/people/:id", requireAuth, requireAccount, async (request, respon
           employment_status = $4,
           supervisor_name = $5,
           supervisor_email = $6,
+          supervisor_account_id = $7,
           updated_at = now()
-      WHERE id = $7 AND archived_at IS NULL
+      WHERE id = $8 AND archived_at IS NULL
       RETURNING id
-    `, [name, email, department, accountStatus === "Active" ? "Active" : "Inactive", supervisorName, supervisorEmail, id]);
+    `, [name, email, department, accountStatus === "Active" ? "Active" : "Inactive", supervisorName, supervisorEmail, supervisorAccountId, id]);
     if (!result.rowCount) return response.status(404).json({ error: "Intern record not found." });
     return response.json({ ok: true });
   } catch (error) {
@@ -730,6 +737,328 @@ app.delete("/api/people/:id/ops-account", requireAuth, requireAccount, async (re
   } catch (error) {
     console.error("Ops account deletion failed:", error instanceof Error ? error.message : "Unknown error");
     return response.status(503).json({ error: "Could not delete the Ops account." });
+  }
+});
+
+const taskStatuses = ["Not Started", "In Progress", "Blocked", "Submitted for Review", "Changes Requested", "Completed", "Cancelled"];
+const taskPriorities = ["Critical", "High", "Medium", "Low"];
+const taskTransitions = {
+  "Not Started": ["In Progress", "Blocked", "Cancelled"],
+  "In Progress": ["Blocked", "Submitted for Review", "Cancelled"],
+  "Blocked": ["In Progress", "Cancelled"],
+  "Submitted for Review": ["Changes Requested", "Completed"],
+  "Changes Requested": ["In Progress", "Blocked", "Submitted for Review"],
+  "Completed": [],
+  "Cancelled": [],
+};
+
+async function getTaskIdentity(request) {
+  const person = await resolveExternalPerson(request.appAccount.email);
+  return {
+    userId: request.appAccount.id,
+    externalId: person?.external_id || `account-${request.appAccount.id}`,
+    name: person?.name || request.appAccount.display_name || request.appAccount.email,
+    role: request.appAccount.app_role,
+    department: person?.department || UNASSIGNED_DEPARTMENT,
+  };
+}
+
+async function getManagerReportIds(identity) {
+  if (!peoplePool || identity.role !== "Manager") return [];
+  const result = await peoplePool.query(`
+    SELECT 'intern-' || i.id::text AS id
+    FROM public.interns i
+    JOIN public.workspace_accounts manager ON i.supervisor_account_id = manager.id
+    WHERE i.archived_at IS NULL
+      AND lower(coalesce(i.employment_status, '')) = 'active'
+      AND lower(manager.email) = lower($1)
+  `, [requestEmail(identity)]);
+  return result.rows.map((row) => row.id);
+}
+
+function requestEmail(identity) {
+  return identity.email || "";
+}
+
+async function getTaskContext(request) {
+  const identity = await getTaskIdentity(request);
+  identity.email = request.appAccount.email;
+  identity.reportIds = await getManagerReportIds(identity);
+  return identity;
+}
+
+function canViewTask(task, identity) {
+  if (["Superadmin", "Admin"].includes(identity.role)) return true;
+  if (identity.role === "Manager") {
+    return task.creator_user_id === identity.userId
+      || task.assignee_external_id === identity.externalId
+      || identity.reportIds.includes(task.assignee_external_id);
+  }
+  return task.assignee_external_id === identity.externalId;
+}
+
+function canWorkTask(task, identity) {
+  return task.assignee_external_id === identity.externalId;
+}
+
+function canReviewTask(task, identity) {
+  return ["Superadmin", "Admin"].includes(identity.role)
+    || task.creator_user_id === identity.userId
+    || (identity.role === "Manager" && identity.reportIds.includes(task.assignee_external_id));
+}
+
+async function isActiveExternalPerson(externalId) {
+  if (!externalId || !peoplePool) return false;
+  const result = await peoplePool.query(`
+    SELECT 1 FROM (
+      SELECT 'account-' || id::text AS id FROM public.workspace_accounts WHERE active = true
+      UNION ALL
+      SELECT 'intern-' || id::text FROM public.interns
+      WHERE archived_at IS NULL AND lower(coalesce(employment_status, '')) = 'active'
+    ) people
+    WHERE id = $1
+  `, [externalId]);
+  return Boolean(result.rowCount);
+}
+
+async function loadTask(taskId, identity) {
+  const result = await appPool.query("SELECT * FROM public.tasks WHERE id = $1", [taskId]);
+  const task = result.rows[0];
+  if (!task || !canViewTask(task, identity)) return null;
+  return task;
+}
+
+async function recordTaskActivity(client, taskId, identity, action, metadata = {}) {
+  await client.query(`
+    INSERT INTO public.task_activity (task_id, actor_user_id, actor_name, action, metadata)
+    VALUES ($1, $2, $3, $4, $5::jsonb)
+  `, [taskId, identity.userId, identity.name, action, JSON.stringify(metadata)]);
+}
+
+const dateOnly = (value) => value instanceof Date ? value.toISOString().slice(0, 10) : String(value || "").slice(0, 10);
+const mapTask = (row) => ({
+  id: row.id,
+  code: `OLX-${String(row.task_number).padStart(4, "0")}`,
+  title: row.title,
+  description: row.description,
+  project: row.project,
+  department: row.department,
+  createdBy: row.creator_external_id,
+  creatorName: row.creator_name,
+  assignee: row.assignee_external_id || undefined,
+  priority: row.priority,
+  status: row.status,
+  due: dateOnly(row.due_date),
+  createdDate: row.created_at,
+  submittedAt: row.submitted_at,
+  completedAt: row.completed_at,
+  blockerReason: row.blocker_reason,
+  checklist: row.checklist || [],
+  updates: row.updates || [],
+  evidence: row.evidence || [],
+  activityLog: row.activity_log || [],
+  criteria: [],
+});
+
+const taskSelect = `
+  SELECT t.*, creator.display_name AS creator_name,
+    coalesce((SELECT jsonb_agg(jsonb_build_object(
+      'id', c.id, 'text', c.text, 'completed', c.completed, 'completedAt', c.completed_at, 'createdAt', c.created_at
+    ) ORDER BY c.created_at) FROM public.task_checklist_items c WHERE c.task_id = t.id), '[]'::jsonb) AS checklist,
+    coalesce((SELECT jsonb_agg(jsonb_build_object(
+      'id', u.id, 'authorId', u.author_user_id, 'authorName', u.author_name, 'authorRole', u.author_role,
+      'type', u.update_type, 'message', u.message, 'linkUrl', u.link_url, 'createdAt', u.created_at
+    ) ORDER BY u.created_at) FROM public.task_updates u WHERE u.task_id = t.id), '[]'::jsonb) AS updates,
+    coalesce((SELECT jsonb_agg(jsonb_build_object(
+      'id', e.id, 'label', e.label, 'url', e.url, 'createdAt', e.created_at
+    ) ORDER BY e.created_at) FROM public.task_evidence e WHERE e.task_id = t.id), '[]'::jsonb) AS evidence,
+    coalesce((SELECT jsonb_agg(jsonb_build_object(
+      'id', a.id, 'actorName', a.actor_name, 'action', a.action, 'metadata', a.metadata, 'createdAt', a.created_at
+    ) ORDER BY a.created_at) FROM public.task_activity a WHERE a.task_id = t.id), '[]'::jsonb) AS activity_log
+  FROM public.tasks t
+  JOIN public.ops_users creator ON creator.id = t.creator_user_id
+`;
+
+app.get("/api/tasks", requireAuth, requireAccount, async (request, response) => {
+  try {
+    const identity = await getTaskContext(request);
+    const result = await appPool.query(`${taskSelect} ORDER BY t.created_at DESC`);
+    return response.json({ tasks: result.rows.filter((task) => canViewTask(task, identity)).map(mapTask) });
+  } catch (error) {
+    console.error("Task query failed:", error instanceof Error ? error.message : "Unknown error");
+    return response.status(503).json({ error: "Unable to load tasks." });
+  }
+});
+
+app.post("/api/tasks", requireAuth, requireAccount, async (request, response) => {
+  const identity = await getTaskContext(request);
+  if (!["Superadmin", "Admin", "Manager"].includes(identity.role)) return response.status(403).json({ error: "Forbidden" });
+  const title = String(request.body.title || "").trim().slice(0, 200);
+  const description = String(request.body.description || "").trim().slice(0, 5000);
+  const project = String(request.body.project || "").trim().slice(0, 200);
+  const priority = String(request.body.priority || "");
+  const dueDate = String(request.body.due || "");
+  const department = validateDepartment(identity.role === "Manager" ? identity.department : request.body.department, { allowUnassigned: false });
+  const assignee = String(request.body.assignee || "").trim() || null;
+  if (!title || !project) return response.status(400).json({ error: "Task name and project are required." });
+  if (!dueDate || !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) return response.status(400).json({ error: "Due date is required." });
+  if (dueDate < new Date().toISOString().slice(0, 10)) return response.status(400).json({ error: "Due date cannot be in the past." });
+  if (!taskPriorities.includes(priority) || !department) return response.status(400).json({ error: "Choose a valid priority and department." });
+  if (identity.role === "Manager" && assignee && assignee !== identity.externalId && !identity.reportIds.includes(assignee)) {
+    return response.status(403).json({ error: "Managers can only assign tasks to themselves or active direct reports." });
+  }
+  if (assignee && !(await isActiveExternalPerson(assignee))) return response.status(400).json({ error: "Choose an active assignee." });
+  const client = await appPool.connect();
+  try {
+    await client.query("BEGIN");
+    const result = await client.query(`
+      INSERT INTO public.tasks
+        (title, description, project, department, creator_user_id, creator_external_id, assignee_external_id, priority, due_date)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+      RETURNING *
+    `, [title, description, project, department, identity.userId, identity.externalId, assignee, priority, dueDate]);
+    await recordTaskActivity(client, result.rows[0].id, identity, "Task created", { assignee, priority, dueDate });
+    await client.query("COMMIT");
+    return response.status(201).json({ task: mapTask({ ...result.rows[0], creator_name: identity.name }) });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Task creation failed:", error instanceof Error ? error.message : "Unknown error");
+    return response.status(503).json({ error: "Unable to assign task. Please try again." });
+  } finally {
+    client.release();
+  }
+});
+
+app.patch("/api/tasks/:id", requireAuth, requireAccount, async (request, response) => {
+  const identity = await getTaskContext(request);
+  const task = await loadTask(request.params.id, identity);
+  if (!task) return response.status(404).json({ error: "Task not found." });
+  const nextStatus = request.body.status ? String(request.body.status) : null;
+  const reviewerAction = nextStatus && ["Changes Requested", "Completed", "Cancelled"].includes(nextStatus);
+  if (nextStatus && (!taskStatuses.includes(nextStatus) || !(taskTransitions[task.status] || []).includes(nextStatus))) {
+    return response.status(409).json({ error: `This task cannot move from ${task.status} to ${nextStatus}.` });
+  }
+  if (nextStatus === "Submitted for Review") {
+    return response.status(400).json({ error: "Use Submit for review and include a submission summary." });
+  }
+  if (nextStatus && (reviewerAction ? !canReviewTask(task, identity) : !canWorkTask(task, identity))) {
+    return response.status(403).json({ error: "You are not allowed to update this task." });
+  }
+  const metadataRequested = ["assignee", "due", "priority", "project", "department"].some((key) => Object.hasOwn(request.body, key));
+  if (metadataRequested && !["Superadmin", "Admin"].includes(identity.role)) {
+    return response.status(403).json({ error: "Only administrators can change task assignment and metadata." });
+  }
+  const priority = metadataRequested && request.body.priority ? String(request.body.priority) : task.priority;
+  const dueDate = metadataRequested && request.body.due ? String(request.body.due) : dateOnly(task.due_date);
+  const project = metadataRequested && request.body.project ? String(request.body.project).trim().slice(0, 200) : task.project;
+  const department = metadataRequested && request.body.department ? validateDepartment(request.body.department, { allowUnassigned: false }) : task.department;
+  const assignee = metadataRequested && Object.hasOwn(request.body, "assignee") ? String(request.body.assignee || "") || null : task.assignee_external_id;
+  if (metadataRequested && (!taskPriorities.includes(priority) || !/^\d{4}-\d{2}-\d{2}$/.test(dueDate) || !project || !department)) {
+    return response.status(400).json({ error: "Choose valid task metadata and a due date." });
+  }
+  if (metadataRequested && assignee && !(await isActiveExternalPerson(assignee))) {
+    return response.status(400).json({ error: "Choose an active assignee." });
+  }
+  const blockerReason = nextStatus === "Blocked" ? String(request.body.blockerReason || "").trim().slice(0, 1000) : task.blocker_reason;
+  if (nextStatus === "Blocked" && !blockerReason) return response.status(400).json({ error: "Describe what is blocking the task." });
+  const result = await appPool.query(`
+    UPDATE public.tasks SET
+      status = coalesce($1, status),
+      blocker_reason = CASE WHEN $1 = 'Blocked' THEN $2 WHEN $1 = 'In Progress' THEN NULL ELSE blocker_reason END,
+      submitted_at = CASE WHEN $1 = 'Submitted for Review' THEN now() ELSE submitted_at END,
+      completed_at = CASE WHEN $1 = 'Completed' THEN now() ELSE completed_at END,
+      assignee_external_id = $4,
+      priority = $5,
+      due_date = $6,
+      project = $7,
+      department = $8,
+      updated_at = now()
+    WHERE id = $3 RETURNING *
+  `, [nextStatus, blockerReason, task.id, assignee, priority, dueDate, project, department]);
+  if (nextStatus) await recordTaskActivity(appPool, task.id, identity, `Status changed to ${nextStatus}`, { from: task.status, to: nextStatus });
+  if (metadataRequested) await recordTaskActivity(appPool, task.id, identity, "Task assignment or metadata changed", { assignee, priority, dueDate, project, department });
+  return response.json({ task: mapTask({ ...result.rows[0], creator_name: task.creator_name }) });
+});
+
+app.post("/api/tasks/:id/checklist", requireAuth, requireAccount, async (request, response) => {
+  const identity = await getTaskContext(request);
+  const task = await loadTask(request.params.id, identity);
+  if (!task || (!canWorkTask(task, identity) && !canReviewTask(task, identity))) return response.status(403).json({ error: "Forbidden" });
+  const text = String(request.body.text || "").trim().slice(0, 300);
+  if (!text) return response.status(400).json({ error: "Checklist text is required." });
+  const result = await appPool.query("INSERT INTO public.task_checklist_items (task_id, text) VALUES ($1,$2) RETURNING *", [task.id, text]);
+  await recordTaskActivity(appPool, task.id, identity, "Checklist item added", { text });
+  return response.status(201).json({ item: result.rows[0] });
+});
+
+app.patch("/api/tasks/:taskId/checklist/:itemId", requireAuth, requireAccount, async (request, response) => {
+  const identity = await getTaskContext(request);
+  const task = await loadTask(request.params.taskId, identity);
+  if (!task || !canWorkTask(task, identity)) return response.status(403).json({ error: "Only the assignee can update checklist progress." });
+  const completed = Boolean(request.body.completed);
+  const result = await appPool.query(`
+    UPDATE public.task_checklist_items SET completed=$1, completed_at=CASE WHEN $1 THEN now() ELSE NULL END
+    WHERE id=$2 AND task_id=$3 RETURNING *
+  `, [completed, request.params.itemId, task.id]);
+  if (!result.rowCount) return response.status(404).json({ error: "Checklist item not found." });
+  await recordTaskActivity(appPool, task.id, identity, completed ? "Checklist item completed" : "Checklist item reopened");
+  return response.json({ item: result.rows[0] });
+});
+
+app.post("/api/tasks/:id/updates", requireAuth, requireAccount, async (request, response) => {
+  const identity = await getTaskContext(request);
+  const task = await loadTask(request.params.id, identity);
+  if (!task || (!canWorkTask(task, identity) && !canReviewTask(task, identity))) return response.status(403).json({ error: "Forbidden" });
+  const type = String(request.body.type || "General comment");
+  const message = String(request.body.message || "").trim().slice(0, 3000);
+  const linkUrl = String(request.body.linkUrl || "").trim().slice(0, 2000) || null;
+  if (!message) return response.status(400).json({ error: "Write an update before posting." });
+  if (linkUrl && !/^https?:\/\/\S+$/i.test(linkUrl)) return response.status(400).json({ error: "Enter a valid supporting URL." });
+  const result = await appPool.query(`
+    INSERT INTO public.task_updates (task_id, author_user_id, author_name, author_role, update_type, message, link_url)
+    VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *
+  `, [task.id, identity.userId, identity.name, identity.role, type, message, linkUrl]);
+  await recordTaskActivity(appPool, task.id, identity, `${type} added`);
+  return response.status(201).json({ update: result.rows[0] });
+});
+
+app.post("/api/tasks/:id/evidence", requireAuth, requireAccount, async (request, response) => {
+  const identity = await getTaskContext(request);
+  const task = await loadTask(request.params.id, identity);
+  if (!task || !canWorkTask(task, identity)) return response.status(403).json({ error: "Only the assignee can add evidence." });
+  const label = String(request.body.label || "").trim().slice(0, 120);
+  const url = String(request.body.url || "").trim().slice(0, 2000);
+  if (!label || !/^https?:\/\/\S+$/i.test(url)) return response.status(400).json({ error: "Add a label and valid evidence URL." });
+  const result = await appPool.query(`
+    INSERT INTO public.task_evidence (task_id, submitted_by, label, url) VALUES ($1,$2,$3,$4) RETURNING *
+  `, [task.id, identity.userId, label, url]);
+  await recordTaskActivity(appPool, task.id, identity, "Evidence added", { label, url });
+  return response.status(201).json({ evidence: result.rows[0] });
+});
+
+app.post("/api/tasks/:id/submit", requireAuth, requireAccount, async (request, response) => {
+  const identity = await getTaskContext(request);
+  const task = await loadTask(request.params.id, identity);
+  if (!task || !canWorkTask(task, identity)) return response.status(403).json({ error: "Only the assignee can submit this task." });
+  if (!["In Progress", "Changes Requested"].includes(task.status)) return response.status(409).json({ error: "Start the task before submitting it." });
+  const summary = String(request.body.summary || "").trim().slice(0, 3000);
+  if (!summary) return response.status(400).json({ error: "Submission summary is required." });
+  const client = await appPool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(`
+      INSERT INTO public.task_updates (task_id, author_user_id, author_name, author_role, update_type, message)
+      VALUES ($1,$2,$3,$4,'Submission',$5)
+    `, [task.id, identity.userId, identity.name, identity.role, summary]);
+    await client.query("UPDATE public.tasks SET status='Submitted for Review', submitted_at=now(), updated_at=now() WHERE id=$1", [task.id]);
+    await recordTaskActivity(client, task.id, identity, "Task submitted for review");
+    await client.query("COMMIT");
+    return response.json({ ok: true });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    return response.status(503).json({ error: "Could not submit this task." });
+  } finally {
+    client.release();
   }
 });
 

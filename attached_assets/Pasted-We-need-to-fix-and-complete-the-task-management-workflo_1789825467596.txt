@@ -1,0 +1,470 @@
+We need to fix and complete the task-management workflows across SupaAdmin, Manager, and Intern roles before onboarding users.
+
+Do not only patch the frontend. Trace each issue through the frontend, API/server actions, database writes, database reads, permissions/RLS, and authentication/session logic. Verify persistence by refreshing the page and logging in as the affected user.
+
+## 1. Fix Manager → Intern Task Assignment Persistence
+
+Current issue:
+
+* Manager assigns a task to an active Intern.
+* Task immediately appears in the Manager UI.
+* After refresh, the task disappears.
+* When logging into the Intern account, the assigned task is not visible.
+
+This suggests the UI is updating optimistically/local-state only, or the database insert/retrieval is failing.
+
+Required behaviour:
+
+* Manager selects an Intern.
+* Manager creates and assigns a task.
+* Task must be written to the database.
+* Refreshing the Manager dashboard must still show the task.
+* Logging into the assigned Intern account must show the same task.
+* The task must contain a persistent assignee/user ID, creator ID, department/team if applicable, timestamps, status, priority, and due date.
+* Do not rely on names or email strings as the primary relationship. Use persistent user/member IDs.
+
+Check:
+
+* Database insert
+* API/server action response
+* Foreign keys
+* Role permissions
+* Supabase RLS if applicable
+* Query filtering
+* Manager-to-Intern relationship
+* Active/inactive account filtering
+* Tenant/company scoping
+
+Do not consider this fixed until it survives a full page refresh and a separate Intern login.
+
+## 2. Fix Manager Task Status Persistence
+
+Current issue:
+
+* SupaAdmin assigns a task to a Manager.
+* The Manager can see the task correctly.
+* Manager changes status, e.g.:
+  `Not Started → In Progress`
+* UI temporarily shows the new status.
+* After refresh it returns to `Not Started`.
+
+Required behaviour:
+
+* Status changes must update the actual database record.
+* UI should only confirm success after the database update succeeds.
+* Refreshing must preserve the updated status.
+* SupaAdmin must see the updated status as well.
+* Keep task status synchronized across all role views.
+
+Use a defined task lifecycle such as:
+
+`Not Started`
+`In Progress`
+`Blocked`
+`Submitted for Review`
+`Changes Requested`
+`Completed`
+
+Only authorized users should be able to make relevant status transitions.
+
+## 3. Add Proper Task Progress and Submission Workflow
+
+The current task system is incomplete because assignees cannot properly report or submit their work.
+
+Add a task detail/workspace view.
+
+### Assignee capabilities
+
+Interns and Managers assigned to a task should be able to:
+
+* Change allowed task status.
+* Add progress updates.
+* Explain what has been completed.
+* Explain what is still pending.
+* Mark themselves as blocked and provide the blocker reason.
+* Add checklist items.
+* Mark checklist items complete/incomplete.
+* Add supporting URLs.
+* Add evidence such as:
+
+  * GitHub PR
+  * GitHub repository
+  * deployed URL
+  * document link
+  * research link
+  * other relevant evidence
+* Submit the task for review.
+
+When submitting, require a short submission summary.
+
+Example:
+
+**Submission Summary**
+
+* Work completed
+* Outstanding items
+* Evidence / links
+* Notes for reviewer
+
+Submitting should change the status to:
+
+`Submitted for Review`
+
+### Reviewer capabilities
+
+The task creator, relevant Manager, or SupaAdmin should be able to:
+
+* Review the submission.
+* View progress history.
+* View submitted links/evidence.
+* Add review comments.
+* Request changes.
+* Mark the task completed.
+
+If changes are required:
+
+`Submitted for Review → Changes Requested`
+
+The assignee can then update the task and resubmit.
+
+If approved:
+
+`Submitted for Review → Completed`
+
+## 4. Add Task Comments / Updates
+
+Add a shared task discussion/activity section.
+
+Both the assignee and authorized Manager/SupaAdmin should be able to add updates/comments.
+
+Each update should store:
+
+* author ID
+* author name/display information
+* role
+* message
+* timestamp
+* optional attachment/link
+* update type if applicable
+
+Examples:
+
+* Progress update
+* General comment
+* Blocker
+* Submission
+* Review feedback
+* Status change
+
+Display these chronologically inside the task.
+
+Avoid building a full chat system. This should remain a professional task activity/update feed.
+
+## 5. Add Task Activity History / Audit Trail
+
+Track meaningful events automatically.
+
+Examples:
+
+* Task created
+* Task assigned
+* Due date changed
+* Priority changed
+* Status changed
+* Checklist updated
+* Comment added
+* Submission made
+* Changes requested
+* Task completed
+* Assignee changed
+
+Show who performed the action and when.
+
+This should be persisted in the database, not generated only from frontend state.
+
+## 6. Fix Due Date Validation
+
+Current issue:
+
+* Due date visually appears optional.
+* Saving without a due date silently fails.
+
+Choose one consistent implementation.
+
+For this system, make the due date **required**.
+
+UI requirements:
+
+* Label it clearly as `Due date *`
+* Validate before submission.
+* If missing, show an inline message such as:
+
+`Due date is required.`
+
+* Do not silently fail.
+* Disable or block submission with a clear explanation.
+* Backend validation must match frontend validation.
+
+Also validate that the due date is reasonable and correctly converted/stored with timezone-safe date handling.
+
+## 7. Fix Ops Login Credential Email Sharing
+
+Current behaviour:
+
+* Ops account creation/reset correctly generates:
+
+  * email/login
+  * temporary password
+* Copy Details works.
+* WhatsApp sharing works.
+* Email sharing does not properly send/share the credentials.
+
+Investigate the complete email flow.
+
+Determine whether the current button:
+
+* opens a `mailto:` link,
+* calls an email provider/API,
+* calls a backend endpoint,
+* or only triggers frontend state.
+
+### Required behaviour
+
+When the user selects `Share via Email`, provide a reliable email-sharing experience.
+
+Preferred implementation:
+
+Open a properly populated email composition flow containing:
+
+**Subject:**
+Your Olyxee Ops Account
+
+**Body:**
+
+Hello [Name],
+
+Your Olyxee Ops account has been created.
+
+Login email: [email]
+Temporary password: [temporary password]
+
+Please sign in and change your temporary password after your first login.
+
+Regards,
+Olyxee
+
+If the system already has a transactional email provider configured, use the existing provider rather than introducing another provider unnecessarily.
+
+If email sending is performed from the backend:
+
+* validate recipient email
+* handle failures
+* return success/error state
+* show a clear confirmation after successful sending
+* never expose provider API keys client-side
+
+Do not silently report success when sending fails.
+
+## 8. Permissions
+
+Maintain the following hierarchy:
+
+### SupaAdmin
+
+Can:
+
+* manage Managers
+* manage Employees/Interns where applicable
+* create/assign tasks
+* assign tasks to Managers
+* view all relevant tasks
+* review relevant work
+* change assignments
+* manage task metadata
+* suspend/delete accounts where existing permissions allow it
+
+### Manager
+
+Can:
+
+* view tasks assigned to them
+* update their own assigned tasks
+* submit their work
+* assign tasks to Interns/employees they manage
+* view progress for people they manage
+* review their submissions
+* request changes
+* complete/approve tasks where authorized
+
+### Intern
+
+Can:
+
+* see only tasks assigned to them
+* update permitted statuses
+* maintain task checklist/progress
+* add comments/updates
+* submit work
+* add evidence/links
+
+Interns must not be able to view or modify tasks belonging to unrelated users.
+
+## 9. Database Design
+
+Inspect the existing schema before creating new tables.
+
+Reuse existing tables where appropriate and migrate carefully.
+
+A clean architecture may require concepts similar to:
+
+`tasks`
+
+* id
+* title
+* description
+* creator_id
+* assignee_id
+* company_id
+* department_id
+* priority
+* status
+* due_date
+* created_at
+* updated_at
+* submitted_at
+* completed_at
+
+`task_checklist_items`
+
+* id
+* task_id
+* text
+* completed
+* completed_at
+* created_at
+
+`task_updates`
+
+* id
+* task_id
+* author_id
+* type
+* message
+* created_at
+
+`task_evidence`
+
+* id
+* task_id
+* submitted_by
+* label
+* url
+* created_at
+
+`task_activity`
+
+* id
+* task_id
+* actor_id
+* action
+* metadata
+* created_at
+
+Do not create duplicate tables if equivalent structures already exist.
+
+## 10. UX Cleanup
+
+Keep this professional and simple.
+
+Avoid:
+
+* excessive colours
+* too many cards
+* duplicate controls
+* unnecessary badges
+* excessive modal windows
+
+A task page should clearly show:
+
+**Task title**
+
+Status · Priority · Due date
+
+Assigned to
+Assigned by
+
+Description
+
+Progress / Checklist
+
+Submission & Evidence
+
+Comments / Updates
+
+Activity
+
+Relevant actions should depend on the logged-in user's role and permissions.
+
+## 11. Error Handling
+
+Remove silent failures.
+
+Every mutation must have:
+
+* loading state
+* success state
+* failure state
+
+Examples:
+
+`Task created successfully.`
+
+`Task status updated.`
+
+`Task submitted for review.`
+
+`Unable to assign task. Please try again.`
+
+`Due date is required.`
+
+`Unable to send login email.`
+
+Do not update the UI permanently unless the backend/database operation succeeds.
+
+If optimistic updates are used, rollback immediately when the backend request fails.
+
+## 12. Final Regression Testing
+
+Before considering this complete, test these exact scenarios:
+
+1. SupaAdmin creates Manager account.
+2. Manager logs in.
+3. SupaAdmin assigns task to Manager.
+4. Manager refreshes — task remains.
+5. Manager changes status to In Progress.
+6. Manager refreshes — status remains In Progress.
+7. Manager adds progress/comment.
+8. SupaAdmin sees the update.
+9. Manager assigns task to an active Intern.
+10. Manager refreshes — task remains.
+11. Intern logs in — task is visible.
+12. Intern changes status.
+13. Intern refreshes — status remains.
+14. Intern adds checklist progress.
+15. Intern adds evidence URL.
+16. Intern submits for review.
+17. Manager sees `Submitted for Review`.
+18. Manager comments/request changes.
+19. Intern sees feedback.
+20. Intern resubmits.
+21. Manager marks task Completed.
+22. Both accounts continue showing Completed after refresh.
+23. Creating a task without a due date shows clear validation.
+24. Creating a task with a due date succeeds.
+25. Ops credentials can be copied.
+26. WhatsApp sharing still works.
+27. Email sharing correctly prepares/sends the login credentials.
+
+Also check the browser console, backend logs, API responses, database records, and authorization/RLS errors during these tests.
+
+The core requirement is **real database persistence and correct role-based retrieval**. Do not fix these issues using frontend-only state or localStorage.

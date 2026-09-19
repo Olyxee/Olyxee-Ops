@@ -931,6 +931,9 @@ body .app.workspace-shell .workspace-topbar .top-actions {
 }
 
 .settings-modal-title > svg {
+  display: block;
+  flex: 0 0 30px;
+  box-sizing: border-box;
   width: 30px;
   height: 30px;
   padding: 6px;
@@ -984,6 +987,8 @@ body .app.workspace-shell .workspace-topbar .top-actions {
   grid-template-columns: 36px minmax(0, 1fr) 14px;
   align-items: center;
   gap: 10px;
+  width: 100%;
+  min-width: 0;
   min-height: 54px;
   padding: 9px 10px;
   border-radius: 12px;
@@ -1008,14 +1013,30 @@ body .app.workspace-shell .workspace-topbar .top-actions {
 }
 
 .settings-tab-icon {
+  box-sizing: border-box;
   width: 36px;
   height: 36px;
   display: grid;
   place-items: center;
+  gap: 0 !important;
+  padding: 0;
+  overflow: hidden;
+  flex: 0 0 36px;
   border-radius: 10px;
   background: rgba(210, 229, 238, 0.68);
   color: #5f7f8e;
   transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.settings-tab-icon > svg {
+  display: block;
+  width: 17px;
+  height: 17px;
+  max-width: 17px;
+  max-height: 17px;
+  margin: 0;
+  flex: none;
+  stroke-width: 2;
 }
 
 .settings-sidebar button.active .settings-tab-icon {
@@ -1308,6 +1329,7 @@ body .app.workspace-shell .workspace-topbar .top-actions {
   }
 
   .settings-sidebar button {
+    width: auto;
     min-height: 40px;
     flex: 0 0 auto;
     grid-template-columns: 28px auto;
@@ -1317,9 +1339,17 @@ body .app.workspace-shell .workspace-topbar .top-actions {
   }
 
   .settings-tab-icon {
+    flex-basis: 28px;
     width: 28px;
     height: 28px;
     border-radius: 8px;
+  }
+
+  .settings-tab-icon > svg {
+    width: 15px;
+    height: 15px;
+    max-width: 15px;
+    max-height: 15px;
   }
 
   .settings-tab-copy small,
@@ -2353,7 +2383,99 @@ body .app.workspace-shell .workspace-topbar::after {
   font-size: 8px;
 }
 
+.workspace-welcome-message {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  margin-bottom: 19px;
+}
+
+.workspace-welcome-message > span {
+  display: block;
+  margin-bottom: 6px;
+  color: #39708a;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.workspace-welcome-message h1 {
+  max-width: 340px;
+  margin: 0;
+  color: #102f40;
+  font-size: clamp(22px, 2vw, 29px) !important;
+  line-height: 1.08;
+  letter-spacing: -.045em;
+}
+
+.workspace-welcome-message p {
+  max-width: 330px;
+  margin: 8px 0 0;
+  color: #607985;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.workspace-profile-identity {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 13px;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .58);
+  box-shadow: 0 8px 22px rgba(40, 94, 114, .1);
+  backdrop-filter: blur(12px);
+}
+
+.workspace-profile-identity .avatar {
+  width: 68px !important;
+  height: 68px !important;
+  border-width: 3px;
+}
+
+.workspace-profile-identity > div {
+  min-width: 0;
+}
+
+.workspace-profile-identity h2 {
+  margin: 5px 0 2px;
+  overflow: hidden;
+  color: #173544;
+  font-size: 16px;
+  letter-spacing: -.025em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-profile-identity p {
+  margin: 0;
+  overflow: hidden;
+  color: #728994;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-profile-foot .workspace-profile-tags {
+  margin: 0;
+}
+
 @media (max-width: 560px) {
+  .workspace-profile-identity {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .workspace-profile-identity .workspace-profile-status {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
   .department-card-actions {
     grid-template-columns: 1fr 1fr;
   }

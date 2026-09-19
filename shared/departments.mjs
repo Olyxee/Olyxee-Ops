@@ -1,6 +1,6 @@
 export const OFFICIAL_DEPARTMENTS = Object.freeze([
   "Research & Development (R&D)",
-  "AI Engineering",
+  "Engineering",
   "Data & Security",
   "Sales & Marketing",
   "Business Operations",
@@ -10,7 +10,7 @@ export const UNASSIGNED_DEPARTMENT = "Unassigned";
 
 const rules = [
   {
-    department: "AI Engineering",
+    department: "Engineering",
     keywords: [
       "artificial intelligence", "ai engineer", "machine learning", "ml engineer",
       "llm", "large language model", "agent engineer", "applied ai", "ai integration",
@@ -124,7 +124,7 @@ export function resolveDepartment(details = {}) {
 
 export const DEPARTMENT_DESCRIPTIONS = Object.freeze({
   "Research & Development (R&D)": "Software, product, research engineering, and prototyping.",
-  "AI Engineering": "Machine learning, applied AI, agents, models, and AI integrations.",
+  "Engineering": "Software, machine learning, applied AI, agents, and technical systems.",
   "Data & Security": "Data platforms, analytics, governance, cybersecurity, and protection.",
   "Sales & Marketing": "Growth, sales, partnerships, customer success, and communications.",
   "Business Operations": "Operations, finance, people, administration, legal, and coordination.",
