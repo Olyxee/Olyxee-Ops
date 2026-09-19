@@ -1,4 +1,4 @@
-export type Role="Super Admin"|"Department Admin"|"Member"|"Intern";
+export type Role="Super Admin"|"Manager"|"Member"|"Intern";
 export type Status="Inbox"|"Planned"|"Available"|"Assigned"|"In Progress"|"Blocked"|"In Review"|"Done"|"Cancelled"|"Backlog"|"In progress"|"In review";
 export type User={id:string;name:string;email:string;role:Role;department:string;reportsTo?:string;active?:boolean};
 export type Blocker={reason:string;need:string;waitingFor:string;severity:"Low"|"Medium"|"High"|"Critical";reportedBy:string;createdAt:string;resolvedAt?:string};
@@ -8,12 +8,12 @@ export type Audit={id:string;actor:string;action:string;time:string};
 export type Notice={id:string;userId:string;title:string;body:string;read:boolean;time:string};
 export type Access={id:string;requester:string;department:string;resourceType:string;system:string;relatedTask:string;reason:string;status:"Pending"|"Approved"|"Rejected";date:string};
 export const users:User[]=[
- {id:"u1",name:"Morgan Lee",email:"morgan@olyxee.com",role:"Super Admin",department:"Operations",active:true},
- {id:"u2",name:"Alisha Fatima",email:"alisha@olyxee.com",role:"Department Admin",department:"AI Engineering",reportsTo:"u1",active:true},
+  {id:"u1",name:"Morgan Lee",email:"info@olyxee.com",role:"Super Admin",department:"Operations",active:true},
+  {id:"u2",name:"Alisha Fatima",email:"alisha@olyxee.com",role:"Manager",department:"AI Engineering",reportsTo:"u1",active:true},
  {id:"u3",name:"Noah Williams",email:"noah@olyxee.com",role:"Intern",department:"AI Engineering",reportsTo:"u2",active:true},
  {id:"u4",name:"Sofia Chen",email:"sofia@olyxee.com",role:"Intern",department:"Product Engineering",reportsTo:"u6",active:true},
  {id:"u5",name:"Ethan Brooks",email:"ethan@olyxee.com",role:"Intern",department:"Data",reportsTo:"u7",active:true},
- {id:"u6",name:"Priya Nair",email:"priya@olyxee.com",role:"Department Admin",department:"Product Engineering",reportsTo:"u1",active:true},
+  {id:"u6",name:"Priya Nair",email:"priya@olyxee.com",role:"Manager",department:"Product Engineering",reportsTo:"u1",active:true},
  {id:"u7",name:"Tomás Reed",email:"tomas@olyxee.com",role:"Member",department:"Data",reportsTo:"u1",active:true}];
 export const projects=["Orgni","Olyxee Logistics","Okiru","Internal Operations","Research"];
 const base={department:"AI Engineering",createdBy:"u1",createdDate:"2026-09-14",targetWeek:"14–18 Sep 2026",criteria:["Acceptance criteria are agreed","Evidence is attached before review"],dependencies:[],comments:[],activity:["Task seeded for week 38"],attachments:[],reviewState:"Not submitted" as const};
