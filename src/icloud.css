@@ -1539,27 +1539,34 @@ body .app.workspace-shell .workspace-card,
 .panel,
 .modal,
 .settings-group {
-  border: 1px solid var(--ops-line);
+  border: 1px solid rgba(255, 255, 255, .76);
   border-radius: 16px;
-  background: rgba(255, 255, 255, .94);
-  box-shadow: 0 5px 18px rgba(48, 68, 71, .055);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: linear-gradient(145deg, rgba(255, 255, 255, .84), rgba(247, 251, 250, .76));
+  box-shadow:
+    0 14px 36px rgba(37, 64, 70, .12),
+    inset 0 1px 0 rgba(255, 255, 255, .92),
+    inset 0 -1px 0 rgba(184, 213, 210, .22);
+  backdrop-filter: blur(24px) saturate(135%);
+  -webkit-backdrop-filter: blur(24px) saturate(135%);
 }
 
 body .app.workspace-shell .workspace-card:hover {
-  box-shadow: 0 8px 24px rgba(48, 68, 71, .085);
+  border-color: rgba(255, 255, 255, .9);
+  box-shadow:
+    0 18px 42px rgba(37, 64, 70, .15),
+    inset 0 1px 0 rgba(255, 255, 255, .96),
+    inset 0 -1px 0 rgba(184, 213, 210, .24);
 }
 
 .workspace-welcome,
 body .app.workspace-shell .workspace-welcome {
-  background: linear-gradient(145deg, rgba(255,255,255,.96) 0%, rgba(241,247,245,.92) 100%) !important;
+  background: linear-gradient(145deg, rgba(255,255,255,.88) 0%, rgba(238,247,244,.78) 100%) !important;
 }
 
 .workspace-card-head {
   min-height: 60px;
-  border-bottom: 1px solid var(--ops-line);
-  background: var(--ops-surface-muted);
+  border-bottom: 1px solid rgba(156, 190, 187, .24);
+  background: rgba(247, 251, 250, .58);
 }
 
 .workspace-card-head b {
@@ -1814,9 +1821,14 @@ body .app.workspace-shell .workspace-welcome {
 }
 
 .login-card {
-  border: 1px solid #e0e7e5;
-  background: rgba(255, 255, 255, .94);
-  box-shadow: 0 22px 60px rgba(44, 67, 70, .11);
+  border: 1px solid rgba(255, 255, 255, .82);
+  background: linear-gradient(145deg, rgba(255, 255, 255, .86), rgba(247, 251, 250, .78));
+  box-shadow:
+    0 24px 64px rgba(37, 64, 70, .18),
+    inset 0 1px 0 rgba(255, 255, 255, .96),
+    inset 0 -1px 0 rgba(184, 213, 210, .22);
+  backdrop-filter: blur(26px) saturate(135%);
+  -webkit-backdrop-filter: blur(26px) saturate(135%);
 }
 
 .login-brand span,
