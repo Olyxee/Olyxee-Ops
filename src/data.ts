@@ -1,6 +1,8 @@
 export type Role="Super Admin"|"Manager"|"Member"|"Intern";
 export type Status="Inbox"|"Planned"|"Available"|"Assigned"|"In Progress"|"Blocked"|"In Review"|"Done"|"Cancelled"|"Backlog"|"In progress"|"In review";
 export type User={id:string;name:string;email:string;role:Role;department:string;reportsTo?:string;active?:boolean};
+export type Availability="Available"|"Busy"|"Offline";
+export type StaffStatus={userId:string;availability:Availability;start:string;end:string;note:string;updatedAt:string};
 export type Blocker={reason:string;need:string;waitingFor:string;severity:"Low"|"Medium"|"High"|"Critical";reportedBy:string;createdAt:string;resolvedAt?:string};
 export type Comment={id:string;author:string;text:string;createdAt:string};
 export type Task={id:string;title:string;project:string;department?:string;createdBy?:string;status:Status;assignee?:string;priority:"Critical"|"High"|"Medium"|"Low";createdDate?:string;startDate?:string;due:string;targetWeek?:string;description:string;criteria:string[];dependencies?:string[];comments?:Comment[];activity?:string[];reviewState?:"Not submitted"|"Awaiting review"|"Changes requested"|"Approved";attachments?:string[];pr?:string;blocker?:Blocker;weeklyCommitment?:boolean;available?:boolean;merged?:boolean};
@@ -19,6 +21,15 @@ export const users:User[]=[
   {id:"u5",name:"Ethan Brooks",email:"ethan@olyxee.com",role:"Intern",department:"Data",reportsTo:"u7",active:true},
   {id:"u6",name:"Priya Nair",email:"priya@olyxee.com",role:"Manager",department:"Product Engineering",reportsTo:"u1",active:true},
   {id:"u7",name:"Tomás Reed",email:"tomas@olyxee.com",role:"Manager",department:"Data",reportsTo:"u1",active:true}];
+export const seedStaffStatuses:StaffStatus[]=[
+  {userId:"u1",availability:"Available",start:"09:00",end:"17:30",note:"Reviewing weekly delivery and team priorities.",updatedAt:"Seeded"},
+  {userId:"u2",availability:"Busy",start:"09:00",end:"17:30",note:"In Orgni sync review.",updatedAt:"Seeded"},
+  {userId:"u3",availability:"Available",start:"10:00",end:"18:00",note:"Open for pairing after lunch.",updatedAt:"Seeded"},
+  {userId:"u4",availability:"Available",start:"09:30",end:"17:30",note:"Working through Okiru invites.",updatedAt:"Seeded"},
+  {userId:"u5",availability:"Busy",start:"08:30",end:"16:30",note:"Investigating customs provider mapping.",updatedAt:"Seeded"},
+  {userId:"u6",availability:"Available",start:"09:00",end:"17:30",note:"Product workspace planning.",updatedAt:"Seeded"},
+  {userId:"u7",availability:"Offline",start:"09:00",end:"17:00",note:"Away from desk this afternoon.",updatedAt:"Seeded"}
+];
 export const projects=["Orgni","Olyxee Logistics","Okiru","Internal Operations","Research"];
 export const seedProjects:Project[]=[
  {id:"p1",name:"Orgni",description:"Team membership, imports, and synchronization for the Orgni workspace.",githubUrl:"https://github.com/olyxee/orgni",assigneeIds:["u2","u3"],resources:[{id:"r1",name:"orgni-architecture.pdf",kind:"document"},{id:"r2",name:"team-sync-flow.png",kind:"image"}],active:true,status:"Active"},
