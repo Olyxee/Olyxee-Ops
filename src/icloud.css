@@ -1,3 +1,18 @@
+/* Terminal cascade: native-feeling iOS surfaces over the legacy widget styles. */
+body .app.workspace-shell{background-image:url("../attached_assets/image_1789783340211.png");background-color:#dfecef}
+body .app.workspace-shell .workspace-topbar{background:#fff!important;border-bottom:1px solid #d8d8dc;box-shadow:0 1px 2px rgba(0,0,0,.04);backdrop-filter:none;-webkit-backdrop-filter:none}
+body .app.workspace-shell .workspace-card,.workspace-section,.panel,.stat{background:#fff;border:1px solid #d8d8dc;border-radius:10px;box-shadow:0 1px 2px rgba(0,0,0,.035);backdrop-filter:none;-webkit-backdrop-filter:none}
+body .app.workspace-shell .workspace-card:hover{box-shadow:0 1px 2px rgba(0,0,0,.035)}
+.workspace-welcome{background:#fff!important}.workspace-card-head{background:#fafafa;border-bottom-color:#d8d8dc}
+.workspace-list>button:hover,.workspace-project-grid>button:hover,.workspace-department-grid>button:hover{background:#f2f2f5;border-radius:6px}
+.workspace-head-actions>button{color:#0f716b!important}.workspace-review-link,.notice{background:#e4f2f0;color:#176b64;border-radius:8px}
+.btn{border-radius:8px;box-shadow:none}.btn:hover{transform:none!important}.btn.primary{background:#178b82;border-color:#178b82;box-shadow:none}.btn.primary:hover{background:#0f716b}
+.modal-back{background:rgba(0,0,0,.28);backdrop-filter:none;-webkit-backdrop-filter:none}.modal{border-radius:12px;box-shadow:0 18px 44px rgba(0,0,0,.18)}
+.login{background-image:url("../attached_assets/image_1789783340211.png");background-color:#dce8eb}.login:before,.login-orb,.login-orb-one,.login-orb-two{display:none!important}.login-card{background:#fff;backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:0 18px 44px rgba(0,0,0,.18)}
+.search-results,.profile-menu-ios,.settings-dialog{background:#fff;border-color:#d8d8dc;box-shadow:0 12px 28px rgba(0,0,0,.14);backdrop-filter:none;-webkit-backdrop-filter:none}
+.profile-account-card{background:#f7f7f8;border-color:#d8d8dc}.profile-ios-actions{background:#fff;border-color:#d8d8dc}
+.settings-sidebar{background:#f2f2f7;border-right-color:#d8d8dc}.settings-sidebar button.active{background:#fff;box-shadow:none}.settings-group{background:#fff;border-color:#d8d8dc;box-shadow:none}
+.loading-bar{background:#e5e5e8;background-image:none}
 /* iCloud-style workspace widgets */
 body .app.workspace-shell {
   background-color: #1698ee;
@@ -1505,6 +1520,17 @@ body .app .nav.active{background:#fff;color:#4c7d76;box-shadow:0 3px 10px rgba(3
 @keyframes workspace-enter-final{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .workspace-content{animation:workspace-enter-final .42s ease both}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.001ms!important}}
+/* Final cascade wins over legacy visual experiments. */
+body .app.workspace-shell{background-image:url("../attached_assets/image_1789783340211.png")!important;background-color:#dfecef}
+body .app.workspace-shell .workspace-topbar{background:#fff!important;border-bottom:1px solid #d8d8dc!important;box-shadow:0 1px 2px rgba(0,0,0,.04)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+body .app.workspace-shell .workspace-card,.workspace-section,.panel,.stat{background:#fff!important;border:1px solid #d8d8dc!important;border-radius:10px!important;box-shadow:0 1px 2px rgba(0,0,0,.035)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+body .app.workspace-shell .workspace-card:hover{box-shadow:0 1px 2px rgba(0,0,0,.035)!important}.workspace-welcome{background:#fff!important}
+.workspace-card-head{background:#fafafa!important;border-bottom-color:#d8d8dc!important}.workspace-list>button:hover,.workspace-project-grid>button:hover,.workspace-department-grid>button:hover{background:#f2f2f5!important;border-radius:6px!important}
+.workspace-head-actions>button{color:#0f716b!important}.workspace-review-link,.notice{background:#e4f2f0!important;color:#176b64!important;border-radius:8px!important}
+.btn{border-radius:8px!important;box-shadow:none!important}.btn:hover{transform:none!important}.btn.primary{background:#178b82!important;border-color:#178b82!important}.btn.primary:hover{background:#0f716b!important}
+.modal-back{background:rgba(0,0,0,.28)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}.modal{border-radius:12px!important;box-shadow:0 18px 44px rgba(0,0,0,.18)!important}
+.login{background-image:url("../attached_assets/image_1789783340211.png")!important;background-color:#dce8eb}.login:before,.login-orb,.login-orb-one,.login-orb-two{display:none!important}.login-card{background:#fff!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:0 18px 44px rgba(0,0,0,.18)!important}
+.search-results,.profile-menu-ios,.settings-dialog{background:#fff!important;border-color:#d8d8dc!important;box-shadow:0 12px 28px rgba(0,0,0,.14)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 
 /* Final Olyxee Ops system pass
    Calm utility surfaces, cool grey canvas, teal used only for action and state. */

@@ -1,4 +1,28 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+/* Final iOS-inspired utility layer: restrained surfaces, controls and motion. */
+:root{--surface:#f2f2f7;--paper:#fff;--paper-soft:#f8f8fa;--ink:#1d1d1f;--muted:#6e6e73;--line:#d8d8dc;--line-strong:#c7c7cc;--accent:#178b82;--accent-dark:#0f716b;--accent-soft:#e4f2f0}
+html,body{background:var(--surface);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Segoe UI",sans-serif}
+h1,h2,h3,h4,b,strong,.title,.panel-title,.task-title{font-family:inherit;letter-spacing:-.018em}
+button,.btn,.input,.select,.textarea{font-family:inherit;transition:background-color .18s ease,border-color .18s ease,color .18s ease,opacity .18s ease}
+button:hover,.btn:hover{transform:none!important}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.btn:focus-visible{outline:2px solid rgba(23,139,130,.42);outline-offset:2px}
+body .app.workspace-shell{background-color:#dfecef;background-image:url("../attached_assets/image_1789783340211.png");background-position:center;background-size:cover;background-attachment:fixed}
+body .app.workspace-shell .workspace-topbar{background:rgba(255,255,255,.96)!important;border-bottom:1px solid var(--line);box-shadow:0 1px 2px rgba(0,0,0,.04);backdrop-filter:none}
+body .app .sidebar{background:#f7f7f8;border-right:1px solid var(--line);box-shadow:none}body .app .brand{color:var(--ink)}body .app .brand span{color:var(--accent)}
+body .app .nav{color:#55565b;border-radius:8px}body .app .nav:hover{background:#e8e8ed;color:var(--ink)}body .app .nav.active{background:#e1f1ef;color:var(--accent-dark);box-shadow:none}
+body .app.workspace-shell .workspace-card,.workspace-section,.panel,.stat{background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 1px 2px rgba(0,0,0,.035);backdrop-filter:none}
+body .app.workspace-shell .workspace-card:hover{box-shadow:0 1px 2px rgba(0,0,0,.035)}.workspace-welcome{background:#fff!important}.workspace-card-head{background:#fafafa;border-bottom:1px solid var(--line)}
+.workspace-list>button:hover,.workspace-project-grid>button:hover,.workspace-department-grid>button:hover{background:#f2f2f5;border-radius:6px}.workspace-head-actions>button{color:var(--accent-dark)!important}.workspace-review-link,.notice{background:var(--accent-soft);color:#176b64;border-radius:8px}
+.workspace-progress span,.delivery-track span,.department-meter span,.department-progress span,.project-progress span{background:var(--accent)}
+.global-search{background:#f2f2f5;border:1px solid transparent;box-shadow:none;border-radius:8px}.global-search:focus-within{background:#fff;border-color:#9ac8c3;box-shadow:0 0 0 3px rgba(23,139,130,.12)}
+.top-profile:hover,.notification-trigger:hover{background:#f0f0f3}.profile-menu,.notification-popover{background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 28px rgba(0,0,0,.14);backdrop-filter:none}
+.btn{min-height:38px;padding:8px 13px;border:1px solid var(--line-strong);border-radius:8px;background:#fff;color:#3d3d42;box-shadow:none}.btn:hover{background:#f5f5f7;border-color:#b8b8be}.btn.primary,.login-card .btn.primary{background:var(--accent);border-color:var(--accent);box-shadow:none;color:#fff}.btn.primary:hover,.login-card .btn.primary:hover{background:var(--accent-dark)}
+.input,.select,.textarea{min-height:38px;border:1px solid var(--line-strong);border-radius:7px;background:#fff;color:var(--ink)}.input:focus,.select:focus,.textarea:focus{border-color:#7ab9b2;box-shadow:0 0 0 3px rgba(23,139,130,.12)}
+.table th{background:#f5f5f7;color:#6e6e73}.table td{border-bottom-color:var(--line)}.table tr:hover td{background:#fafafa}.modal-back{background:rgba(0,0,0,.28);backdrop-filter:none}
+.modal,.login-card{background:#fff;border-color:var(--line);border-radius:12px;box-shadow:0 18px 44px rgba(0,0,0,.18)}.modal-head,.modal-foot{background:#fafafa;border-color:var(--line)}
+.login{background-color:#dce8eb;background-image:url("../attached_assets/image_1789783340211.png");background-position:center;background-size:cover}.login:before,.login-orb,.login-orb-one,.login-orb-two{display:none!important}.login-card{backdrop-filter:none}
+.login-rule{background:var(--line)}.login-rule span{background:var(--accent)}.login-card .eyebrow{font-family:inherit;color:var(--accent-dark)}.login-trust{color:var(--muted)}.login-lock{background:var(--accent-soft);color:var(--accent-dark)}
+.badge,.availability{border-radius:6px}.loading-bar{background:#e5e5e8;background-image:none;animation:loading-pulse 1.2s ease-in-out infinite}@keyframes loading-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+@media(prefers-reduced-motion:reduce){.loading-bar{animation:none}}
 /* Final visual system: quiet iOS utility, tuned for long daily sessions. */
 :root{--surface:#f6f7f8;--paper:#fff;--paper-soft:#fbfbfc;--ink:#20252b;--muted:#707780;--line:#e3e6e9;--line-strong:#d5d9de;--accent:#4c7d76;--accent-soft:#e8f1ef;--accent-warm:#a77d4e}
 html{background:var(--surface)}
