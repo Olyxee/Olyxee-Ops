@@ -29,7 +29,7 @@ const appPool = process.env.OPS_DATABASE_URL
   ? new pg.Pool({
       connectionString: process.env.OPS_DATABASE_URL,
       ssl: { rejectUnauthorized: false },
-      max: 10,
+      max: 5,
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 10_000,
     })
@@ -315,7 +315,8 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
           manage_interns,
           manage_projects,
           active,
-          department
+          department,
+          reports_to_account_id
         FROM public.workspace_accounts
         ORDER BY active DESC, display_name
       `),
@@ -344,6 +345,7 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
         accessRole: isManager ? "Manager" : "Member",
         accountStatus: opsAccount ? (opsAccount.active ? "Active" : "Suspended") : "Pending",
         department: validateDepartment(account.department) || UNASSIGNED_DEPARTMENT,
+        reportsTo: account.reports_to_account_id ? `account-${account.reports_to_account_id}` : undefined,
         position: isManager ? "Department Manager" : "Team Member",
         role: isManager ? "Manager" : "Member",
         avatarUrl: opsProfile.avatarUrl,
@@ -444,12 +446,45 @@ app.post("/api/people", requireAuth, requireAccount, async (request, response) =
       if (!["Superadmin", "Admin"].includes(appRole)) {
         return response.status(403).json({ error: "Only administrators can add employees." });
       }
+      let reportsToAccountId = null;
+      if (accessRole === "Manager") {
+        const superadmin = await appPool.query(`
+          SELECT email
+          FROM public.ops_users
+          WHERE role = 'Superadmin' AND active = true
+          ORDER BY created_at
+          LIMIT 1
+        `);
+        if (!superadmin.rowCount) {
+          return response.status(400).json({ error: "An active Superadmin account is required before adding a Manager." });
+        }
+        const supervisor = await peoplePool.query(`
+          SELECT id
+          FROM public.workspace_accounts
+          WHERE lower(email) = lower($1) AND active = true
+          LIMIT 1
+        `, [superadmin.rows[0].email]);
+        if (!supervisor.rowCount) {
+          return response.status(400).json({ error: "The active Superadmin does not have a matching People account." });
+        }
+        reportsToAccountId = supervisor.rows[0].id;
+      } else if (reportsTo) {
+        const managerMatch = /^account-(\d+)$/.exec(reportsTo);
+        if (!managerMatch) return response.status(400).json({ error: "Invalid manager selection." });
+        const supervisor = await peoplePool.query(`
+          SELECT id
+          FROM public.workspace_accounts
+          WHERE id = $1 AND active = true AND (manage_interns = true OR manage_projects = true)
+        `, [Number(managerMatch[1])]);
+        if (!supervisor.rowCount) return response.status(400).json({ error: "Selected manager is unavailable." });
+        reportsToAccountId = supervisor.rows[0].id;
+      }
       const result = await peoplePool.query(`
         INSERT INTO public.workspace_accounts
-          (email, display_name, manage_interns, manage_projects, active, created_by)
-        VALUES ($1, $2, $3, $3, $4, $5)
+          (email, display_name, manage_interns, manage_projects, active, created_by, reports_to_account_id)
+        VALUES ($1, $2, $3, $3, $4, $5, $6)
         RETURNING id
-      `, [email, name, accessRole === "Manager", accountStatus === "Active", request.appAccount.email]);
+      `, [email, name, accessRole === "Manager", accountStatus === "Active", request.appAccount.email, reportsToAccountId]);
       return response.status(201).json({ ok: true, id: `account-${result.rows[0].id}` });
     }
 
@@ -536,6 +571,41 @@ app.patch("/api/people/:id", requireAuth, requireAccount, async (request, respon
       if (!department) {
         return response.status(400).json({ error: "Choose an official department or Unassigned." });
       }
+      let reportsToAccountId = null;
+      if (accessRole === "Manager") {
+        const superadmin = await appPool.query(`
+          SELECT email
+          FROM public.ops_users
+          WHERE role = 'Superadmin' AND active = true
+          ORDER BY created_at
+          LIMIT 1
+        `);
+        if (!superadmin.rowCount) {
+          return response.status(400).json({ error: "An active Superadmin account is required before assigning the Manager role." });
+        }
+        const supervisor = await peoplePool.query(`
+          SELECT id
+          FROM public.workspace_accounts
+          WHERE lower(email) = lower($1) AND active = true AND id <> $2
+          LIMIT 1
+        `, [superadmin.rows[0].email, id]);
+        if (!supervisor.rowCount) {
+          return response.status(400).json({ error: "The active Superadmin does not have a matching People account." });
+        }
+        reportsToAccountId = supervisor.rows[0].id;
+      } else if (reportsTo) {
+        const managerMatch = /^account-(\d+)$/.exec(reportsTo);
+        if (!managerMatch || Number(managerMatch[1]) === id) {
+          return response.status(400).json({ error: "Invalid manager selection." });
+        }
+        const supervisor = await peoplePool.query(`
+          SELECT id
+          FROM public.workspace_accounts
+          WHERE id = $1 AND active = true AND (manage_interns = true OR manage_projects = true)
+        `, [Number(managerMatch[1])]);
+        if (!supervisor.rowCount) return response.status(400).json({ error: "Selected manager is unavailable." });
+        reportsToAccountId = supervisor.rows[0].id;
+      }
       const result = await peoplePool.query(`
         UPDATE public.workspace_accounts
         SET display_name = $1,
@@ -544,10 +614,11 @@ app.patch("/api/people/:id", requireAuth, requireAccount, async (request, respon
             manage_projects = $3,
             active = $4,
             department = $5,
+            reports_to_account_id = $6,
             updated_at = now()
-        WHERE id = $6
+        WHERE id = $7
         RETURNING id
-      `, [name, email, accessRole === "Manager", accountStatus === "Active", department, id]);
+      `, [name, email, accessRole === "Manager", accountStatus === "Active", department, reportsToAccountId, id]);
       if (!result.rowCount) return response.status(404).json({ error: "Employee account not found." });
       return response.json({ ok: true });
     }
@@ -610,6 +681,81 @@ app.patch("/api/people/:id", requireAuth, requireAccount, async (request, respon
     console.error("People update failed:", error instanceof Error ? error.message : "Unknown error");
     if (error?.code === "23505") return response.status(409).json({ error: "That email address is already in use." });
     return response.status(503).json({ error: "Could not update this person." });
+  }
+});
+
+app.delete("/api/people/:id", requireAuth, requireAccount, async (request, response) => {
+  if (request.appAccount.app_role !== "Superadmin") {
+    return response.status(403).json({ error: "Only the Superadmin can delete people." });
+  }
+  if (!peoplePool || !appPool) return response.status(503).json({ error: "Required databases are not configured." });
+  const match = /^(intern|account)-(\d+)$/.exec(request.params.id);
+  if (!match) return response.status(400).json({ error: "Invalid person identifier." });
+  const [, kind, rawId] = match;
+  const id = Number(rawId);
+
+  try {
+    const personResult = kind === "intern"
+      ? await peoplePool.query(`
+          SELECT email, full_name AS name
+          FROM public.interns
+          WHERE id = $1 AND archived_at IS NULL
+        `, [id])
+      : await peoplePool.query(`
+          SELECT email, display_name AS name
+          FROM public.workspace_accounts
+          WHERE id = $1
+        `, [id]);
+    const person = personResult.rows[0];
+    if (!person) return response.status(404).json({ error: "Person not found." });
+    const email = String(person.email || "").trim().toLowerCase();
+    if (email === String(request.appAccount.email).toLowerCase()) {
+      return response.status(409).json({ error: "You cannot delete your own Superadmin account." });
+    }
+
+    const protectedAccount = email
+      ? await appPool.query("SELECT role FROM public.ops_users WHERE lower(email) = lower($1) LIMIT 1", [email])
+      : { rows: [] };
+    if (protectedAccount.rows[0]?.role === "Superadmin") {
+      return response.status(409).json({ error: "The Superadmin account cannot be deleted." });
+    }
+
+    if (kind === "account") {
+      const directReports = await peoplePool.query(`
+        SELECT
+          (SELECT count(*)::int FROM public.workspace_accounts WHERE reports_to_account_id = $1) +
+          (SELECT count(*)::int FROM public.interns WHERE supervisor_account_id = $1 AND archived_at IS NULL)
+          AS count
+      `, [id]);
+      if (Number(directReports.rows[0]?.count || 0) > 0) {
+        return response.status(409).json({ error: "Reassign this person’s direct reports before deleting their account." });
+      }
+    }
+
+    if (email) {
+      await appPool.query(`
+        DELETE FROM public.ops_users
+        WHERE lower(email) = lower($1) AND role <> 'Superadmin'
+      `, [email]);
+    }
+
+    const deleted = kind === "intern"
+      ? await peoplePool.query(`
+          UPDATE public.interns
+          SET archived_at = now(), updated_at = now()
+          WHERE id = $1 AND archived_at IS NULL
+          RETURNING id
+        `, [id])
+      : await peoplePool.query(`
+          DELETE FROM public.workspace_accounts
+          WHERE id = $1
+          RETURNING id
+        `, [id]);
+    if (!deleted.rowCount) return response.status(404).json({ error: "Person not found." });
+    return response.json({ ok: true });
+  } catch (error) {
+    console.error("Person deletion failed:", error instanceof Error ? error.message : "Unknown error");
+    return response.status(503).json({ error: "Could not delete this person." });
   }
 });
 

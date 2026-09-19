@@ -1468,6 +1468,44 @@ body .app.workspace-shell .workspace-topbar .top-actions {
   }
 }
 
+/* Keep the widget layer aligned with the light workspace surface. */
+body .app.workspace-shell{background:#f3f5f6;background-image:none}
+body .app.workspace-shell .workspace-card{background:#fff;border-color:#e3e6e9;box-shadow:0 8px 24px rgba(31,39,47,.055)}
+body .app.workspace-shell .workspace-card-head{background:#fafbfc;border-bottom-color:#e3e6e9}
+body .app.workspace-shell .workspace-card-head b{color:#20252b}
+body .app.workspace-shell .workspace-welcome{background:linear-gradient(145deg,#fff,#f1f4f5)!important}
+.workspace-section{background:#fff;border-color:#e3e6e9;box-shadow:0 8px 24px rgba(31,39,47,.055)}
+.workspace-back{background:#fff;border-color:#d5d9de;color:#4c7d76;box-shadow:0 3px 10px rgba(31,39,47,.05)}
+.workspace-back:hover{border-color:#a7c4be;background:#f7f9f9}
+body .app .brand{color:#20252b}
+body .app .brand span{color:#4c7d76}
+body .app .nav{color:#69717a}
+body .app .nav:hover{background:#e7ebee;color:#20252b}
+body .app .nav.active{background:#fff;color:#4c7d76;box-shadow:0 3px 10px rgba(31,39,47,.06),inset 3px 0 #4c7d76}
+.workspace-welcome h1,.title{color:#20252b}
+.workspace-welcome p,.subtitle{color:#707780}
+.workspace-list>button:hover,.workspace-project-grid>button:hover,.workspace-department-grid>button:hover{background:#f1f4f5}
+.workspace-head-actions>button{color:#4c7d76!important}
+.workspace-review-link,.notice{background:#e8f1ef;color:#35665f}
+.workspace-progress span,.delivery-track span,.department-meter span,.department-progress span,.project-progress span{background:#4c7d76}
+.global-search{background:#f4f5f6;border-color:#e3e6e9;box-shadow:none}
+.global-search:focus-within{border-color:#a7c4be;box-shadow:0 0 0 4px rgba(76,125,118,.12)}
+.btn{background:#fff;border-color:#d5d9de;color:#4d555d}
+.btn:hover{background:#f4f6f7;border-color:#c6ccd1}
+.btn.primary{background:#4c7d76;border-color:#4c7d76;box-shadow:0 6px 14px rgba(76,125,118,.18)}
+.btn.primary:hover{background:#3e6b65}
+.input,.select,.textarea{background:#fff;border-color:#d5d9de;color:#20252b}
+.input:focus,.select:focus,.textarea:focus{border-color:#8fb5ae;box-shadow:0 0 0 3px rgba(76,125,118,.12)}
+.table th{background:#f5f6f7;color:#737b83}.table td{border-bottom-color:#e3e6e9}.table tr:hover td{background:#fafbfb}
+.modal-back{background:rgba(38,44,50,.24);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.modal-head,.modal-foot{background:#fafbfb;border-color:#e3e6e9}
+.login{background:radial-gradient(circle at 15% 10%,#e6f0ee 0,transparent 35%),linear-gradient(145deg,#f8f9fa,#e9edef)}
+.login-card{background:rgba(255,255,255,.92);border-color:#e3e6e9;box-shadow:0 28px 70px rgba(31,39,47,.12)}
+.login-card h1{color:#20252b}.login-card>p{color:#707780}.login-brand span{color:#20252b}
+@keyframes workspace-enter-final{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.workspace-content{animation:workspace-enter-final .42s ease both}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.001ms!important}}
+
 /* Final Olyxee Ops system pass
    Calm utility surfaces, cool grey canvas, teal used only for action and state. */
 :root {
@@ -2600,6 +2638,44 @@ body .app.workspace-shell .workspace-topbar::after {
   grid-column: 1 / -1;
 }
 
+.person-field-help {
+  color: #708690;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.person-delete-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px;
+  border: 1px solid rgba(220, 178, 172, .55);
+  border-radius: 14px;
+  background: rgba(255, 250, 249, .92);
+}
+
+.person-delete-section > div {
+  display: grid;
+  gap: 4px;
+}
+
+.person-delete-section b {
+  color: #7f3730;
+  font-size: 12px;
+}
+
+.person-delete-section p {
+  margin: 0;
+  color: #806b68;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.person-delete-section .btn {
+  flex: 0 0 auto;
+}
+
 @media (max-width: 620px) {
   .person-modal {
     width: calc(100vw - 16px);
@@ -2622,4 +2698,26 @@ body .app.workspace-shell .workspace-topbar::after {
     flex: 1;
     min-width: 0;
   }
+
+  .person-delete-section {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }
+
+/* Final surface overrides after all legacy widget rules. */
+body .app.workspace-shell{background:#f3f5f6;background-image:none}
+body .app.workspace-shell .workspace-topbar{background:rgba(255,255,255,.86)!important;border-bottom:1px solid #e3e6e9;box-shadow:0 1px 0 rgba(32,37,43,.03),0 8px 24px rgba(31,39,47,.04)}
+body .app.workspace-shell .workspace-card,.workspace-section,.panel,.stat{background:#fff;border-color:#e3e6e9;box-shadow:0 8px 24px rgba(31,39,47,.055)}
+body .app .sidebar{background:#f1f3f5;border-right:1px solid #e3e6e9}
+body .app .brand{color:#20252b}body .app .brand span{color:#4c7d76}
+body .app .nav{color:#69717a}body .app .nav:hover{background:#e7ebee;color:#20252b}body .app .nav.active{background:#fff;color:#4c7d76;box-shadow:0 3px 10px rgba(31,39,47,.06),inset 3px 0 #4c7d76}
+.workspace-card-head{background:#fafbfc;border-bottom-color:#e3e6e9}.workspace-card-head b,.workspace-welcome h1,.title{color:#20252b}.workspace-welcome p,.subtitle{color:#707780}
+.workspace-head-actions>button{color:#4c7d76!important}.workspace-review-link,.notice{background:#e8f1ef;color:#35665f}.workspace-progress span,.delivery-track span,.department-meter span,.department-progress span,.project-progress span{background:#4c7d76}
+.global-search{background:#f4f5f6;border-color:#e3e6e9;box-shadow:none}.global-search:focus-within{border-color:#a7c4be;box-shadow:0 0 0 4px rgba(76,125,118,.12)}
+.btn{background:#fff;border-color:#d5d9de;color:#4d555d}.btn:hover{background:#f4f6f7;border-color:#c6ccd1}.btn.primary{background:#4c7d76;border-color:#4c7d76}.btn.primary:hover{background:#3e6b65}
+.input,.select,.textarea{background:#fff;border-color:#d5d9de;color:#20252b}.input:focus,.select:focus,.textarea:focus{border-color:#8fb5ae;box-shadow:0 0 0 3px rgba(76,125,118,.12)}
+.table th{background:#f5f6f7;color:#737b83}.table td{border-bottom-color:#e3e6e9}.table tr:hover td{background:#fafbfb}.modal-back{background:rgba(38,44,50,.24)}
+.login{background:radial-gradient(circle at 15% 10%,#e6f0ee 0,transparent 35%),linear-gradient(145deg,#f8f9fa,#e9edef)}.login-card{background:rgba(255,255,255,.92);border-color:#e3e6e9}
+*,*::before,*::after{font-style:normal}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.001ms!important}}

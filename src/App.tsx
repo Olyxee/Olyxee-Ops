@@ -11,7 +11,7 @@ const navGroups:{label:string;items:{name:View;icon:any}[]}[]=[
   {label:"Team",items:[{name:"People",icon:Users},{name:"Departments",icon:Building2},{name:"Blockers",icon:AlertTriangle}]},
   {label:"Cadence",items:[{name:"Weekly Review",icon:FileCheck2}]}];
 const initials=(n:string)=>n.split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase();
-const accessOf=(person:User):AccessRole=>person.accessRole||(person.role==="Super Admin"?"Superadmin":person.role==="Manager"?"Manager":"Member");
+const accessOf=(person:User):AccessRole=>person.opsRole||person.accessRole||(person.role==="Super Admin"?"Superadmin":person.role==="Manager"?"Manager":"Member");
 const employmentOf=(person:User):EmploymentType=>person.employmentType||(person.role==="Intern"?"Intern":"Employee");
 const accountOf=(person:User):AccountStatus=>person.accountStatus||(person.active===false?"Suspended":"Active");
 const isAdmin=(person:User)=>["Superadmin","Admin"].includes(accessOf(person));
@@ -314,10 +314,19 @@ function ProjectDetail({user,project,tasks,team,onBack,onOpen,onProjectUpdated,o
   const [opsActive,setOpsActive]=useState(person?.opsActive!==false);
   const [savingAccount,setSavingAccount]=useState(false);
   const [deletingAccount,setDeletingAccount]=useState(false);
+  const [deletingPerson,setDeletingPerson]=useState(false);
   const [editMode,setEditMode]=useState(!person);
+   const [activePanel,setActivePanel]=useState<"identity"|"organisation"|"access">("identity");
    const emailValid=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-  const managers=team.filter(member=>isManager(member)&&accountOf(member)==="Active");
+   const managers=team.filter(member=>isManager(member)&&accountOf(member)==="Active");
+   const superadmins=team.filter(member=>accessOf(member)==="Superadmin"&&accountOf(member)==="Active");
   const accessOptions:AccessRole[]=livePerson?["Manager","Member"]:administrator?["Superadmin","Admin","Manager","Member"]:["Member"];
+   useEffect(()=>{
+     if(accessRole==="Manager"){
+       const superadmin=superadmins.find(member=>member.id!==person?.id);
+       setReportsTo(superadmin?.id||"");
+     }
+   },[accessRole,person?.id,team]);
   const provision=async()=>{
     if(!person?.id)return;
     setProvisioning(true);
@@ -346,14 +355,23 @@ function ProjectDetail({user,project,tasks,team,onBack,onOpen,onProjectUpdated,o
     if(!response.ok){window.alert(result.error||"Could not delete this Ops account");return}
     window.location.reload();
   };
+  const deletePerson=async()=>{
+    if(!person?.id||!window.confirm(`Delete ${person.name} permanently?\n\nThis removes their People directory record and Ops login. Their historical task and project activity will remain. This cannot be undone.`))return;
+    setDeletingPerson(true);
+    const response=await fetch(`/api/people/${person.id}`,{method:"DELETE"});
+    const result=await response.json();
+    setDeletingPerson(false);
+    if(!response.ok){window.alert(result.error||"Could not delete this person");return}
+    window.location.reload();
+  };
   const shareMessage=credentials?`Hello ${credentials.name},\n\nYour Olyxee Ops account has been created.\n\nLogin email: ${credentials.email}\nTemporary password: ${credentials.temporaryPassword}\n\nPlease sign in and change your temporary password after your first login.\n\nRegards,\nOlyxee`:"";
   const emailShare=credentials?`mailto:${encodeURIComponent(credentials.email)}?subject=${encodeURIComponent("Your Olyxee Ops Account")}&body=${encodeURIComponent(shareMessage)}`:"#";
   const whatsappShare=credentials?`https://wa.me/?text=${encodeURIComponent(shareMessage)}`:"#";
   const savePerson=()=>onSave({...person,id:person?.id||"",name,email,department,employmentType,accessRole,accountStatus,reportsTo} as User);
-  const footer=editMode?<><button className="btn" onClick={()=>editing?setEditMode(false):onClose()}>Cancel</button><button className="btn primary" disabled={!name.trim()||!emailValid} onClick={savePerson}>{editing?"Save changes":"Add person"}</button></>:<><button className="btn" onClick={onClose}>Close</button>{administrator&&<button className="btn primary" onClick={()=>setEditMode(true)}>Manage person</button>}</>;
+   const footer=editMode?<><button className="btn" onClick={()=>editing?setEditMode(false):onClose()}>Cancel</button><button className="btn primary" disabled={!name.trim()||!emailValid||accessRole==="Manager"&&!reportsTo} onClick={savePerson}>{editing?"Save changes":"Add person"}</button></>:<><button className="btn" onClick={onClose}>Close</button>{administrator&&<button className="btn primary" onClick={()=>setEditMode(true)}>Manage person</button>}</>;
   return <Modal title={editing?(editMode?"Edit person":"Person profile"):"Add team member"} className="person-modal" onClose={onClose} footer={footer}>
     <div className="person-modal-intro"><span className="person-modal-kicker">{editing?"TEAM DIRECTORY":"NEW TEAM MEMBER"}</span><p>{editing?(editMode?"Update this person’s directory record and account settings.":"View this person’s role, reporting line, and account status."):"Set up the directory record first; access can be provisioned when ready."}</p></div>
-    <div className="person-modal-content">
+     <div className="person-modal-content">
     {!editMode&&person?<div className="person-profile-view">
       <div className="person-profile-identity"><Avatar person={person} size={72}/><div><h3>{person.name}</h3><p>{person.email||"No email recorded"}</p><span className={`people-status ${accountOf(person).toLowerCase()}`}>{accountOf(person)}</span></div></div>
       <dl className="person-profile-details">
@@ -366,24 +384,31 @@ function ProjectDetail({user,project,tasks,team,onBack,onOpen,onProjectUpdated,o
         {person.contactDetails&&<div><dt>Contact</dt><dd>{person.contactDetails}</dd></div>}
         {person.githubUsername&&<div><dt>GitHub</dt><dd>@{person.githubUsername}</dd></div>}
       </dl>
-    </div>:<>
-    <div className="person-modal-section">
+     </div>:<>
+     <div className={`person-modal-switcher ${canProvision?"has-access":"two-tabs"}`} role="group" aria-label="Person details sections">
+       <button type="button" className={activePanel==="identity"?"active":""} aria-label="Identity: name and contact" aria-pressed={activePanel==="identity"} onClick={()=>setActivePanel("identity")}><span className="person-modal-tab-index">01</span><span><b>Identity</b><small>Name and contact</small></span></button>
+       <button type="button" className={activePanel==="organisation"?"active":""} aria-label="Organisation: role and reporting" aria-pressed={activePanel==="organisation"} onClick={()=>setActivePanel("organisation")}><span className="person-modal-tab-index">02</span><span><b>Organisation</b><small>Role and reporting</small></span></button>
+       {editing&&canProvision&&<button type="button" className={activePanel==="access"?"active":""} aria-label="Access: Ops account controls" aria-pressed={activePanel==="access"} onClick={()=>setActivePanel("access")}><span className="person-modal-tab-index">03</span><span><b>Access</b><small>Ops account controls</small></span></button>}
+     </div>
+     {activePanel==="identity"&&<div className="person-modal-section person-modal-section-active">
       <div className="person-modal-section-head"><span><b>Profile</b><small>Basic contact details</small></span><i>01</i></div>
       <div className="person-modal-fields person-modal-fields-profile">
         <label className="form-label">Full name<input className="input" value={name} onChange={event=>setName(event.target.value)} placeholder="Full name"/></label>
         <label className="form-label">Email address<input className="input" type="email" value={email} onChange={event=>setEmail(event.target.value)} placeholder="name@example.com"/>{email&&!emailValid&&<span className="person-field-error">Enter a valid email address.</span>}</label>
       </div>
-    </div>
-    <div className="person-modal-section">
+     </div>}
+     {activePanel==="organisation"&&<div className="person-modal-section person-modal-section-active">
       <div className="person-modal-section-head"><span><b>Role & organisation</b><small>Where this person sits in Olyxee</small></span><i>02</i></div>
       <div className="person-modal-fields">
         <label className="form-label">Department<select className="select" value={department} disabled={!administrator} onChange={event=>setDepartment(event.target.value)}><option value="">Select a department</option>{departmentOptions.map(option=><option key={option}>{option}</option>)}</select></label>
         <label className="form-label">Employment type<select className="select" value={employmentType} disabled={livePerson||!administrator} onChange={event=>setEmploymentType(event.target.value as EmploymentType)}>{["Employee","Intern"].map(value=><option key={value}>{value}</option>)}</select></label>
         <label className="form-label">{livePerson?"People directory role":"Access role"}<select className="select" value={accessRole} disabled={!administrator||livePerson&&intern} onChange={event=>setAccessRole(event.target.value as AccessRole)}>{accessOptions.map(value=><option key={value}>{value}</option>)}</select></label>
         <label className="form-label">{livePerson?"Employment status":"Account status"}<select className="select" value={accountStatus} onChange={event=>setAccountStatus(event.target.value as AccountStatus)}>{["Active","Suspended"].map(value=><option key={value}>{value}</option>)}</select></label>
-        {accessRole==="Member"&&intern&&<label className="form-label person-field-wide">Manager<select className="select" value={reportsTo} disabled={!administrator} onChange={event=>setReportsTo(event.target.value)}><option value="">Unassigned</option>{managers.filter(manager=>administrator||manager.id===user.id).map(manager=><option key={manager.id} value={manager.id}>{manager.name}</option>)}</select></label>}
+        {accessRole==="Member"&&<label className="form-label person-field-wide">Reports to<select className="select" value={reportsTo} disabled={!administrator} onChange={event=>setReportsTo(event.target.value)}><option value="">Unassigned</option>{managers.filter(manager=>manager.id!==person?.id&&(administrator||manager.id===user.id)).map(manager=><option key={manager.id} value={manager.id}>{manager.name}</option>)}</select></label>}
+        {accessRole==="Manager"&&<label className="form-label person-field-wide">Reports to<select className="select" value={reportsTo} disabled><option value="">{superadmins.length?"Select an active Superadmin":"No active Superadmin available"}</option>{superadmins.filter(superadmin=>superadmin.id!==person?.id).map(superadmin=><option key={superadmin.id} value={superadmin.id}>{superadmin.name} · Superadmin</option>)}</select><small className="person-field-help">Managers automatically report to the active Superadmin account.</small></label>}
       </div>
-    </div>
+     </div>}
+     {activePanel==="access"&&<div className="person-modal-access-panel">
       {editMode&&canProvision&&person?.hasOpsAccess&&<section className="access-provision account-management">
         <div><b>Manage Ops account</b><p>Control this person’s role and sign-in access. These settings do not alter their employee record.</p></div>
         <div className="account-management-grid">
@@ -404,8 +429,13 @@ function ProjectDetail({user,project,tasks,team,onBack,onOpen,onProjectUpdated,o
         <button className="btn" type="button" disabled={provisioning||Boolean(temporaryPassword)&&temporaryPassword.length<10} onClick={provision}>{provisioning?"Resetting password…":"Reset temporary password"}</button>
         {credentials&&<div className="access-credentials"><span><small>Login email</small><b>{credentials.email}</b></span><span><small>Temporary password</small><b className="mono">{credentials.temporaryPassword}</b></span><div><button className="btn" type="button" onClick={()=>navigator.clipboard.writeText(shareMessage)}>Copy details</button><a className="btn" href={emailShare}>Share by email</a><a className="btn" href={whatsappShare} target="_blank" rel="noreferrer">Share by WhatsApp</a></div></div>}
       </section>}
-      <div className="notice person-modal-note">{livePerson?"Changes are saved to the connected people database.":administrator?"Employment type, access permissions, and account status are managed independently.":"Managers can add members within their own department and manage their account status."}</div>
-      </>}
+      {editMode&&canProvision&&<section className="person-delete-section">
+        <div><b>Delete person</b><p>Remove this person from the directory and revoke their Ops login. Historical work records are retained.</p></div>
+        <button className="btn danger" type="button" disabled={deletingPerson||deletingAccount||savingAccount} onClick={deletePerson}>{deletingPerson?"Deleting person…":"Delete person"}</button>
+      </section>}
+       </div>}
+       <div className="notice person-modal-note">{livePerson?"Changes are saved to the connected people database.":administrator?"Employment type, access permissions, and account status are managed independently.":"Managers can add members within their own department and manage their account status."}</div>
+       </>}
     </div>
   </Modal>
  }
@@ -449,7 +479,7 @@ function SettingsModal({user,team,setTeam,statuses,setStatuses,tasks,flash,onClo
 function Review({tasks,objectives,team,user,onOpen,onNewObjective,update,setObjectives,can,flash}:{tasks:Task[];objectives:WeeklyObjective[];team:User[];user:User;onOpen:(id:string)=>void;onNewObjective:()=>void;update:(id:string,p:Partial<Task>)=>void;setObjectives:React.Dispatch<React.SetStateAction<WeeklyObjective[]>>;can:(x:string)=>boolean;flash:(s:string)=>void}){
   const [decisions,setDecisions]=useState<Record<string,string>>({});
   const [reasons,setReasons]=useState<Record<string,string>>({});
-  const visibleObjectives=objectives.filter(objective=>user.role==="Super Admin"||objective.managerId===user.id);
+  const visibleObjectives=objectives.filter(objective=>isAdmin(user)||objective.managerId===user.id);
   const committed=tasks.filter(task=>task.weeklyCommitment);
   const delivered=committed.filter(task=>task.status==="Completed");
   const awaitingApproval=committed.filter(task=>task.status==="Submitted for Review");
@@ -459,8 +489,8 @@ function Review({tasks,objectives,team,user,onOpen,onNewObjective,update,setObje
   const sections=[["BLOCKED COMMITMENTS",blocked,"red"],["AWAITING APPROVAL",awaitingApproval,"amber"],["MISSED COMMITMENTS",missed,"red"]] as const;
   const owner=(task:Task)=>team.find(person=>person.id===task.assignee)?.name||"Unassigned";
   return <>
-    <Header eyebrow="Operating cadence" title="Weekly Review" subtitle="Track objectives and resolve blocked, awaiting, and overdue commitments." action={user.role==="Super Admin"&&<button className="btn primary" onClick={onNewObjective}><Plus size={14}/> New objective</button>}/>
-    <div className="panel objective-review"><div className="panel-head"><span className="panel-title">Objectives</span><span className="mono">{visibleObjectives.length} tracked</span></div><div className="list">{visibleObjectives.map(objective=><div className="row objective-row" key={objective.id}><div className="row-main"><div className="row-title">{objective.title}</div><div className="row-meta">{user.role==="Super Admin"?team.find(person=>person.id===objective.managerId)?.name:"Your objective"} · Due {objective.dueDate} · {objective.priority} priority</div><div className="row-meta">{objective.description}</div></div><div className="inline">{user.role==="Manager"&&objective.managerId===user.id?<select className="select" value={objective.status} onChange={event=>setObjectives(items=>items.map(item=>item.id===objective.id?{...item,status:event.target.value as ObjectiveStatus}:item))}>{["Not started","In progress","At risk","Complete"].map(status=><option key={status}>{status}</option>)}</select>:<Status s={objective.status}/>}</div></div>)}{!visibleObjectives.length&&<div className="empty">No objectives have been created.</div>}</div></div>
+    <Header eyebrow="Operating cadence" title="Weekly Review" subtitle="Track objectives and resolve blocked, awaiting, and overdue commitments." action={isAdmin(user)&&<button className="btn primary" onClick={onNewObjective}><Plus size={14}/> New objective</button>}/>
+    <div className="panel objective-review"><div className="panel-head"><span className="panel-title">Objectives</span><span className="mono">{visibleObjectives.length} tracked</span></div><div className="list">{visibleObjectives.map(objective=><div className="row objective-row" key={objective.id}><div className="row-main"><div className="row-title">{objective.title}</div><div className="row-meta">{isAdmin(user)?team.find(person=>person.id===objective.managerId)?.name:"Your objective"} · Due {objective.dueDate} · {objective.priority} priority</div><div className="row-meta">{objective.description}</div></div><div className="inline">{isManager(user)&&objective.managerId===user.id?<select className="select" value={objective.status} onChange={event=>setObjectives(items=>items.map(item=>item.id===objective.id?{...item,status:event.target.value as ObjectiveStatus}:item))}>{["Not started","In progress","At risk","Complete"].map(status=><option key={status}>{status}</option>)}</select>:<Status s={objective.status}/>}</div></div>)}{!visibleObjectives.length&&<div className="empty">No objectives have been created.</div>}</div></div>
     <div className="section-gap"><div className="eyebrow">Decision agenda</div><div className="grid stats">{[["Delivered",`${delivered.length} / ${committed.length}`],["Decisions needed",discussionCount],["Blocked",blocked.length],["Awaiting approval",awaitingApproval.length]].map(metric=><div className="panel stat" key={metric[0]}><div className="stat-label">{metric[0]}</div><div className="stat-num">{metric[1]}</div></div>)}</div>{discussionCount===0?<div className="panel empty"><strong>All clear.</strong><br/>No commitments require a decision.</div>:<div className="grid">{sections.filter(([,items])=>items.length).map(([label,items,tone])=><div className="panel" key={label}><div className="panel-head"><span className="panel-title">{label}</span><span className={`badge ${tone}`}>{items.length}</span></div><div className="list">{items.map(task=><div className="row" key={task.id} style={{alignItems:"flex-start"}}><div className="row-main"><div className="row-title">{task.title}</div><div className="row-meta">{task.code||task.id} · Project: {task.project} · Owner: {owner(task)} · Due: {task.due}</div></div><div className="inline"><Status s={task.status}/><button className="btn" onClick={()=>onOpen(task.id)}>Open task</button></div></div>)}</div></div>)}</div>}</div>
   </>
 }

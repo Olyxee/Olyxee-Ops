@@ -6,3 +6,55 @@
 .person-modal .access-provision{margin-top:12px;border-color:#dce6e1;border-radius:15px;background:#f1f7f4}.person-modal .account-management{background:#f8f9f8;border-color:#e0e4e2}.person-modal .access-provision>div:first-child b{color:#304d40;font-size:13px}.person-modal .access-provision>div:first-child p{color:#78857f}.person-modal .person-modal-note{margin-top:14px;border:1px solid #e2e7e4;border-left:3px solid #8aa998;border-radius:10px;background:#f2f5f3;color:#63726b;font-size:10px}.person-modal .modal-foot{min-height:70px;padding:13px 20px;border-top:1px solid #e1e6e3;background:#fff}.person-modal .modal-foot .btn{min-width:82px}.person-modal .modal-foot .btn.primary{min-width:118px}
 .people-profile-link{display:flex;align-items:center;gap:9px;padding:0;border:0;background:transparent;color:inherit;text-align:left}.people-profile-link:hover b{color:#34756f;text-decoration:underline}.people-profile-link span{display:grid;gap:2px}.people-profile-link small{color:#7d8a84;font-size:10px}.person-profile-view{display:grid;gap:14px;padding-top:12px}.person-profile-identity{display:flex;align-items:center;gap:16px;padding:18px;border:1px solid #e1e6e3;border-radius:15px;background:#fff}.person-profile-identity h3{margin:0;color:#24342d;font-size:20px}.person-profile-identity p{margin:3px 0 9px;color:#76827d;font-size:11px}.person-profile-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;overflow:hidden;border:1px solid #e1e6e3;border-radius:15px;background:#fff}.person-profile-details>div{display:grid;gap:5px;padding:14px 16px;border-right:1px solid #edf0ee;border-bottom:1px solid #edf0ee}.person-profile-details dt{color:#87928d;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase}.person-profile-details dd{margin:0;color:#2d3c35;font-size:12px;font-weight:600}
 @media(max-width:560px){.person-modal{width:calc(100% - 12px);max-height:calc(100dvh - 12px);border-radius:18px}.person-modal .modal-head{padding:15px 17px}.person-modal .modal-head b{font-size:19px}.person-modal-intro{padding:15px 17px 13px}.person-modal-content{padding:0 10px 14px}.person-modal-fields,.person-modal-fields-profile,.person-profile-details{grid-template-columns:1fr;padding:14px;gap:12px}.person-modal .modal-body{max-height:calc(100dvh - 160px)}.person-modal .modal-foot{padding:11px 13px}.person-modal .modal-foot .btn{flex:1}}
+
+/* Person workspace: a compact three-stop command rail instead of a single scroll. */
+.person-modal .modal-body{background:linear-gradient(135deg,#f8fbf9 0%,#f2f7f5 100%)}
+.person-modal-intro{position:relative;overflow:hidden;padding:20px 24px 17px;background:linear-gradient(105deg,#f7fbf9,#eef6f3)}
+.person-modal-intro:after{position:absolute;right:-28px;bottom:-48px;width:150px;height:150px;border:1px solid rgba(81,139,116,.16);border-radius:50%;box-shadow:0 0 0 17px rgba(81,139,116,.04),0 0 0 34px rgba(81,139,116,.03);content:"";pointer-events:none}
+.person-modal-kicker{position:relative;z-index:1;color:#478170;letter-spacing:.19em}
+.person-modal-intro p{position:relative;z-index:1;color:#647d73}
+.person-modal-content{padding:14px 18px 20px}
+.person-modal-switcher{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-bottom:12px;padding:6px;border:1px solid #dbe8e1;border-radius:16px;background:#eaf3ef;box-shadow:inset 0 1px 0 rgba(255,255,255,.8)}
+.person-modal-switcher.two-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}
+.person-modal-switcher button{min-width:0;display:flex;align-items:center;gap:9px;padding:9px 10px;border:1px solid transparent;border-radius:11px;background:transparent;color:#6e8178;text-align:left;transition:background-color .18s ease,border-color .18s ease,transform .18s ease}
+.person-modal-switcher button:hover{background:rgba(255,255,255,.58);transform:translateY(-1px)}
+.person-modal-switcher button.active{border-color:#d2e3da;background:#fff;color:#294e40;box-shadow:0 4px 12px rgba(39,91,69,.09)}
+.person-modal-switcher button>span:last-child{display:grid;gap:2px;min-width:0}
+.person-modal-switcher b{font-size:11px;font-weight:700}
+.person-modal-switcher small{overflow:hidden;color:#8a9a92;font-size:8px;text-overflow:ellipsis;white-space:nowrap}
+.person-modal-tab-index{display:grid;place-items:center;width:27px;height:27px;flex:0 0 27px;border-radius:8px;background:#dcece5;color:#5f8675;font-family:"DM Mono",monospace;font-size:9px}
+.person-modal-switcher button.active .person-modal-tab-index{background:#397663;color:#fff}
+.person-modal-section{margin-top:0;border-color:#dce7e1;border-radius:17px;box-shadow:0 5px 17px rgba(34,79,59,.045);animation:person-panel-in .2s ease both}
+.person-modal-section-head{min-height:51px;padding:9px 16px;background:rgba(255,255,255,.7)}
+.person-modal-section-head i{background:#e8f2ed;color:#4e816c}
+.person-modal-fields{gap:13px 15px;padding:16px}
+.person-modal-access-panel{display:grid;gap:12px;animation:person-panel-in .2s ease both}
+.person-modal-access-panel .access-provision{margin-top:0;padding:17px;border-radius:17px;box-shadow:0 5px 17px rgba(34,79,59,.045)}
+.person-modal-access-panel .access-provision>div:first-child{padding-bottom:2px}
+.person-modal-access-panel .access-provision>div:first-child b{font-size:14px;letter-spacing:-.02em}
+.person-modal-access-panel .access-provision>div:first-child p{max-width:440px;line-height:1.55}
+.person-modal-access-panel .person-delete-section{margin-top:0}
+.person-modal-note{margin-top:0!important}
+@keyframes person-panel-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media(max-width:560px){
+  .person-modal-switcher{gap:4px;padding:4px}
+  .person-modal-switcher button{justify-content:center;padding:8px 5px}
+  .person-modal-switcher button>span:last-child{display:none}
+  .person-modal-tab-index{width:30px;height:30px;flex-basis:30px}
+  .person-modal-content{padding:11px 10px 14px}
+}
+
+/* Light, compact sheet treatment shared with the rest of Ops. */
+.person-modal{border-color:#e1e4e7;border-radius:18px;background:#f7f8f9;box-shadow:0 30px 80px rgba(31,39,47,.2)}
+.person-modal .modal-head{background:#fff;border-bottom-color:#e5e7ea}
+.person-modal .modal-head b{color:#20252b}
+.person-modal .modal-body{background:linear-gradient(135deg,#f8f9fa,#f2f4f5)}
+.person-modal-intro{background:linear-gradient(105deg,#fff,#f1f4f4)}
+.person-modal-section{border-color:#e1e4e7;border-radius:14px;box-shadow:0 5px 17px rgba(31,39,47,.04)}
+.person-modal-section-head{background:#fff;border-bottom-color:#edf0f1}
+.person-modal-fields .input,.person-modal-fields .select{background:#fbfcfc;border-color:#d9dde1}
+.person-modal-switcher{border-color:#e1e5e7;background:#edf0f2}
+.person-modal-switcher button.active{border-color:#dce3e2;background:#fff;color:#35665f;box-shadow:0 4px 12px rgba(31,39,47,.08)}
+.person-modal-tab-index{background:#e2ecea;color:#4c7d76}
+.person-modal-switcher button.active .person-modal-tab-index{background:#4c7d76}
+.person-modal .modal-foot{background:#fff;border-top-color:#e1e4e7}

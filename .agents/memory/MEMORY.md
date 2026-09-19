@@ -1,1 +1,2 @@
 - [Database boundary](database-boundary.md) — Ops data belongs in the clean app database; external Supabase remains people-only.
+- [Ops database connection limit](ops-database-connections.md) — keep the shared Ops/session pool small because the session-mode database has a low client cap.
