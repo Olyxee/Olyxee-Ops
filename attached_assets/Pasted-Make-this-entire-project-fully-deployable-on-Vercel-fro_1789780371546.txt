@@ -1,0 +1,105 @@
+Make this entire project fully deployable on Vercel from GitHub.
+
+Audit the current repository structure, dependencies, frontend configuration, routing, environment variables, build scripts, and any backend/server code before making changes.
+
+The project is currently being detected by Vercel as a Vite application. Configure it so that I can connect the GitHub repository to Vercel, leave the correct Root Directory selected, and deploy successfully without manually modifying files after import.
+
+Requirements:
+
+Vite production build
+Make sure package.json contains valid scripts:
+"dev"
+"build"
+"preview"
+npm run build must complete successfully with zero build errors.
+Vite must output the production application to dist.
+Fix missing packages, broken imports, TypeScript errors, case-sensitive filename/import issues, and production-only build problems.
+Repository structure
+Determine where the actual frontend application lives.
+Prefer making the repository root directly deployable if practical.
+The final structure should allow Vercel to detect the application automatically.
+Clearly report what Vercel Root Directory should be. If the root is correct, it should be ./.
+Vercel configuration
+Add a vercel.json only if it is actually required.
+For a React/Vite SPA using client-side routing, configure Vercel so routes such as /login, /dashboard, /projects, /interns, /admin, etc. do not return 404 when refreshed directly.
+Do not interfere with static assets or API routes.
+Environment variables
+Find every environment variable currently used by the application.
+Frontend variables exposed through Vite must use the VITE_ prefix.
+Do not hardcode secrets.
+Do not commit real credentials.
+Create or update .env.example containing variable names only, with safe placeholder values.
+Make sure .env, .env.local, and other secret environment files are properly ignored by Git.
+At the end, give me the exact environment variable names I need to add under Vercel → Project → Settings → Environment Variables.
+Supabase/authentication
+If the project uses Supabase, make sure the browser client is configured using environment variables such as:
+VITE_SUPABASE_URL
+VITE_SUPABASE_ANON_KEY
+Remove any dependency on Replit-only environment handling where it would break Vercel.
+Do not expose Supabase service-role keys or other server secrets to the browser.
+Backend/API
+Inspect whether this repository contains Express, Node, FastAPI, or another backend.
+Do not assume a long-running Replit server will work unchanged on Vercel.
+If backend endpoints exist, determine whether they should become Vercel serverless functions under /api, remain on an external backend, or require another deployment architecture.
+Refactor only where necessary and preserve existing behavior.
+Frontend API URLs must come from environment variables rather than localhost or Replit URLs.
+Remove Replit-only deployment assumptions
+Search for hardcoded:
+localhost
+127.0.0.1
+.replit
+replit.dev
+repl.co
+Replit-specific ports
+Replit-specific deployment URLs
+Replace these with production-safe configuration where appropriate.
+Do not remove Replit development support unless necessary.
+Static files
+Make sure assets, logos, fonts, icons, and public files resolve correctly after production build.
+Fix absolute filesystem paths that only work inside Replit.
+React routing
+Verify all application routes work:
+when navigated to normally,
+when opened directly by URL,
+and when the browser is refreshed.
+
+Production testing
+Run:
+
+npm install
+npm run build
+
+Then test the generated production build locally using:
+
+npm run preview
+
+Fix every issue discovered.
+
+Do not unnecessarily redesign or rewrite the application
+Preserve the existing UI.
+Preserve existing functionality.
+Preserve the database schema and application logic unless a deployment compatibility change is required.
+Focus specifically on making the current project production-ready for Vercel.
+Commit-ready result
+Make all necessary changes directly in the project so I can push them to GitHub and import/redeploy the repository on Vercel.
+
+After completing the work, give me a concise deployment report containing:
+
+Whether npm run build passes
+Vercel framework preset
+Vercel Root Directory
+Build Command
+Output Directory
+Install Command
+Environment variables I must add to Vercel
+Whether vercel.json was added and why
+Whether any backend functionality requires separate deployment
+Any remaining manual steps
+
+Target Vercel configuration should ideally be:
+
+Framework Preset: Vite
+Root Directory: ./
+Install Command: npm install
+Build Command: npm run build
+Output Directory: dist
