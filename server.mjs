@@ -740,6 +740,25 @@ app.put("/api/state/:key", requireAuth, requireAccount, requireAdmin, async (req
   return response.json({ ok: true });
 });
 
+app.patch("/api/projects/:id", requireAuth, requireAccount, requireAdmin, async (request, response) => {
+  const githubUrl = String(request.body.githubUrl || "").trim();
+  if (!/^https?:\/\/(www\.)?github\.com\/.+/i.test(githubUrl)) return response.status(400).json({ error: "Enter a valid GitHub repository URL." });
+  const result = await appPool.query("SELECT state_value FROM workspace_state WHERE state_key = 'projects'");
+  const projects = result.rows[0]?.state_value || [];
+  const project = projects.find((item) => item.id === request.params.id);
+  if (!project) return response.status(404).json({ error: "Project not found." });
+  project.githubUrl = githubUrl;
+  if (request.appAccount.app_role === "Superadmin") {
+    project.assigneeIds = Array.isArray(request.body.assigneeIds) ? [...new Set(request.body.assigneeIds.map(String))] : project.assigneeIds;
+  }
+  await appPool.query(`
+    UPDATE workspace_state
+    SET state_value = $1::jsonb, updated_by = $2, updated_at = now()
+    WHERE state_key = 'projects'
+  `, [JSON.stringify(projects), request.appAccount.id]);
+  return response.json({ project });
+});
+
 app.post("/api/projects/:id/resources", requireAuth, requireAccount, async (request, response) => {
   const { name, kind, url } = request.body || {};
   if (!name || !["document", "image"].includes(kind) || !url) return response.status(400).json({ error: "A valid uploaded resource is required." });

@@ -2189,6 +2189,63 @@ body .app.workspace-shell .workspace-topbar::after {
   border-bottom: 0;
 }
 
+.project-edit-panel {
+  margin: 18px 0;
+  display: grid;
+  gap: 16px;
+}
+
+.project-edit-panel > .panel-head {
+  margin: -20px -20px 0;
+}
+
+.project-assignee-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 7px;
+}
+
+.project-assignee-grid > label {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  padding: 9px;
+  border: 1px solid #e0e7e4;
+  border-radius: 11px;
+  background: #f9fbfa;
+}
+
+.project-assignee-grid > label > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.project-assignee-grid b,
+.project-assignee-grid small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-assignee-grid b {
+  color: #31423c;
+  font-size: 10px;
+}
+
+.project-assignee-grid small {
+  color: #82908a;
+  font-size: 8px;
+}
+
+@media (max-width: 700px) {
+  .project-assignee-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .workspace-welcome {
   position: relative;
   overflow: hidden;
