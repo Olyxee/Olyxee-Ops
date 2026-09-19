@@ -7,15 +7,23 @@ export type Task={id:string;title:string;project:string;department?:string;creat
 export type Audit={id:string;actor:string;action:string;time:string};
 export type Notice={id:string;userId:string;title:string;body:string;read:boolean;time:string};
 export type Access={id:string;requester:string;department:string;resourceType:string;system:string;relatedTask:string;reason:string;status:"Pending"|"Approved"|"Rejected";date:string};
+export type ProjectResource={id:string;name:string;kind:"document"|"image"};
+export type Project={id:string;name:string;description:string;githubUrl:string;assigneeIds:string[];resources:ProjectResource[];active:boolean;status:"Active"|"Archived"};
 export const users:User[]=[
   {id:"u1",name:"Morgan Lee",email:"info@olyxee.com",role:"Super Admin",department:"Operations",active:true},
   {id:"u2",name:"Alisha Fatima",email:"alisha@olyxee.com",role:"Manager",department:"AI Engineering",reportsTo:"u1",active:true},
  {id:"u3",name:"Noah Williams",email:"noah@olyxee.com",role:"Intern",department:"AI Engineering",reportsTo:"u2",active:true},
  {id:"u4",name:"Sofia Chen",email:"sofia@olyxee.com",role:"Intern",department:"Product Engineering",reportsTo:"u6",active:true},
- {id:"u5",name:"Ethan Brooks",email:"ethan@olyxee.com",role:"Intern",department:"Data",reportsTo:"u7",active:true},
+  {id:"u5",name:"Ethan Brooks",email:"ethan@olyxee.com",role:"Intern",department:"Data",reportsTo:"u7",active:true},
   {id:"u6",name:"Priya Nair",email:"priya@olyxee.com",role:"Manager",department:"Product Engineering",reportsTo:"u1",active:true},
- {id:"u7",name:"Tomás Reed",email:"tomas@olyxee.com",role:"Member",department:"Data",reportsTo:"u1",active:true}];
+  {id:"u7",name:"Tomás Reed",email:"tomas@olyxee.com",role:"Manager",department:"Data",reportsTo:"u1",active:true}];
 export const projects=["Orgni","Olyxee Logistics","Okiru","Internal Operations","Research"];
+export const seedProjects:Project[]=[
+ {id:"p1",name:"Orgni",description:"Team membership, imports, and synchronization for the Orgni workspace.",githubUrl:"https://github.com/olyxee/orgni",assigneeIds:["u2","u3"],resources:[{id:"r1",name:"orgni-architecture.pdf",kind:"document"},{id:"r2",name:"team-sync-flow.png",kind:"image"}],active:true,status:"Active"},
+ {id:"p2",name:"Olyxee Logistics",description:"Customs automation and shipment exception workflows for logistics operations.",githubUrl:"https://github.com/olyxee/logistics",assigneeIds:["u7","u5"],resources:[{id:"r3",name:"customs-field-map.docx",kind:"document"}],active:true,status:"Active"},
+ {id:"p3",name:"Okiru",description:"Company workspace, billing, and invitation experiences for Okiru customers.",githubUrl:"https://github.com/olyxee/okiru",assigneeIds:["u6","u4"],resources:[{id:"r4",name:"okiru-workspace-spec.pdf",kind:"document"},{id:"r5",name:"workspace-preview.png",kind:"image"}],active:true,status:"Active"},
+ {id:"p4",name:"Internal Operations",description:"Internal operating cadence, permissions, and weekly delivery reviews.",githubUrl:"https://github.com/olyxee/internal-operations",assigneeIds:["u1"],resources:[{id:"r6",name:"weekly-review-template.docx",kind:"document"}],active:true,status:"Active"},
+ {id:"p5",name:"Research",description:"Water forecasting simulations, API delivery, and reproducible model fixtures.",githubUrl:"https://github.com/olyxee/research",assigneeIds:["u2","u3"],resources:[{id:"r7",name:"simulation-brief.pdf",kind:"document"},{id:"r8",name:"forecast-dashboard.png",kind:"image"}],active:true,status:"Active"}];
 const base={department:"AI Engineering",createdBy:"u1",createdDate:"2026-09-14",targetWeek:"14–18 Sep 2026",criteria:["Acceptance criteria are agreed","Evidence is attached before review"],dependencies:[],comments:[],activity:["Task seeded for week 38"],attachments:[],reviewState:"Not submitted" as const};
 export const seedTasks:Task[]=[
  {...base,id:"OLX-101",title:"Orgni Teams Integration",project:"Orgni",status:"In Review",assignee:"u2",priority:"High",due:"2026-09-16",description:"Connect Orgni team membership to the internal directory.",criteria:["Teams map to Orgni workspaces","Sync retries safely","Audit event is emitted"],pr:"https://github.com/olyxee/orgni/pull/184",reviewState:"Awaiting review",weeklyCommitment:true},
