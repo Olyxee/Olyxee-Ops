@@ -1,6 +1,8 @@
-export type Role="Super Admin"|"Manager"|"Member"|"Intern";
+export type EmploymentType="Employee"|"Intern";
+export type AccessRole="Superadmin"|"Admin"|"Manager"|"Member";
+export type AccountStatus="Active"|"Pending"|"Suspended";
 export type Status="Inbox"|"Planned"|"Available"|"Assigned"|"In Progress"|"Blocked"|"In Review"|"Done"|"Cancelled"|"Backlog"|"In progress"|"In review";
-export type User={id:string;name:string;email:string;role:Role;department:string;reportsTo?:string;active?:boolean;avatarUrl?:string;contactDetails?:string;githubUsername?:string};
+export type User={id:string;name:string;email:string;employmentType:EmploymentType;accessRole:AccessRole;accountStatus:AccountStatus;department:string;reportsTo?:string;avatarUrl?:string;contactDetails?:string;githubUsername?:string;role?:string;active?:boolean};
 export type Availability="Available"|"Busy"|"Offline";
 export type StaffStatus={userId:string;availability:Availability;start:string;end:string;note:string;updatedAt:string};
 export type Blocker={reason:string;need:string;waitingFor:string;severity:"Low"|"Medium"|"High"|"Critical";reportedBy:string;createdAt:string;resolvedAt?:string};
@@ -14,13 +16,13 @@ export type Access={id:string;requester:string;department:string;resourceType:st
 export type ProjectResource={id:string;name:string;kind:"document"|"image"};
 export type Project={id:string;name:string;description:string;githubUrl:string;assigneeIds:string[];resources:ProjectResource[];active:boolean;status:"Active"|"Archived";logoUrl?:string};
 export const users:User[]=[
-  {id:"u1",name:"Morgan Lee",email:"info@olyxee.com",role:"Super Admin",department:"Operations",active:true},
-  {id:"u2",name:"Alisha Fatima",email:"alisha@olyxee.com",role:"Manager",department:"AI Engineering",reportsTo:"u1",active:true},
- {id:"u3",name:"Noah Williams",email:"noah@olyxee.com",role:"Intern",department:"AI Engineering",reportsTo:"u2",active:true},
- {id:"u4",name:"Sofia Chen",email:"sofia@olyxee.com",role:"Intern",department:"Product Engineering",reportsTo:"u6",active:true},
-  {id:"u5",name:"Ethan Brooks",email:"ethan@olyxee.com",role:"Intern",department:"Data",reportsTo:"u7",active:true},
-  {id:"u6",name:"Priya Nair",email:"priya@olyxee.com",role:"Manager",department:"Product Engineering",reportsTo:"u1",active:true},
-  {id:"u7",name:"Tomás Reed",email:"tomas@olyxee.com",role:"Manager",department:"Data",reportsTo:"u1",active:true}];
+  {id:"u1",name:"Morgan Lee",email:"info@olyxee.com",employmentType:"Employee",accessRole:"Superadmin",accountStatus:"Active",department:"Operations",role:"Super Admin",active:true},
+  {id:"u2",name:"Alisha Fatima",email:"alisha@olyxee.com",employmentType:"Employee",accessRole:"Manager",accountStatus:"Active",department:"AI Engineering",reportsTo:"u1",role:"Manager",active:true},
+ {id:"u3",name:"Noah Williams",email:"noah@olyxee.com",employmentType:"Intern",accessRole:"Member",accountStatus:"Active",department:"AI Engineering",reportsTo:"u2",role:"Intern",active:true},
+ {id:"u4",name:"Sofia Chen",email:"sofia@olyxee.com",employmentType:"Intern",accessRole:"Member",accountStatus:"Active",department:"Product Engineering",reportsTo:"u6",role:"Intern",active:true},
+  {id:"u5",name:"Ethan Brooks",email:"ethan@olyxee.com",employmentType:"Intern",accessRole:"Member",accountStatus:"Active",department:"Data",reportsTo:"u7",role:"Intern",active:true},
+  {id:"u6",name:"Priya Nair",email:"priya@olyxee.com",employmentType:"Employee",accessRole:"Manager",accountStatus:"Active",department:"Product Engineering",reportsTo:"u1",role:"Manager",active:true},
+  {id:"u7",name:"Tomás Reed",email:"tomas@olyxee.com",employmentType:"Employee",accessRole:"Manager",accountStatus:"Active",department:"Data",reportsTo:"u1",role:"Manager",active:true}];
 export const seedStaffStatuses:StaffStatus[]=[
   {userId:"u1",availability:"Available",start:"09:00",end:"17:30",note:"Reviewing weekly delivery and team priorities.",updatedAt:"Seeded"},
   {userId:"u2",availability:"Busy",start:"09:00",end:"17:30",note:"In Orgni sync review.",updatedAt:"Seeded"},
