@@ -203,7 +203,7 @@ app.get("/api/me", requireAuth, requireAccount, async (request, response) => {
 app.patch("/api/me/profile", requireAuth, requireAccount, async (request, response) => {
   const allowed = {
     displayName: typeof request.body.displayName === "string" ? request.body.displayName.trim().slice(0, 160) : undefined,
-    avatarUrl: typeof request.body.avatarUrl === "string" ? request.body.avatarUrl.slice(0, 500) : undefined,
+    avatarUrl: typeof request.body.avatarUrl === "string" ? request.body.avatarUrl.slice(0, 500000) : undefined,
     contactDetails: typeof request.body.contactDetails === "string" ? request.body.contactDetails.slice(0, 100) : undefined,
     githubUsername: typeof request.body.githubUsername === "string" ? request.body.githubUsername.slice(0, 40) : undefined,
   };

@@ -1946,3 +1946,69 @@ body .app.workspace-shell .workspace-welcome {
     flex-direction: column;
   }
 }
+
+/* Project launcher: large, clear icons instead of list rows */
+.workspace-projects .workspace-project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  align-content: center;
+  gap: 14px;
+  min-height: 190px;
+  padding: 18px 20px 22px;
+}
+
+.workspace-projects .workspace-project-grid > button {
+  width: 100%;
+  min-height: 116px;
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, .56);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .34);
+  color: var(--ops-ink);
+  text-align: center;
+}
+
+.workspace-projects .workspace-project-grid > button:hover {
+  padding: 12px 8px;
+  border-color: rgba(255, 255, 255, .88);
+  background: rgba(255, 255, 255, .58);
+  box-shadow: 0 10px 24px rgba(35, 73, 80, .12);
+  transform: translateY(-2px);
+}
+
+.workspace-projects .workspace-project-grid .project-logo {
+  width: 72px !important;
+  height: 72px !important;
+  border-radius: 20px;
+  box-shadow: 0 8px 18px rgba(39, 73, 80, .16);
+}
+
+.workspace-projects .workspace-project-grid > button > b {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .workspace-projects .workspace-project-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 14px;
+  }
+}
+
+.avatar.avatar-image {
+  display: block;
+  flex: 0 0 auto;
+  aspect-ratio: 1;
+  object-fit: cover;
+  object-position: center;
+}
