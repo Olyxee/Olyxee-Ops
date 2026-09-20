@@ -126,7 +126,7 @@
 .workspace-review-home .review-home-head { background: #fff !important; border-bottom: 1px solid #edf0f2 !important; }
 .workspace-review-home .review-home-objective-list {
   display: grid !important;
-  grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+  grid-template-columns: 1fr !important;
   gap: 10px !important;
   padding: 14px !important;
   background: #f8f9fa !important;
@@ -171,7 +171,29 @@
 .workspace-review-home .review-objective-owner-avatar { display: grid; flex: 0 0 auto; }
 .workspace-review-home .review-objective-owner-avatar .avatar { border: 1px solid #e5e9e9; }
 .workspace-review-home .review-objective-meta { display: flex; align-items: flex-end; align-self: stretch; flex-direction: column; justify-content: space-between; gap: 8px; }
-.workspace-review-home .review-objective-people { display: none; }
+.workspace-review-home .review-objective-people {
+  display: flex !important;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 30px;
+  padding-left: 7px;
+}
+.workspace-review-home .review-objective-people > span {
+  display: block;
+  margin-left: -8px;
+  overflow: hidden;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(31,39,47,.14);
+}
+.workspace-review-home .review-objective-people > span:first-child { margin-left: 0; }
+.workspace-review-home .review-objective-people .avatar {
+  display: block;
+  width: 29px !important;
+  height: 29px !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
 .workspace-review-home .workspace-objective-state { min-width: auto; padding: 4px 6px; border-radius: 6px; font-size: 8px; }
 .workspace-review-home .review-objective-chevron { align-self: center; color: #a2abad; }
 .workspace-review-home .review-objective-edit { position: absolute; right: 8px; bottom: 8px; width: 26px !important; height: 26px !important; margin: 0 !important; border-color: #e5e9eb !important; background: #fafbfb !important; color: #778286 !important; box-shadow: none !important; backdrop-filter: none; }
