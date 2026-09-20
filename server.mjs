@@ -1503,7 +1503,7 @@ app.post("/api/tasks", requireAuth, requireAccount, async (request, response) =>
   const assigneeIds = [...new Set(requestedAssignees.map((value) => String(value || "").trim()).filter(Boolean))];
   const assignee = assigneeIds[0] || null;
   const taskLeadId = String(request.body.taskLeadId || "").trim() || null;
-  const startDate = String(request.body.startDate || "").trim() || null;
+  const startDate = new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Johannesburg" });
   const deliverables = String(request.body.deliverables || "").trim().slice(0, 5000) || null;
   if (!title || !project) return response.status(400).json({ error: "Task name and project are required." });
   if (!/^https:\/\/(www\.)?github\.com\/.+/i.test(githubUrl)) return response.status(400).json({ error: "A valid GitHub link is required." });
@@ -1512,9 +1512,6 @@ app.post("/api/tasks", requireAuth, requireAccount, async (request, response) =>
   if (!taskPriorities.includes(priority) || !departmentIds.length) return response.status(400).json({ error: "Choose a valid priority and department." });
   if (identity.role === "Manager" && !departmentIds.includes(identity.department)) {
     return response.status(403).json({ error: "Managers must include their own department on a task." });
-  }
-  if (assigneeIds.some((id) => !identity.reportIds.includes(id) && id !== identity.externalId && identity.role === "Manager")) {
-    return response.status(403).json({ error: "Managers can only assign themselves or active direct reports." });
   }
   if ((await Promise.all(assigneeIds.map((id) => isAssignablePerson(id)))).some((valid) => !valid)) return response.status(400).json({ error: "Choose active assignees." });
   if ((await Promise.all(assigneeIds.map((id) => assigneeBelongsToDepartments(id, departmentIds)))).some((valid) => !valid)) {
@@ -1616,8 +1613,8 @@ app.patch("/api/tasks/:id", requireAuth, requireAccount, async (request, respons
   if (metadataRequested && (await Promise.all(assigneeIds.map((id) => assigneeBelongsToDepartments(id, departmentIds)))).some((valid) => !valid)) {
     return response.status(400).json({ error: "Every assignee must belong to a participating department." });
   }
-  if (metadataRequested && identity.role === "Manager" && (!departmentIds.includes(identity.department) || assigneeIds.some((id) => id !== identity.externalId && !identity.reportIds.includes(id)))) {
-    return response.status(403).json({ error: "Managers can only collaborate within their department and active direct reports." });
+  if (metadataRequested && identity.role === "Manager" && !departmentIds.includes(identity.department)) {
+    return response.status(403).json({ error: "Managers must include their own department on a task." });
   }
   if (taskLeadId && !assigneeIds.includes(taskLeadId)) {
     return response.status(400).json({ error: "The Task Lead must be one of the assignees." });
