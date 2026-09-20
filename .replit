@@ -44,7 +44,7 @@ externalPort = 3000
 [userenv]
 
 [userenv.shared]
-EMAIL_FROM = "info@olyxee.com"
+EMAIL_FROM = "Olyxee Ops <notifications@ops.olyxee.com>"
 EMAIL_REPLY_TO = "info@olyxee.com"
 OPS_APP_URL = "https://ops.olyxee.com/"
 EMAIL_ENABLED = "true"
