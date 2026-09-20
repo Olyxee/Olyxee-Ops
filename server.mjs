@@ -6,6 +6,14 @@ import connectPgSimple from "connect-pg-simple";
 import bcrypt from "bcryptjs";
 import { Client as ObjectStorageClient } from "@replit/object-storage";
 import {
+  deliverEmailNotification,
+  processPendingEmails,
+  queueTransactionalEmail,
+  taskUrl,
+  validateEmailConfiguration,
+  verifyResendWebhook,
+} from "./server/services/notifications/email-service.mjs";
+import {
   OFFICIAL_DEPARTMENTS,
   UNASSIGNED_DEPARTMENT,
   isOfficialDepartment,
@@ -53,6 +61,7 @@ const upload = multer({
 const stateKeys = new Set(["tasks", "projects", "audit", "notices", "objectives", "staff-statuses", "departments"]);
 const loginAttempts = new Map();
 const dummyPasswordHash = await bcrypt.hash(crypto.randomUUID(), 12);
+validateEmailConfiguration({ production: isProduction });
 
 const validateDepartment = (value, { allowUnassigned = true } = {}) => {
   const department = String(value || "").trim();
@@ -62,6 +71,37 @@ const validateDepartment = (value, { allowUnassigned = true } = {}) => {
 };
 
 app.disable("x-powered-by");
+app.post("/api/email/webhooks/resend", express.raw({ type: "application/json", limit: "256kb" }), async (request, response) => {
+  try {
+    const rawBody = request.body.toString("utf8");
+    if (!verifyResendWebhook(rawBody, request.headers, process.env.RESEND_WEBHOOK_SECRET)) {
+      return response.status(401).json({ error: "Invalid webhook signature." });
+    }
+    const event = JSON.parse(rawBody);
+    const messageId = event?.data?.email_id || event?.data?.id;
+    const statusByType = {
+      "email.delivered": "DELIVERED",
+      "email.bounced": "BOUNCED",
+      "email.complained": "COMPLAINED",
+    };
+    const status = statusByType[event?.type];
+    if (messageId && status && appPool) {
+      await appPool.query(`
+        UPDATE public.email_notifications
+        SET status=$1, updated_at=now()
+        WHERE provider_message_id=$2
+          AND (
+            $1='COMPLAINED'
+            OR ($1='BOUNCED' AND status <> 'COMPLAINED')
+            OR ($1='DELIVERED' AND status NOT IN ('BOUNCED','COMPLAINED'))
+          )
+      `, [status, messageId]);
+    }
+    return response.json({ ok: true });
+  } catch {
+    return response.status(400).json({ error: "Invalid webhook payload." });
+  }
+});
 app.use(express.json({ limit: "2mb" }));
 if (appPool) {
   if (!process.env.SESSION_SECRET) throw new Error("SESSION_SECRET is required when Ops authentication is enabled.");
@@ -851,30 +891,103 @@ app.post("/api/people/:id/ops-access", requireAuth, requireAccount, async (reque
       }
     }
 
-    const randomBytes = new Uint8Array(9);
-    crypto.getRandomValues(randomBytes);
-    const generatedPassword = `${Buffer.from(randomBytes).toString("base64url")}!7a`;
-    const passwordHash = await bcrypt.hash(generatedPassword, 12);
+    const temporaryPasswordHash = await bcrypt.hash(crypto.randomUUID(), 12);
     const role = person.role === "Manager" ? "Manager" : "Member";
-    const accountResult = await appPool.query(`
-      INSERT INTO public.ops_users (email, password_hash, display_name, role, active)
-      VALUES ($1, $2, $3, $4, true)
-      ON CONFLICT (email) DO UPDATE
-      SET password_hash = EXCLUDED.password_hash,
-          display_name = EXCLUDED.display_name,
-          updated_at = now()
-      RETURNING role
-    `, [String(person.email).trim().toLowerCase(), passwordHash, person.name || person.email, role]);
-
-    return response.json({
-      name: person.name || person.email,
-      email: String(person.email).trim().toLowerCase(),
-      password: generatedPassword,
-      role: accountResult.rows[0].role,
-    });
+    const rawToken = crypto.randomBytes(32).toString("base64url");
+    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+    const setupUrl = `${String(process.env.OPS_APP_URL || "").replace(/\/+$/, "")}/setup-account?token=${encodeURIComponent(rawToken)}`;
+    const client = await appPool.connect();
+    let emailId = null;
+    try {
+      await client.query("BEGIN");
+      const accountResult = await client.query(`
+        INSERT INTO public.ops_users (email, password_hash, display_name, role, active)
+        VALUES ($1, $2, $3, $4, true)
+        ON CONFLICT (email) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            role = EXCLUDED.role,
+            updated_at = now()
+        RETURNING id, role
+      `, [String(person.email).trim().toLowerCase(), temporaryPasswordHash, person.name || person.email, role]);
+      await client.query("UPDATE public.account_setup_tokens SET used_at=now() WHERE user_id=$1 AND used_at IS NULL", [accountResult.rows[0].id]);
+      const tokenResult = await client.query(`
+        INSERT INTO public.account_setup_tokens (user_id, token_hash, expires_at)
+        VALUES ($1,$2,now() + interval '24 hours')
+        RETURNING id
+      `, [accountResult.rows[0].id, tokenHash]);
+      const firstName = String(person.name || person.email).trim().split(/\s+/)[0];
+      const queued = await isolateEmailQueue(client, () => queueTransactionalEmail(client, {
+        type: "user.created",
+        recipient: String(person.email).trim().toLowerCase(),
+        recipientUserId: accountResult.rows[0].id,
+        relatedInternshipId: kind === "intern" ? request.params.id : null,
+        subject: "Your Olyxee Ops account is ready",
+        intro: `Hello ${firstName}, your Olyxee Ops account is ready. This secure setup link expires in 24 hours.`,
+        details: [
+          { label: "Role", value: accountResult.rows[0].role },
+          { label: "Department", value: person.department },
+          { label: "Login email", value: person.email },
+        ],
+        ctaLabel: "Set up your account",
+        ctaUrl: setupUrl,
+        deduplicationKey: `account-invite:${accountResult.rows[0].id}:${tokenResult.rows[0].id}`,
+      }));
+      emailId = queued?.id || null;
+      await client.query("COMMIT");
+      await deliverQueuedEmail(emailId);
+      return response.json({
+        name: person.name || person.email,
+        email: String(person.email).trim().toLowerCase(),
+        role: accountResult.rows[0].role,
+        invitationStatus: emailId ? "queued" : "not_queued",
+        message: emailId
+          ? "Account created. The secure invitation email is being delivered."
+          : "Account created. Invitation email could not be queued.",
+      });
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
   } catch (error) {
     console.error("Ops access provisioning failed:", error instanceof Error ? error.message : "Unknown error");
     return response.status(503).json({ error: "Could not create Ops access." });
+  }
+});
+
+app.post("/api/auth/setup-account", async (request, response) => {
+  if (!appPool) return response.status(503).json({ error: "Application database is not configured." });
+  const token = String(request.body.token || "");
+  const password = String(request.body.password || "");
+  if (token.length < 32 || password.length < 12) {
+    return response.status(400).json({ error: "Use the invitation link and choose a password with at least 12 characters." });
+  }
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  const client = await appPool.connect();
+  try {
+    await client.query("BEGIN");
+    const setup = await client.query(`
+      SELECT id, user_id
+      FROM public.account_setup_tokens
+      WHERE token_hash=$1 AND used_at IS NULL AND expires_at > now()
+      FOR UPDATE
+    `, [tokenHash]);
+    if (!setup.rowCount) {
+      await client.query("ROLLBACK");
+      return response.status(410).json({ error: "This setup link has expired or has already been used." });
+    }
+    const passwordHash = await bcrypt.hash(password, 12);
+    await client.query("UPDATE public.ops_users SET password_hash=$1, updated_at=now() WHERE id=$2", [passwordHash, setup.rows[0].user_id]);
+    await client.query("UPDATE public.account_setup_tokens SET used_at=now() WHERE id=$1", [setup.rows[0].id]);
+    await client.query("COMMIT");
+    return response.json({ ok: true });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Account setup failed:", error instanceof Error ? error.message : "Unknown error");
+    return response.status(503).json({ error: "Could not finish account setup." });
+  } finally {
+    client.release();
   }
 });
 
@@ -1073,10 +1186,12 @@ async function loadTask(taskId, identity) {
 }
 
 async function recordTaskActivity(client, taskId, identity, action, metadata = {}) {
-  await client.query(`
+  const result = await client.query(`
     INSERT INTO public.task_activity (task_id, actor_user_id, actor_name, action, metadata)
     VALUES ($1, $2, $3, $4, $5::jsonb)
+    RETURNING id
   `, [taskId, identity.userId, identity.name, action, JSON.stringify(metadata)]);
+  return result.rows[0]?.id;
 }
 
 async function getTaskManagerIds(client, task) {
@@ -1112,6 +1227,108 @@ async function getTaskManagerIds(client, task) {
     if (creatorPerson?.external_id) managerIds.add(creatorPerson.external_id);
   }
   return [...managerIds];
+}
+
+async function resolveEmailRecipient(externalId) {
+  if (!externalId || !peoplePool) return null;
+  const match = /^(intern|account)-(\d+)$/.exec(externalId);
+  if (!match) return null;
+  const [, kind, rawId] = match;
+  const result = kind === "intern"
+    ? await peoplePool.query(`
+        SELECT full_name AS name, email, department
+        FROM public.interns
+        WHERE id=$1 AND archived_at IS NULL
+      `, [Number(rawId)])
+    : await peoplePool.query(`
+        SELECT coalesce(display_name,email) AS name, email, department
+        FROM public.workspace_accounts
+        WHERE id=$1 AND active=true
+      `, [Number(rawId)]);
+  const person = result.rows[0];
+  if (!person?.email) return null;
+  const account = await appPool.query(`
+    SELECT id FROM public.ops_users WHERE lower(email)=lower($1) AND active=true LIMIT 1
+  `, [person.email]);
+  return { ...person, userId: account.rows[0]?.id || null };
+}
+
+async function deliverQueuedEmail(id) {
+  if (!id) return;
+  await deliverEmailNotification(appPool, id).catch((error) => {
+    console.error("Queued email processing failed:", error instanceof Error ? error.message : "Unknown error");
+  });
+}
+
+async function isolateEmailQueue(client, operation) {
+  const transactional = client !== appPool;
+  const savepoint = `email_${crypto.randomUUID().replaceAll("-", "")}`;
+  try {
+    if (transactional) await client.query(`SAVEPOINT ${savepoint}`);
+    const result = await operation();
+    if (transactional) await client.query(`RELEASE SAVEPOINT ${savepoint}`);
+    return result;
+  } catch (error) {
+    if (transactional) {
+      try {
+        await client.query(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+        await client.query(`RELEASE SAVEPOINT ${savepoint}`);
+      } catch {}
+    }
+    console.error("Email event could not be queued:", error instanceof Error ? error.message : "Unknown error");
+    return null;
+  }
+}
+
+async function queueTaskAssigneeEmail(client, task, {
+  type,
+  subject,
+  intro,
+  details = [],
+  ctaLabel,
+  deduplicationKey,
+}) {
+  return isolateEmailQueue(client, async () => {
+    const recipient = await resolveEmailRecipient(task.assignee_external_id);
+    if (!recipient) return null;
+    const queued = await queueTransactionalEmail(client, {
+      type,
+      recipient: recipient.email,
+      recipientUserId: recipient.userId,
+      relatedTaskId: task.id,
+      subject,
+      intro,
+      details,
+      ctaLabel,
+      ctaUrl: taskUrl(task.id),
+      deduplicationKey,
+    });
+    return queued.id || null;
+  });
+}
+
+async function queueTaskManagerEmails(client, task, buildEmail) {
+  return await isolateEmailQueue(client, async () => {
+    const ids = [];
+    const managerIds = await getTaskManagerIds(client, task);
+    for (const managerId of managerIds) {
+      const queuedId = await isolateEmailQueue(client, async () => {
+        const recipient = await resolveEmailRecipient(managerId);
+        if (!recipient) return null;
+        const input = buildEmail(recipient, managerId);
+        const queued = await queueTransactionalEmail(client, {
+          ...input,
+          recipient: recipient.email,
+          recipientUserId: recipient.userId,
+          relatedTaskId: task.id,
+          ctaUrl: taskUrl(task.id),
+        });
+        return queued.id || null;
+      });
+      if (queuedId) ids.push(queuedId);
+    }
+    return ids;
+  }) || [];
 }
 
 async function notifyTaskManagers(client, task, title, body) {
@@ -1237,6 +1454,7 @@ app.post("/api/tasks", requireAuth, requireAccount, async (request, response) =>
   }
   if (assignee && !(await isAssignablePerson(assignee))) return response.status(400).json({ error: "Choose an active assignee." });
   const client = await appPool.connect();
+  let emailId = null;
   try {
     await client.query("BEGIN");
     const result = await client.query(`
@@ -1247,7 +1465,25 @@ app.post("/api/tasks", requireAuth, requireAccount, async (request, response) =>
     `, [title, description, project, githubUrl, department, identity.userId, identity.externalId, assignee, priority, dueDate]);
     await recordTaskActivity(client, result.rows[0].id, identity, "Task created", { assignee, priority, dueDate });
     await notifyTaskAssignee(client, result.rows[0], identity, "New task assigned", `${identity.name} assigned you “${title}” in ${project}.`);
+    if (assignee) {
+      emailId = await queueTaskAssigneeEmail(client, result.rows[0], {
+        type: "task.assigned",
+        subject: `New task assigned: ${title}`,
+        intro: `You have been assigned a new task by ${identity.name}.`,
+        details: [
+          { label: "Task", value: title },
+          { label: "Project", value: project },
+          { label: "Department", value: department },
+          { label: "Priority", value: priority },
+          { label: "Due date", value: dueDate },
+          { label: "Brief", value: description },
+        ],
+        ctaLabel: "Open task",
+        deduplicationKey: `task-assigned:${result.rows[0].id}:${assignee}`,
+      });
+    }
     await client.query("COMMIT");
+    await deliverQueuedEmail(emailId);
     return response.status(201).json({ task: mapTask({ ...result.rows[0], creator_name: identity.name }) });
   } catch (error) {
     await client.query("ROLLBACK");
@@ -1295,6 +1531,7 @@ app.patch("/api/tasks/:id", requireAuth, requireAccount, async (request, respons
   const blockerReason = nextStatus === "Blocked" ? String(request.body.blockerReason || "").trim().slice(0, 1000) : task.blocker_reason;
   if (nextStatus === "Blocked" && !blockerReason) return response.status(400).json({ error: "Describe what is blocking the task." });
   const client = await appPool.connect();
+  const emailIds = [];
   try {
     await client.query("BEGIN");
     const locked = await client.query("SELECT * FROM public.tasks WHERE id = $1 FOR UPDATE", [task.id]);
@@ -1339,10 +1576,47 @@ app.patch("/api/tasks/:id", requireAuth, requireAccount, async (request, respons
           nextStatus === "Completed" ? "Work reviewed and approved" : "Changes requested",
           `${identity.name} reviewed “${lockedTask.title}”: ${feedback}`,
         );
+        const reviewEmailId = await queueTaskAssigneeEmail(client, lockedTask, {
+          type: nextStatus === "Completed" ? "task.approved" : "task.changes_requested",
+          subject: `${nextStatus === "Completed" ? "Task approved" : "Changes requested"}: ${lockedTask.title}`,
+          intro: nextStatus === "Completed"
+            ? `${identity.name} approved your completed work.`
+            : `${identity.name} reviewed your work and requested changes.`,
+          details: [
+            { label: "Task", value: lockedTask.title },
+            { label: "Project", value: lockedTask.project },
+            { label: "Reviewer", value: identity.name },
+            { label: "Feedback", value: feedback },
+            { label: "Date", value: new Date().toLocaleDateString("en-ZA") },
+          ],
+          ctaLabel: nextStatus === "Completed" ? "View task" : "View feedback",
+          deduplicationKey: `${nextStatus === "Completed" ? "task-approved" : "task-changes"}:${task.id}:${lockedTask.updated_at?.toISOString?.() || Date.now()}`,
+        });
+        if (reviewEmailId) emailIds.push(reviewEmailId);
       }
     }
-    if (metadataRequested) await recordTaskActivity(client, task.id, identity, "Task assignment or metadata changed", { assignee, priority, dueDate, project, department });
+    if (metadataRequested) {
+      const assignmentEventId = await recordTaskActivity(client, task.id, identity, "Task assignment or metadata changed", { assignee, priority, dueDate, project, department });
+      if (assignee && assignee !== lockedTask.assignee_external_id) {
+        const assignmentEmailId = await queueTaskAssigneeEmail(client, { ...lockedTask, assignee_external_id: assignee }, {
+          type: "task.assigned",
+          subject: `New task assigned: ${lockedTask.title}`,
+          intro: `${identity.name} assigned this task to you.`,
+          details: [
+            { label: "Task", value: lockedTask.title },
+            { label: "Project", value: project },
+            { label: "Department", value: department },
+            { label: "Priority", value: priority },
+            { label: "Due date", value: dueDate },
+          ],
+          ctaLabel: "Open task",
+          deduplicationKey: `task-assigned:${task.id}:${assignee}:${assignmentEventId}`,
+        });
+        if (assignmentEmailId) emailIds.push(assignmentEmailId);
+      }
+    }
     await client.query("COMMIT");
+    await Promise.all(emailIds.map(deliverQueuedEmail));
     return response.json({ task: mapTask({ ...result.rows[0], creator_name: task.creator_name }) });
   } catch (error) {
     await client.query("ROLLBACK");
@@ -1428,6 +1702,7 @@ app.post("/api/tasks/:id/updates", requireAuth, requireAccount, async (request, 
     return response.status(409).json({ error: "Start or continue the task before posting progress." });
   }
   const client = await appPool.connect();
+  const emailIds = [];
   try {
     await client.query("BEGIN");
     const result = await client.query(`
@@ -1436,7 +1711,23 @@ app.post("/api/tasks/:id/updates", requireAuth, requireAccount, async (request, 
     `, [task.id, identity.userId, identity.name, identity.role, type, message, linkUrl]);
     await recordTaskActivity(client, task.id, identity, `${type} added`);
     await notifyTaskAssignee(client, task, identity, "New task comment", `${identity.name} commented on “${task.title}”: ${message}`);
+    if (type === "Progress update") {
+      emailIds.push(...await queueTaskManagerEmails(client, task, (_recipient, managerId) => ({
+        type: "task.progress_updated",
+        subject: `Progress update: ${task.title}`,
+        intro: `${identity.name} posted a progress update.`,
+        details: [
+          { label: "Intern", value: identity.name },
+          { label: "Task", value: task.title },
+          { label: "Update", value: message },
+          { label: "Posted", value: new Date().toLocaleString("en-ZA") },
+        ],
+        ctaLabel: "View task",
+        deduplicationKey: `task-progress:${task.id}:${result.rows[0].id}:${managerId}`,
+      })));
+    }
     await client.query("COMMIT");
+    await Promise.all(emailIds.map(deliverQueuedEmail));
     return response.status(201).json({ update: result.rows[0] });
   } catch (error) {
     await client.query("ROLLBACK");
@@ -1468,15 +1759,33 @@ app.post("/api/tasks/:id/help", requireAuth, requireAccount, async (request, res
     return response.status(400).json({ error: "Choose what you need help with and add a short explanation." });
   }
   const client = await appPool.connect();
+  const emailIds = [];
   try {
     await client.query("BEGIN");
-    await client.query(`
+    const helpResult = await client.query(`
       INSERT INTO public.task_updates (task_id, author_user_id, author_name, author_role, update_type, message)
       VALUES ($1,$2,$3,$4,'Help requested',$5)
+      RETURNING id
     `, [task.id, identity.userId, identity.name, identity.role, `${category}: ${explanation}`]);
     await recordTaskActivity(client, task.id, identity, "Help requested", { category, explanation });
     await notifyTaskManagers(client, task, "Help requested", `${identity.name} requested help with ${task.title}: ${category}.`);
+    emailIds.push(...await queueTaskManagerEmails(client, task, (_recipient, managerId) => ({
+      type: "task.help_requested",
+      subject: `Help requested: ${identity.name} — ${task.title}`,
+      intro: `${identity.name} needs help with an assigned task.`,
+      details: [
+        { label: "Intern", value: identity.name },
+        { label: "Project", value: task.project },
+        { label: "Task", value: task.title },
+        { label: "Category", value: category },
+        { label: "Explanation", value: explanation },
+        { label: "Requested", value: new Date().toLocaleString("en-ZA") },
+      ],
+      ctaLabel: "Open task",
+      deduplicationKey: `task-help:${task.id}:${helpResult.rows[0].id}:${managerId}`,
+    })));
     await client.query("COMMIT");
+    await Promise.all(emailIds.map(deliverQueuedEmail));
     return response.status(201).json({ ok: true });
   } catch (error) {
     await client.query("ROLLBACK");
@@ -1509,6 +1818,7 @@ app.post("/api/tasks/:id/submit", requireAuth, requireAccount, async (request, r
   const summary = String(request.body.summary || "").trim().slice(0, 3000);
   if (!summary) return response.status(400).json({ error: "Submission summary is required." });
   const client = await appPool.connect();
+  const emailIds = [];
   try {
     await client.query("BEGIN");
     const locked = await client.query("SELECT * FROM public.tasks WHERE id = $1 FOR UPDATE", [request.params.id]);
@@ -1527,14 +1837,32 @@ app.post("/api/tasks/:id/submit", requireAuth, requireAccount, async (request, r
       WHERE task_id = $1 AND update_type IN ('Submission', 'Resubmission')
     `, [task.id]);
     const resubmission = priorSubmissions.rows[0].count > 0;
-    await client.query(`
+    const submissionResult = await client.query(`
       INSERT INTO public.task_updates (task_id, author_user_id, author_name, author_role, update_type, message)
       VALUES ($1,$2,$3,$4,$5,$6)
+      RETURNING id
     `, [task.id, identity.userId, identity.name, identity.role, resubmission ? "Resubmission" : "Submission", summary]);
     await client.query("UPDATE public.tasks SET status='Submitted for Review', submitted_at=now(), updated_at=now() WHERE id=$1", [task.id]);
     await recordTaskActivity(client, task.id, identity, resubmission ? "Task resubmitted for review" : "Task submitted for review");
     await notifyTaskManagers(client, task, resubmission ? "Work resubmitted for review" : "Work submitted for review", `${identity.name} ${resubmission ? "resubmitted" : "submitted"} ${task.title} for review.`);
+    const evidence = await client.query("SELECT url FROM public.task_evidence WHERE task_id=$1 ORDER BY created_at DESC LIMIT 1", [task.id]);
+    emailIds.push(...await queueTaskManagerEmails(client, task, (_recipient, managerId) => ({
+      type: "task.submitted",
+      subject: `Work ready for review: ${task.title}`,
+      intro: `${identity.name} ${resubmission ? "resubmitted" : "submitted"} work for review.`,
+      details: [
+        { label: "Intern", value: identity.name },
+        { label: "Project", value: task.project },
+        { label: "Task", value: task.title },
+        { label: "Summary", value: summary },
+        { label: "Evidence", value: evidence.rows[0]?.url },
+        { label: "Submitted", value: new Date().toLocaleString("en-ZA") },
+      ],
+      ctaLabel: "Review work",
+      deduplicationKey: `task-submitted:${task.id}:${submissionResult.rows[0].id}:${managerId}`,
+    })));
     await client.query("COMMIT");
+    await Promise.all(emailIds.map(deliverQueuedEmail));
     return response.json({ ok: true });
   } catch (error) {
     await client.query("ROLLBACK");
@@ -1542,6 +1870,84 @@ app.post("/api/tasks/:id/submit", requireAuth, requireAccount, async (request, r
   } finally {
     client.release();
   }
+});
+
+app.get("/api/email-notifications", requireAuth, requireAccount, async (request, response) => {
+  if (request.appAccount.app_role !== "Superadmin") return response.status(403).json({ error: "Forbidden" });
+  const limit = Math.min(100, Math.max(1, Number(request.query.limit) || 50));
+  const result = await appPool.query(`
+    SELECT id, type, recipient_email AS "recipientEmail", recipient_user_id AS "recipientUserId",
+           related_task_id AS "relatedTaskId", related_internship_id AS "relatedInternshipId",
+           subject, provider, provider_message_id AS "providerMessageId", status,
+           failure_reason AS "failureReason", retry_count AS "retryCount",
+           created_at AS "createdAt", sent_at AS "sentAt", updated_at AS "updatedAt"
+    FROM public.email_notifications
+    ORDER BY created_at DESC
+    LIMIT $1
+  `, [limit]);
+  return response.json({ notifications: result.rows });
+});
+
+app.post("/api/email-notifications/:id/retry", requireAuth, requireAccount, async (request, response) => {
+  if (request.appAccount.app_role !== "Superadmin") return response.status(403).json({ error: "Forbidden" });
+  const reset = await appPool.query(`
+    UPDATE public.email_notifications
+    SET status='PENDING', failure_reason=NULL, updated_at=now()
+    WHERE id=$1 AND status IN ('FAILED','DISABLED') AND retry_count < 3
+    RETURNING id
+  `, [request.params.id]);
+  if (!reset.rowCount) return response.status(409).json({ error: "This email cannot be retried." });
+  const result = await deliverEmailNotification(appPool, request.params.id);
+  return response.json({ ok: result.delivered, status: result.delivered ? "SENT" : "FAILED" });
+});
+
+app.all("/api/email/process-scheduled", async (request, response) => {
+  const configuredSecret = process.env.CRON_SECRET || "";
+  const suppliedSecret = String(request.headers.authorization || "").replace(/^Bearer\s+/i, "");
+  if (!configuredSecret || suppliedSecret.length !== configuredSecret.length
+      || !crypto.timingSafeEqual(Buffer.from(suppliedSecret), Buffer.from(configuredSecret))) {
+    return response.status(401).json({ error: "Unauthorized" });
+  }
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  const todayDate = today.toISOString().slice(0, 10);
+  const tomorrowDate = tomorrow.toISOString().slice(0, 10);
+  const tasks = await appPool.query(`
+    SELECT * FROM public.tasks
+    WHERE status NOT IN ('Completed','Cancelled')
+      AND assignee_external_id IS NOT NULL
+      AND due_date <= $1::date
+  `, [tomorrowDate]);
+  const queuedIds = [];
+  for (const task of tasks.rows) {
+    const dueDate = dateOnly(task.due_date);
+    const overdue = dueDate < todayDate;
+    const dueTomorrow = dueDate === tomorrowDate;
+    if (!overdue && !dueTomorrow) continue;
+    const id = await queueTaskAssigneeEmail(appPool, task, {
+      type: overdue ? "task.overdue" : "task.due_soon",
+      subject: `Task ${overdue ? "overdue" : "due tomorrow"}: ${task.title}`,
+      intro: overdue
+        ? "This task is overdue and still open."
+        : "This task is due tomorrow.",
+      details: [
+        { label: "Task", value: task.title },
+        { label: "Project", value: task.project },
+        { label: "Priority", value: task.priority },
+        { label: "Due date", value: dueDate },
+      ],
+      ctaLabel: "Open task",
+      deduplicationKey: `task-${overdue ? "overdue" : "due-soon"}:${task.id}:${dueDate}`,
+    });
+    if (id) queuedIds.push(id);
+  }
+  const deliveryResults = await processPendingEmails(appPool, { limit: 50 });
+  return response.json({
+    ok: true,
+    remindersQueued: queuedIds.length,
+    emailsProcessed: deliveryResults.length,
+  });
 });
 
 app.get("/api/state/:key", requireAuth, requireAccount, async (request, response) => {

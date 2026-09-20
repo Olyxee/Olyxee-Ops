@@ -4,6 +4,12 @@
   "installCommand": "npm install",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "crons": [
+    {
+      "path": "/api/email/process-scheduled",
+      "schedule": "0 * * * *"
+    }
+  ],
   "routes": [
     {
       "src": "/api/(.*)",

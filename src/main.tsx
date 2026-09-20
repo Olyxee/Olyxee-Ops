@@ -63,6 +63,7 @@ function Login() {
 }
 
 function Root() {
+  const accountSetup=window.location.pathname==="/setup-account";
   const [authenticated, setAuthenticated] = useState<boolean|null>(null);
   useEffect(()=>{
     fetch("/api/auth/session")
@@ -73,6 +74,7 @@ function Root() {
       .then(result=>setAuthenticated(Boolean(result.authenticated)))
       .catch(()=>setAuthenticated(false));
   },[]);
+  if(accountSetup)return <App/>;
   if(authenticated===null)return <div className="login"><div className="login-card"><div className="loading-bar loading-profile-name"/><div className="loading-bar loading-profile-meta"/></div></div>;
   return authenticated?<App/>:<Login/>;
 }

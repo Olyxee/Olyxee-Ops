@@ -41,8 +41,33 @@ async function uploadAsset(file:File,kind:"profile"|"project_logo"|"document"|"i
 }
 
 export default function App(){
+  if(window.location.pathname==="/setup-account")return <SetupAccount/>;
+  return <WorkspaceApp/>;
+}
+
+function SetupAccount(){
+  const token=new URLSearchParams(window.location.search).get("token")||"";
+  const [password,setPassword]=useState("");
+  const [confirm,setConfirm]=useState("");
+  const [message,setMessage]=useState("");
+  const [saving,setSaving]=useState(false);
+  const submit=async()=>{
+    if(password.length<12){setMessage("Use at least 12 characters.");return}
+    if(password!==confirm){setMessage("Passwords do not match.");return}
+    setSaving(true);
+    const response=await fetch("/api/auth/setup-account",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token,password})});
+    const result=await response.json();
+    setSaving(false);
+    if(!response.ok){setMessage(result.error||"Could not set up your account.");return}
+    setMessage("Your account is ready. You can now sign in.");
+  };
+  return <div className="login"><div className="login-orb login-orb-one" aria-hidden="true"/><div className="login-orb login-orb-two" aria-hidden="true"/><form className="login-card" onSubmit={event=>{event.preventDefault();submit()}}><input className="sr-only" type="email" autoComplete="username" tabIndex={-1} aria-hidden="true" readOnly/><div className="login-brand"><img src="/olyxee-logo.png" alt="Olyxee"/><span>Olyxee <em>Ops</em></span></div><div className="login-rule"><span/></div><span className="workspace-access-label">Secure account setup</span><h1>Create your password</h1><p>Choose a password with at least 12 characters. This invitation link can only be used once.</p><div className="form-grid"><label className="form-label">Password<input className="input" type="password" autoComplete="new-password" value={password} onChange={event=>setPassword(event.target.value)} required/></label><label className="form-label">Confirm password<input className="input" type="password" autoComplete="new-password" value={confirm} onChange={event=>setConfirm(event.target.value)} required/></label>{message&&<div className="notice">{message}</div>}<button className="btn primary" type="submit" disabled={saving||!token}>{saving?"Saving…":"Set up account"}</button>{message.startsWith("Your account")&&<a className="btn" href="/">Go to sign in</a>}</div></form></div>;
+}
+
+function WorkspaceApp(){
+  const linkedTaskId=new URLSearchParams(window.location.search).get("task");
   const signOut=async()=>{await fetch("/api/auth/logout",{method:"POST"});window.location.assign("/")};
-  const [user,setUser]=useState<User|null>(null); const [view,setView]=useState<View>("Overview"); const [taskId,setTaskId]=useState<string|null>(null); const [projectId,setProjectId]=useState<string|null>(null); const [searchQuery,setSearchQuery]=useState("");
+  const [user,setUser]=useState<User|null>(null); const [view,setView]=useState<View>(linkedTaskId?"Tasks":"Overview"); const [taskId,setTaskId]=useState<string|null>(linkedTaskId); const [projectId,setProjectId]=useState<string|null>(null); const [searchQuery,setSearchQuery]=useState("");
   const [loading,setLoading]=useState(false);
    const [accountError,setAccountError]=useState("");
    const [onlineUserIds,setOnlineUserIds]=useState<string[]>([]);
@@ -103,7 +128,7 @@ export default function App(){
   const selectView=(v:View)=>{setView(v);setTaskId(null);setProjectId(null);setDepartmentId(null);setProfileOpen(false);setNotificationsOpen(false);setSearchQuery("");window.scrollTo({top:0,behavior:"smooth"})};
   const openDepartment=(department:string)=>{setView("Departments");setTaskId(null);setProjectId(null);setDepartmentId(department);setProfileOpen(false);setNotificationsOpen(false);setSearchQuery("");window.scrollTo({top:0,behavior:"smooth"})};
   const openSearchResult=(result:(typeof searchResults)[number])=>{setSearchQuery("");if(result.kind==="task"){setView("Tasks");setProjectId(null);setTaskId(result.target)}else if(result.kind==="project"){setView("Projects");setTaskId(null);setProjectId(result.target)}else selectView(result.target as View)};
-  useEffect(()=>{const controller=new AbortController();fetch("/api/me",{signal:controller.signal}).then(async response=>{if(!response.ok)throw new Error((await response.json()).error||"Your account could not be loaded.");return response.json() as Promise<User>}).then(person=>{setUser(person);setTeam([person]);setView("Overview")}).catch(error=>{if(error?.name!=="AbortError")setAccountError(error.message)});return()=>controller.abort()},[]);
+  useEffect(()=>{const controller=new AbortController();fetch("/api/me",{signal:controller.signal}).then(async response=>{if(!response.ok)throw new Error((await response.json()).error||"Your account could not be loaded.");return response.json() as Promise<User>}).then(person=>{setUser(person);setTeam([person]);setView(linkedTaskId?"Tasks":"Overview")}).catch(error=>{if(error?.name!=="AbortError")setAccountError(error.message)});return()=>controller.abort()},[]);
   useEffect(()=>{if(!user)return;setLoading(true);const timer=window.setTimeout(()=>setLoading(false),260);return()=>window.clearTimeout(timer)},[user?.id,view,taskId]);
   useEffect(()=>{if(!user)return;const controller=new AbortController();setDatabasePeopleError("");fetch("/api/people",{signal:controller.signal}).then(async response=>{if(!response.ok)throw new Error("Live people records are unavailable");return response.json() as Promise<{people:DatabasePerson[]}>}).then(result=>{setDatabasePeople(result.people);setTeam(()=>{const merged:User[]=[...result.people];if(!merged.some(person=>person.id===user.id))merged.unshift(user);return merged})}).catch(error=>{if(error?.name!=="AbortError")setDatabasePeopleError("Could not load people from Supabase.")});return()=>controller.abort()},[user?.id]);
   useEffect(()=>{if(!user)return;loadTasks().catch(error=>flash(error instanceof Error?error.message:"Unable to load tasks."))},[user?.id]);
@@ -597,7 +622,7 @@ function InternTaskDetail({task,user,team,onBack,update,refresh,flash}:{task:Tas
   const [accountStatus,setAccountStatus]=useState<AccountStatus>(person?accountOf(person):"Pending");
   const [reportsTo,setReportsTo]=useState(person?.reportsTo||(isManager(user)?user.id:""));
   const [provisioning,setProvisioning]=useState(false);
-  const [credentials,setCredentials]=useState<{name:string;email:string;password:string;role:string}|null>(null);
+   const [credentials,setCredentials]=useState<{name:string;email:string;role:string;invitationStatus:string;message:string}|null>(null);
   const [opsRole,setOpsRole]=useState<AccessRole>(person?.opsRole||"Member");
   const [opsActive,setOpsActive]=useState(person?.opsActive!==false);
   const [savingAccount,setSavingAccount]=useState(false);
@@ -659,7 +684,7 @@ function InternTaskDetail({task,user,team,onBack,update,refresh,flash}:{task:Tas
     if(!response.ok){window.alert(result.error||"Could not delete this person");return}
     window.location.reload();
   };
-  const shareMessage=credentials?`Hello ${credentials.name},\n\nYour Olyxee Ops account has been created.\n\nLogin email: ${credentials.email}\nPassword: ${credentials.password}\n\nThis password remains active until an administrator generates a replacement.\n\nRegards,\nOlyxee`:"";
+  const shareMessage=credentials?`Hello ${credentials.name},\n\nYour Olyxee Ops account has been created. A secure account setup email was sent to ${credentials.email}. The setup link expires in 24 hours.\n\nRegards,\nOlyxee`:"";
   const emailShare=credentials?`mailto:${encodeURIComponent(credentials.email)}?subject=${encodeURIComponent("Your Olyxee Ops Account")}&body=${encodeURIComponent(shareMessage)}`:"#";
   const whatsappShare=credentials?`https://wa.me/?text=${encodeURIComponent(shareMessage)}`:"#";
   const savePerson=()=>onSave({...person,id:person?.id||"",name,email,department,employmentType,accessRole,accountStatus,reportsTo} as User);
@@ -693,7 +718,7 @@ function InternTaskDetail({task,user,team,onBack,update,refresh,flash}:{task:Tas
        </div>
         {canProvision&&<details className="person-account-disclosure" open><summary>Account access</summary><div className="person-account-content">
           {canAdministerAccount&&person?.hasOpsAccess&&<><div className="account-management-grid"><label className="form-label">Ops role<select className="select" value={opsRole} onChange={event=>setOpsRole(event.target.value as AccessRole)}>{["Manager","Member"].map(value=><option key={value}>{value}</option>)}</select></label><label className="form-label">Sign-in access<select className="select" value={opsActive?"Active":"Suspended"} onChange={event=>setOpsActive(event.target.value==="Active")}><option>Active</option><option>Suspended</option></select></label></div><div className="account-management-actions"><button className="btn" type="button" disabled={savingAccount||deletingAccount} onClick={saveOpsAccount}>{savingAccount?"Saving…":"Save account access"}</button><button className="btn" type="button" disabled={savingAccount||deletingAccount} onClick={deleteOpsAccount}>{deletingAccount?"Deleting…":"Delete login"}</button></div></>}
-          <section className="access-provision"><div><b>{person?.hasOpsAccess?"Replace login password":"Create login details"}</b><p>Use {person?.email} and generate a secure password. It remains valid until a replacement is generated.</p></div><button className="btn primary" type="button" disabled={provisioning} onClick={provision}>{provisioning?"Generating…":person?.hasOpsAccess?"Generate replacement password":"Create Ops login"}</button>{credentials&&<div className="access-credentials"><span><small>Login email</small><b>{credentials.email}</b></span><span><small>Password</small><b className="mono">{credentials.password}</b></span><div><button className="btn" type="button" onClick={()=>navigator.clipboard.writeText(shareMessage)}>Copy details</button><a className="btn" href={emailShare}>Share by email</a><a className="btn" href={whatsappShare} target="_blank" rel="noreferrer">Share by WhatsApp</a></div></div>}</section>
+          <section className="access-provision"><div><b>{person?.hasOpsAccess?"Resend account invitation":"Create Ops access"}</b><p>Create access and send a secure, single-use password setup link to {person?.email}.</p></div><button className="btn primary" type="button" disabled={provisioning} onClick={provision}>{provisioning?"Sending…":person?.hasOpsAccess?"Resend invitation":"Create Ops access"}</button>{credentials&&<div className="access-credentials"><span><small>Login email</small><b>{credentials.email}</b></span><span><small>Invitation</small><b>{credentials.invitationStatus==="queued"?"Email queued":"Needs retry"}</b></span><div><button className="btn" type="button" onClick={()=>navigator.clipboard.writeText(shareMessage)}>Copy note</button><a className="btn" href={emailShare}>Open email</a><a className="btn" href={whatsappShare} target="_blank" rel="noreferrer">Share by WhatsApp</a></div></div>}</section>
           {accessOf(user)==="Superadmin"&&<div className="person-delete-row"><span><b>Delete person</b><small>Removes their directory record and login.</small></span><button className="btn" type="button" disabled={deletingPerson||deletingAccount||savingAccount} onClick={deletePerson}>{deletingPerson?"Deleting…":"Delete"}</button></div>}
        </div></details>}
       </div>:!editMode&&person?<div className="person-profile-view">
@@ -708,7 +733,7 @@ function InternTaskDetail({task,user,team,onBack,update,refresh,flash}:{task:Tas
         {person.contactDetails&&<div><dt>Contact</dt><dd>{person.contactDetails}</dd></div>}
         {person.githubUsername&&<div><dt>GitHub</dt><dd>@{person.githubUsername}</dd></div>}
       </dl>
-       {canProvision&&<section className="access-provision person-profile-provision"><div><b>{person.hasOpsAccess?"Replace login password":"Create Ops login details"}</b><p>{person.hasOpsAccess?"Generate a replacement password for this intern’s existing Ops account.":"Create secure sign-in details for this intern using their recorded email address."}</p></div><button className="btn primary" type="button" disabled={provisioning} onClick={provision}>{provisioning?"Generating…":person.hasOpsAccess?"Generate replacement":"Create Ops login"}</button>{credentials&&<div className="access-credentials"><span><small>Login email</small><b>{credentials.email}</b></span><span><small>Password</small><b className="mono">{credentials.password}</b></span><div><button className="btn" type="button" onClick={()=>navigator.clipboard.writeText(shareMessage)}>Copy details</button><a className="btn" href={emailShare}>Share by email</a><a className="btn" href={whatsappShare} target="_blank" rel="noreferrer">Share by WhatsApp</a></div></div>}</section>}
+       {canProvision&&<section className="access-provision person-profile-provision"><div><b>{person.hasOpsAccess?"Resend account invitation":"Create Ops access"}</b><p>Send a secure, single-use password setup link to this person’s recorded email address.</p></div><button className="btn primary" type="button" disabled={provisioning} onClick={provision}>{provisioning?"Sending…":person.hasOpsAccess?"Resend invitation":"Create Ops access"}</button>{credentials&&<div className="access-credentials"><span><small>Login email</small><b>{credentials.email}</b></span><span><small>Invitation</small><b>{credentials.invitationStatus==="queued"?"Email queued":"Needs retry"}</b></span><div><button className="btn" type="button" onClick={()=>navigator.clipboard.writeText(shareMessage)}>Copy note</button><a className="btn" href={emailShare}>Open email</a><a className="btn" href={whatsappShare} target="_blank" rel="noreferrer">Share by WhatsApp</a></div></div>}</section>}
        <section className="person-progress" aria-label={`${person.name} task progress`}>
          <div className="person-progress-head"><span><small>Task progress</small><b>{taskProgress}% complete</b></span><strong>{completedPersonTasks}/{personTasks.length}</strong></div>
          <div className="person-progress-track"><span style={{width:`${taskProgress}%`}}/></div>
@@ -749,14 +774,14 @@ function InternTaskDetail({task,user,team,onBack,update,refresh,flash}:{task:Tas
         <div className="account-management-actions"><button className="btn primary" type="button" disabled={savingAccount||deletingAccount} onClick={saveOpsAccount}>{savingAccount?"Saving…":"Save account access"}</button><button className="btn danger" type="button" disabled={savingAccount||deletingAccount} onClick={deleteOpsAccount}>{deletingAccount?"Deleting…":"Delete Ops account"}</button></div>
       </section>}
        {editMode&&canProvision&&!person?.hasOpsAccess&&<section className="access-provision">
-         <div><b>Ops login access</b><p>The login will use <b>{person.email}</b> and generate a strong password that remains valid until replaced.</p></div>
-         <button className="btn primary" type="button" disabled={provisioning} onClick={provision}>{provisioning?"Creating access…":credentials?"Generate another password":"Create Ops login"}</button>
-        {credentials&&<div className="access-credentials"><span><small>Login email</small><b>{credentials.email}</b></span><span><small>Password</small><b className="mono">{credentials.password}</b></span><div><button className="btn" type="button" onClick={()=>navigator.clipboard.writeText(shareMessage)}>Copy details</button><a className="btn" href={emailShare}>Share by email</a><a className="btn" href={whatsappShare} target="_blank" rel="noreferrer">Share by WhatsApp</a></div></div>}
+         <div><b>Ops login access</b><p>The login will use <b>{person.email}</b>. A secure password setup link will be emailed and will expire after 24 hours.</p></div>
+          <button className="btn primary" type="button" disabled={provisioning} onClick={provision}>{provisioning?"Sending invitation…":credentials?"Resend invitation":"Create Ops login"}</button>
+        {credentials&&<div className="access-credentials"><span><small>Login email</small><b>{credentials.email}</b></span><span><small>Invitation</small><b>{credentials.invitationStatus==="queued"?"Email queued":"Needs retry"}</b></span><div><button className="btn" type="button" onClick={()=>navigator.clipboard.writeText(shareMessage)}>Copy note</button><a className="btn" href={emailShare}>Open email</a><a className="btn" href={whatsappShare} target="_blank" rel="noreferrer">Share by WhatsApp</a></div></div>}
       </section>}
       {editMode&&canProvision&&person?.hasOpsAccess&&<section className="access-provision">
-         <div><b>Replace password</b><p>Generate a new password for <b>{person.email}</b>. The current password will stop working immediately.</p></div>
-         <button className="btn" type="button" disabled={provisioning} onClick={provision}>{provisioning?"Generating password…":"Generate replacement password"}</button>
-        {credentials&&<div className="access-credentials"><span><small>Login email</small><b>{credentials.email}</b></span><span><small>Password</small><b className="mono">{credentials.password}</b></span><div><button className="btn" type="button" onClick={()=>navigator.clipboard.writeText(shareMessage)}>Copy details</button><a className="btn" href={emailShare}>Share by email</a><a className="btn" href={whatsappShare} target="_blank" rel="noreferrer">Share by WhatsApp</a></div></div>}
+          <div><b>Reset account access</b><p>Send a new secure password setup link to <b>{person.email}</b>. The current password will stop working immediately.</p></div>
+          <button className="btn" type="button" disabled={provisioning} onClick={provision}>{provisioning?"Sending invitation…":"Send new setup link"}</button>
+        {credentials&&<div className="access-credentials"><span><small>Login email</small><b>{credentials.email}</b></span><span><small>Invitation</small><b>{credentials.invitationStatus==="queued"?"Email queued":"Needs retry"}</b></span><div><button className="btn" type="button" onClick={()=>navigator.clipboard.writeText(shareMessage)}>Copy note</button><a className="btn" href={emailShare}>Open email</a><a className="btn" href={whatsappShare} target="_blank" rel="noreferrer">Share by WhatsApp</a></div></div>}
       </section>}
        {editMode&&canAdministerAccount&&<section className="person-delete-section">
         <div><b>Delete person</b><p>Remove this person from the directory and revoke their Ops login. Historical work records are retained.</p></div>

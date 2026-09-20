@@ -36,3 +36,11 @@ externalPort = 80
 [[ports]]
 localPort = 24678
 externalPort = 3000
+
+[userenv]
+
+[userenv.shared]
+EMAIL_FROM = "info@olyxee.com"
+EMAIL_REPLY_TO = "info@olyxee.com"
+OPS_APP_URL = "https://ops.olyxee.com/"
+EMAIL_ENABLED = "true"
