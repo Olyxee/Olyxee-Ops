@@ -374,6 +374,69 @@
   }
 }
 
+/* Topbar wordmark: distinctive, legible, and balanced as one product name. */
+body .app .workspace-brand .workspace-wordmark {
+  display: inline-flex !important;
+  align-items: baseline !important;
+  gap: 6px !important;
+  margin: 0 !important;
+  color: #111 !important;
+  font-family: ui-rounded, "Avenir Next", "Nunito Sans", "Trebuchet MS", sans-serif !important;
+  font-size: 20px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  letter-spacing: -.055em !important;
+}
+
+body .app .workspace-brand .workspace-wordmark-name,
+body .app .workspace-brand .workspace-wordmark-ops {
+  display: inline !important;
+  font-family: inherit !important;
+  line-height: inherit !important;
+}
+
+body .app .workspace-brand .workspace-wordmark-name {
+  color: #111 !important;
+  font-size: 20px !important;
+  font-weight: 800 !important;
+  letter-spacing: -.055em !important;
+}
+
+body .app .workspace-brand .workspace-wordmark-ops {
+  position: relative;
+  color: #5f5f63 !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  letter-spacing: -.035em !important;
+}
+
+body .app .workspace-brand img {
+  width: 38px !important;
+  height: 38px !important;
+}
+
+@media (max-width: 700px) {
+  body .app .workspace-brand .workspace-wordmark {
+    gap: 4px !important;
+    font-size: 17px !important;
+  }
+
+  body .app .workspace-brand .workspace-wordmark-name {
+    display: inline !important;
+    font-size: 17px !important;
+  }
+
+  body .app .workspace-brand .workspace-wordmark-ops {
+    display: inline !important;
+    font-size: 14px !important;
+  }
+
+  body .app .workspace-brand img {
+    width: 33px !important;
+    height: 33px !important;
+  }
+}
+
 /* Frameless notification bell with a persistent unread count. */
 body .app .notification-trigger {
   position: relative;
