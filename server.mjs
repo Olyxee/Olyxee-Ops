@@ -1219,8 +1219,8 @@ app.patch("/api/tasks/:id", requireAuth, requireAccount, async (request, respons
   if (!task) return response.status(404).json({ error: "Task not found." });
   const nextStatus = request.body.status ? String(request.body.status) : null;
   const feedback = String(request.body.feedback || "").trim().slice(0, 3000);
-  if (nextStatus === "Changes Requested" && !feedback) {
-    return response.status(400).json({ error: "Feedback is required when requesting changes." });
+  if (["Changes Requested", "Completed"].includes(nextStatus) && !feedback) {
+    return response.status(400).json({ error: "Written review feedback is required before making this decision." });
   }
   const reviewerAction = nextStatus && ["Changes Requested", "Completed", "Cancelled"].includes(nextStatus);
   if (nextStatus && (!taskStatuses.includes(nextStatus) || !(taskTransitions[task.status] || []).includes(nextStatus))) {
@@ -1282,7 +1282,7 @@ app.patch("/api/tasks/:id", requireAuth, requireAccount, async (request, respons
     `, [nextStatus, blockerReason, task.id, assignee, priority, dueDate, project, department]);
     if (nextStatus) {
       await recordTaskActivity(client, task.id, identity, `Status changed to ${nextStatus}`, { from: lockedTask.status, to: nextStatus });
-      if (nextStatus === "Changes Requested") {
+      if (["Changes Requested", "Completed"].includes(nextStatus)) {
         await client.query(`
           INSERT INTO public.task_updates (task_id, author_user_id, author_name, author_role, update_type, message)
           VALUES ($1,$2,$3,$4,'Review feedback',$5)

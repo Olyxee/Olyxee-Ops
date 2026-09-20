@@ -1375,6 +1375,24 @@
   gap: 8px;
 }
 
+.manager-review-form {
+  width: min(430px, 100%);
+  display: grid;
+  gap: 10px;
+}
+
+.manager-review-form label {
+  display: grid;
+  gap: 6px;
+  color: #5f666c;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.manager-review-form .textarea {
+  background: rgba(255, 255, 255, .9);
+}
+
 .manager-task-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 220px;

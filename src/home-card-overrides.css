@@ -224,6 +224,156 @@
   -webkit-line-clamp: 2;
 }
 
+/* Manager department health: an hourly signal, not a completion bar. */
+.manager-health-card {
+  padding: 18px 20px 20px;
+}
+
+.manager-health-open {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0 14px;
+  border: 0;
+  background: transparent;
+  color: #25272a;
+  text-align: left;
+}
+
+.manager-health-open > span {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.manager-health-open b {
+  font-size: 16px;
+}
+
+.manager-health-state {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #e8f2ed;
+  color: #39745f;
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.manager-health-state.needs-attention {
+  background: #f6edde;
+  color: #8b6426;
+}
+
+.manager-health-state.at-risk {
+  background: #f7e5e2;
+  color: #9a4d44;
+}
+
+.manager-health-chart {
+  position: relative;
+  height: 152px;
+  overflow: hidden;
+  border: 1px solid #e1e3e6;
+  border-radius: 13px;
+  background: linear-gradient(180deg, #fafbfc, #f3f5f6);
+}
+
+.manager-health-grid {
+  position: absolute;
+  inset: 22px 16px;
+  display: grid;
+  grid-template-rows: repeat(3, 1fr);
+}
+
+.manager-health-grid i {
+  border-top: 1px dashed #dfe2e5;
+}
+
+.manager-health-chart svg {
+  position: absolute;
+  inset: 8px 12px;
+  width: calc(100% - 24px);
+  height: calc(100% - 16px);
+}
+
+.manager-health-area {
+  fill: rgba(69, 105, 100, .10);
+}
+
+.manager-health-line {
+  fill: none;
+  stroke: #3f625d;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.manager-health-chart circle {
+  fill: #fff;
+  stroke: #3f625d;
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.manager-health-chart circle:last-child {
+  fill: #3f625d;
+  stroke: #fff;
+}
+
+.manager-health-hours {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  margin: 7px 2px 15px;
+  color: #92969a;
+  font-size: 8px;
+  text-align: center;
+}
+
+.manager-health-action {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 15px;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 12px;
+  border: 1px solid #e5d6bb;
+  border-radius: 11px;
+  background: #fbf7ef;
+  color: #6e542c;
+  text-align: left;
+}
+
+.manager-health-action > span {
+  display: grid;
+  gap: 3px;
+}
+
+.manager-health-action small {
+  color: #9a7a46;
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.manager-health-action b {
+  color: #4f4028;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+@media (max-width: 560px) {
+  .manager-health-card {
+    padding: 15px;
+  }
+
+  .manager-health-hours span:nth-child(even) {
+    display: none;
+  }
+}
+
 .workspace-board-member .workspace-tasks .workspace-list {
   gap: 0;
   margin: 14px;
