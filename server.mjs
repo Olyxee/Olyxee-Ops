@@ -1483,7 +1483,7 @@ app.get("/api/state/:key", requireAuth, requireAccount, async (request, response
       `, [identity.externalId]);
       const taskProjectNames = new Set(assignedTaskProjects.rows.map((row) => row.project));
       value = Array.isArray(value)
-        ? value.filter((project) => (project.assigneeIds || []).includes(identity.externalId) || taskProjectNames.has(project.name))
+        ? value.filter((project) => (project.assigneeIds || []).includes(identity.externalId) && taskProjectNames.has(project.name))
         : [];
     } else if (request.params.key === "notices") {
       value = Array.isArray(value) ? value.filter((notice) => notice.userId === identity.externalId) : [];
