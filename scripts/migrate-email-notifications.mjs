@@ -20,20 +20,34 @@ await pool.query(`
     provider text NOT NULL DEFAULT 'resend',
     provider_message_id text,
     status text NOT NULL DEFAULT 'PENDING'
-      CHECK (status IN ('PENDING','PROCESSING','SENT','FAILED','DISABLED','DELIVERED','BOUNCED','COMPLAINED')),
+      CHECK (status IN ('PENDING','PROCESSING','SENT','FAILED','DISABLED','DELIVERED','BOUNCED','COMPLAINED','DELAYED')),
     failure_reason text,
     deduplication_key text NOT NULL UNIQUE,
     retry_count integer NOT NULL DEFAULT 0,
     processing_started_at timestamptz,
     created_at timestamptz NOT NULL DEFAULT now(),
     sent_at timestamptz,
+    delivered_at timestamptz,
     updated_at timestamptz NOT NULL DEFAULT now()
   );
   ALTER TABLE public.email_notifications ADD COLUMN IF NOT EXISTS processing_started_at timestamptz;
+  ALTER TABLE public.email_notifications ADD COLUMN IF NOT EXISTS delivered_at timestamptz;
+  ALTER TABLE public.email_notifications DROP CONSTRAINT IF EXISTS email_notifications_status_check;
+  ALTER TABLE public.email_notifications ADD CONSTRAINT email_notifications_status_check
+    CHECK (status IN ('PENDING','PROCESSING','SENT','FAILED','DISABLED','DELIVERED','BOUNCED','COMPLAINED','DELAYED'));
   CREATE INDEX IF NOT EXISTS email_notifications_status_idx
     ON public.email_notifications(status, created_at);
   CREATE INDEX IF NOT EXISTS email_notifications_task_idx
     ON public.email_notifications(related_task_id);
+
+  CREATE TABLE IF NOT EXISTS public.email_webhook_events (
+    event_id text PRIMARY KEY,
+    event_type text NOT NULL,
+    provider_message_id text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now()
+  );
+  CREATE INDEX IF NOT EXISTS email_webhook_events_message_idx
+    ON public.email_webhook_events(provider_message_id);
 
   CREATE TABLE IF NOT EXISTS public.account_setup_tokens (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

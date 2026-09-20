@@ -1,0 +1,415 @@
+Finish and verify the Olyxee Ops email notification system.
+
+Important requirement: these emails are **notification-only**. Users are not expected to reply by email. All actions, comments, feedback, reviews, and updates must happen inside Olyxee Ops.
+
+Use:
+
+```env
+EMAIL_FROM="Olyxee Ops <no-reply@olyxee.com>"
+OPS_APP_URL="https://ops.olyxee.com"
+EMAIL_ENABLED=true
+```
+
+If `EMAIL_REPLY_TO` is not required by the current implementation, remove it.
+
+If it is required, use:
+
+```env
+EMAIL_REPLY_TO="no-reply@olyxee.com"
+```
+
+Every email template must include a footer such as:
+
+`This is an automated notification from Olyxee Ops. Please do not reply to this email. Open Olyxee Ops to take action or respond.`
+
+Every actionable email must contain a direct CTA back into Ops.
+
+Examples:
+
+* `Open task`
+* `Review submission`
+* `View feedback`
+* `View progress`
+* `Open weekly review`
+* `View intern`
+
+Do not encourage email replies.
+
+## Completion Criteria
+
+Do not consider this feature complete until all of the following have been verified.
+
+### 1. Resend configuration
+
+Confirm the backend reads:
+
+```env
+RESEND_API_KEY
+RESEND_WEBHOOK_SECRET
+CRON_SECRET
+EMAIL_FROM
+OPS_APP_URL
+EMAIL_ENABLED
+```
+
+Confirm none of these secrets are exposed to frontend JavaScript.
+
+### 2. Test email
+
+Add a Superadmin-only way to send a test email.
+
+Example button:
+
+`Send test email`
+
+The test should send to the currently logged-in Superadmin.
+
+The email should:
+
+* arrive successfully
+* show `Olyxee Ops` as sender
+* use `no-reply@olyxee.com`
+* contain the automated-notification footer
+* contain a working link to Olyxee Ops
+
+Show a clear result in the UI:
+
+`Test email sent successfully`
+
+or:
+
+`Test email failed`
+
+### 3. Account creation test
+
+Test this exact flow:
+
+```text
+Superadmin creates a test intern
+→ account is created successfully
+→ invitation/setup email is created
+→ Resend accepts the email
+→ provider message ID is saved
+→ intern receives email
+→ setup link opens the correct Ops page
+```
+
+Email must not contain a permanent password.
+
+### 4. Task assignment test
+
+Test:
+
+```text
+Manager assigns task
+→ assignee receives email
+→ email contains correct task title
+→ correct due date is shown
+→ Open task button opens the exact task
+```
+
+Verify the email is only sent once.
+
+Refreshing the page or retrying the API must not send duplicates.
+
+### 5. Progress update test
+
+Test:
+
+```text
+Intern posts progress update
+→ update saves successfully
+→ assigned Manager receives notification
+→ email contains the progress text
+→ View task opens the correct task
+```
+
+The intern who posted the update must not receive their own progress email.
+
+### 6. Submit-for-review test
+
+Test:
+
+```text
+Intern submits work
+→ status becomes Submitted for Review
+→ Manager receives email
+→ submission summary is shown
+→ evidence link is shown when supplied
+→ Review work opens correct task
+```
+
+This should only send after the submission has successfully saved.
+
+### 7. Changes-requested test
+
+Test:
+
+```text
+Manager requests changes
+→ status becomes Changes Requested
+→ feedback is saved
+→ intern receives email
+→ feedback text appears correctly
+→ View feedback opens correct task
+```
+
+Do not allow an empty review-feedback email.
+
+### 8. Approval test
+
+Test:
+
+```text
+Manager approves work
+→ task becomes completed/approved
+→ intern receives approval email
+→ completion timestamp is recorded
+```
+
+Interns must not be able to approve their own tasks.
+
+### 9. Help-request test
+
+Test:
+
+```text
+Intern clicks I need help
+→ selects reason
+→ enters explanation
+→ help request saves
+→ Manager receives email
+→ email opens correct task
+```
+
+### 10. Email delivery webhook
+
+Verify this production endpoint:
+
+`POST https://ops.olyxee.com/api/webhooks/resend`
+
+It must not return:
+
+* 404
+* 405
+* frontend HTML
+* login redirect
+
+Test with a real Resend delivery event.
+
+Expected flow:
+
+```text
+Email sent
+→ Resend returns message ID
+→ message ID saved
+→ Resend webhook received
+→ signature verified
+→ matching notification found
+→ status updated to DELIVERED
+```
+
+Also verify bounced/failed emails update correctly.
+
+### 11. Email log
+
+In Superadmin, verify the email log displays:
+
+* recipient
+* notification type
+* related task/user
+* created time
+* sent time
+* delivery status
+* failure reason when applicable
+
+Expected statuses may include:
+
+```text
+PENDING
+SENT
+DELIVERED
+DELAYED
+BOUNCED
+COMPLAINED
+FAILED
+```
+
+### 12. Failed email handling
+
+Temporarily simulate an email-provider failure.
+
+Verify:
+
+```text
+Task/account action succeeds
+→ email fails separately
+→ business data remains saved
+→ email log shows FAILED
+→ Superadmin can retry
+```
+
+Retrying the email must not repeat the original business action.
+
+### 13. Duplicate protection
+
+Explicitly test duplicate API requests.
+
+Verify that the same:
+
+* account invitation
+* task assignment
+* submission
+* approval
+* help request
+* scheduled reminder
+
+cannot generate duplicate emails.
+
+### 14. Scheduled jobs
+
+Verify the secured scheduled endpoint works using `CRON_SECRET`.
+
+Test each scheduled notification manually:
+
+* task due tomorrow
+* task overdue
+* weekly intern review
+* internship ending in 14 days
+* internship ending in 7 days
+
+The cron route must reject requests without the correct secret.
+
+The scheduled jobs must run server-side and must not depend on a browser being open.
+
+### 15. Weekly review
+
+Generate a test weekly review for one intern.
+
+Verify that it correctly calculates:
+
+* tasks assigned
+* tasks completed
+* tasks in progress
+* tasks awaiting review
+* overdue tasks
+* recent progress updates
+* unresolved help requests
+
+The email must be factual and must not automatically assign performance ratings or scores.
+
+### 16. Notification-only behaviour
+
+Review every email template.
+
+Confirm that:
+
+* no template asks the recipient to reply
+* every template tells the user to use Olyxee Ops
+* actionable emails have a direct Ops link
+* the footer says it is an automated notification
+* comments and review responses remain inside Ops
+
+### 17. Production URL verification
+
+Check every generated link.
+
+There must be no malformed URLs such as:
+
+```text
+https://ops.olyxee.com//tasks/123
+```
+
+Links should look like:
+
+```text
+https://ops.olyxee.com/tasks/123
+```
+
+### 18. Mobile email rendering
+
+Verify templates render properly on both desktop and mobile.
+
+Check:
+
+* button width
+* readable text
+* no horizontal scrolling
+* no broken layout
+* no oversized logo
+* links are tappable
+
+### 19. Final health check
+
+Create a small Superadmin email-system status section showing:
+
+```text
+Email system: Enabled
+Provider: Resend
+Sender: no-reply@olyxee.com
+Webhook: Connected
+Cron: Configured
+Last successful email: [timestamp]
+Last webhook received: [timestamp]
+```
+
+Do not expose secrets.
+
+This gives us a quick way to know whether email infrastructure is operational.
+
+## Definition of Done
+
+Only mark this implementation as complete when these core flows have been successfully tested:
+
+```text
+Account created → invitation received
+Task assigned → notification received
+Progress posted → Manager notified
+Work submitted → Manager notified
+Changes requested → Intern notified
+Work approved → Intern notified
+Help requested → Manager notified
+Webhook → delivery status updated
+Cron → scheduled email sent
+Failed email → retry works
+Duplicate request → no duplicate email
+```
+
+At the end, return a final verification report with a table:
+
+```text
+Feature                     Status
+Resend connection            PASS / FAIL
+Sender configuration         PASS / FAIL
+Test email                   PASS / FAIL
+Account invitation           PASS / FAIL
+Task assignment              PASS / FAIL
+Progress notification        PASS / FAIL
+Submit for review            PASS / FAIL
+Changes requested            PASS / FAIL
+Approval email               PASS / FAIL
+Help request                 PASS / FAIL
+Webhook verification         PASS / FAIL
+Delivery tracking            PASS / FAIL
+Cron authentication          PASS / FAIL
+Due-date reminders           PASS / FAIL
+Weekly review                PASS / FAIL
+Internship reminders         PASS / FAIL
+Duplicate protection         PASS / FAIL
+Failure/retry handling       PASS / FAIL
+Notification-only footer     PASS / FAIL
+Production links             PASS / FAIL
+```
+
+For every `FAIL`, explain exactly what is still missing.
+
+Also return:
+
+1. Files changed
+2. Database migrations added
+3. Environment variables currently required
+4. Production endpoints created
+5. Remaining manual setup required from me
+6. Exact final test I should perform myself before onboarding interns
+
+Do not claim the email system is complete unless the core production flows have actually been verified.

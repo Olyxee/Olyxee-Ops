@@ -1,0 +1,352 @@
+Implement and verify the Resend webhook endpoint for Olyxee Ops.
+
+The webhook has already been configured in Resend with this endpoint:
+
+`https://ops.olyxee.com/api/webhooks/resend`
+
+Make sure this exact production endpoint works correctly.
+
+## Requirements
+
+Create a backend route:
+
+`POST /api/webhooks/resend`
+
+This route must:
+
+* Accept Resend webhook events
+* Verify the webhook signature using Resend's recommended verification method
+* Reject invalid or unsigned webhook requests
+* Parse the event safely
+* Update the existing email notification log
+* Return a successful 2xx response quickly when processing succeeds
+* Never expose secrets to the frontend
+
+## Environment Variable
+
+Add support for:
+
+```env
+RESEND_WEBHOOK_SECRET=
+```
+
+Do not hard-code the webhook secret.
+
+The webhook secret must only exist on the server.
+
+If the project already has centralized environment validation, add it there.
+
+## Important: Raw Request Body
+
+Check Resend's current webhook verification requirements.
+
+If signature verification requires the original/raw request body, make sure the framework does not mutate or parse the body before verification.
+
+Implement the route correctly for the existing framework.
+
+Do not blindly use `JSON.stringify(req.body)` for signature verification if Resend requires the original request payload.
+
+## Events to Support
+
+Handle at least:
+
+```text
+email.delivered
+email.bounced
+email.complained
+email.delivery_delayed
+email.failed
+```
+
+If Resend uses slightly different current event names, use the exact event names from the current Resend API/webhook specification.
+
+Ignore unsupported events safely and still return an appropriate success response so Resend does not continuously retry events we intentionally do not process.
+
+## Match Emails Correctly
+
+When an email is originally sent through Resend, save the returned Resend message ID as:
+
+`providerMessageId`
+
+When the webhook arrives, use that provider message ID to find the corresponding email notification record.
+
+Do not match solely by recipient email or subject.
+
+Example flow:
+
+```text
+Ops sends email
+→ Resend returns message ID
+→ save message ID in emailNotifications table
+→ webhook arrives
+→ extract Resend message ID
+→ find emailNotifications.providerMessageId
+→ update delivery status
+```
+
+## Delivery Status Mapping
+
+Map webhook events to Ops statuses.
+
+Example:
+
+```text
+email.delivered → DELIVERED
+email.bounced → BOUNCED
+email.complained → COMPLAINED
+email.delivery_delayed → DELAYED
+email.failed → FAILED
+```
+
+Preserve existing statuses such as:
+
+```text
+PENDING
+SENT
+FAILED
+```
+
+Extend the enum/schema if necessary.
+
+## Database Updates
+
+For a delivered email, update fields such as:
+
+```text
+status = DELIVERED
+deliveredAt = current timestamp
+updatedAt = current timestamp
+```
+
+For bounce:
+
+```text
+status = BOUNCED
+failureReason = safe bounce reason if available
+updatedAt = current timestamp
+```
+
+For complaint:
+
+```text
+status = COMPLAINED
+updatedAt = current timestamp
+```
+
+For delayed:
+
+```text
+status = DELAYED
+updatedAt = current timestamp
+```
+
+For failed:
+
+```text
+status = FAILED
+failureReason = safe provider reason if available
+updatedAt = current timestamp
+```
+
+Do not store entire raw webhook payloads unless there is an existing safe audit pattern.
+
+Never store secrets, auth headers, or sensitive tokens.
+
+## Idempotency
+
+Resend may retry webhook events.
+
+Make webhook processing idempotent.
+
+Processing the same event twice must not:
+
+* create duplicate email log records
+* create duplicate task activity entries
+* trigger another email
+* trigger another business action
+
+If the email is already marked `DELIVERED`, receiving the same delivered event again should simply return success.
+
+If Resend provides a unique webhook event ID, store or use it for deduplication.
+
+## Webhook Must Not Trigger Business Logic
+
+This webhook is only for email delivery state.
+
+It must NOT:
+
+* submit tasks
+* approve tasks
+* change internship state
+* send another email
+* create user accounts
+* modify task status
+
+It should only update email-delivery information.
+
+## Security
+
+The endpoint should be publicly accessible because Resend needs to call it, but it must still be secure through webhook-signature verification.
+
+Do not require the normal Ops user authentication session.
+
+Do not protect it with Superadmin login.
+
+Instead:
+
+```text
+Public endpoint
++
+valid Resend signature required
+```
+
+Reject invalid signatures with an appropriate HTTP status.
+
+Do not log the webhook secret.
+
+## Error Handling
+
+If signature verification fails:
+
+Return an appropriate 4xx response.
+
+If the payload is malformed:
+
+Return an appropriate 4xx response.
+
+If the message ID is valid but no matching email record exists:
+
+* log a safe warning
+* do not crash
+* return a successful response if appropriate so Resend does not continuously retry an event we cannot associate
+
+If the database is temporarily unavailable:
+
+Return an appropriate server error so Resend can retry.
+
+## Response Performance
+
+Do not perform unnecessary expensive operations inside the webhook.
+
+The route should verify, update the relevant email record, and respond.
+
+## Logging
+
+Add concise server-side logs such as:
+
+```text
+Resend webhook received: email.delivered
+Email delivery status updated: [providerMessageId] → DELIVERED
+```
+
+Do not log:
+
+* webhook secrets
+* setup tokens
+* passwords
+* API keys
+* entire sensitive request payloads
+
+## Superadmin Email Log
+
+Make sure the existing Superadmin email-log UI reflects the webhook updates.
+
+Example:
+
+```text
+Recipient                Type               Status
+intern@olyxee.com         TASK_ASSIGNED      DELIVERED
+manager@olyxee.com        TASK_SUBMITTED     DELIVERED
+user@example.com          ACCOUNT_INVITE     BOUNCED
+```
+
+If a message is bounced or failed, show the safe failure reason where available.
+
+## Testing
+
+Add automated tests for:
+
+1. Valid signed `email.delivered`
+
+   * returns success
+   * updates email record to DELIVERED
+
+2. Valid signed `email.bounced`
+
+   * updates to BOUNCED
+
+3. Invalid signature
+
+   * rejected
+   * database unchanged
+
+4. Missing signature
+
+   * rejected
+
+5. Unknown message ID
+
+   * does not crash
+
+6. Duplicate webhook
+
+   * remains idempotent
+
+7. Unsupported event
+
+   * safely ignored
+
+8. Database failure
+
+   * returns suitable server error
+
+Mock external dependencies.
+
+Do not call real Resend services in tests.
+
+## Production Verification
+
+After implementation, verify that:
+
+`POST https://ops.olyxee.com/api/webhooks/resend`
+
+is reachable in production.
+
+Make sure it does NOT return:
+
+```text
+404
+405
+HTML frontend page
+authentication redirect
+```
+
+It should be a real backend endpoint.
+
+Then send a test transactional email through Ops and verify this flow:
+
+```text
+Ops sends email
+→ Resend accepts it
+→ providerMessageId saved
+→ recipient receives email
+→ Resend webhook fires
+→ /api/webhooks/resend receives it
+→ signature verified
+→ email record becomes DELIVERED
+```
+
+If the app is deployed on Vercel, ensure the route is correctly deployed as a server/API route and is not swallowed by SPA routing.
+
+## Final Output
+
+After implementing, report:
+
+1. File containing `/api/webhooks/resend`
+2. How signature verification is implemented
+3. Required environment variable
+4. Database fields/statuses added
+5. Events handled
+6. Test results
+7. Whether the production route responds correctly
+8. Any action still required from me in Resend or Vercel

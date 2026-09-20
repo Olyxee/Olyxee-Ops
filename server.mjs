@@ -11,8 +11,9 @@ import {
   queueTransactionalEmail,
   taskUrl,
   validateEmailConfiguration,
-  verifyResendWebhook,
 } from "./server/services/notifications/email-service.mjs";
+import { handleResendWebhook } from "./server/services/notifications/resend-webhook.mjs";
+import { reminderDays, taskReminderKey, utcDate, weeklySummary } from "./server/services/notifications/schedule-logic.mjs";
 import {
   OFFICIAL_DEPARTMENTS,
   UNASSIGNED_DEPARTMENT,
@@ -71,36 +72,14 @@ const validateDepartment = (value, { allowUnassigned = true } = {}) => {
 };
 
 app.disable("x-powered-by");
-app.post("/api/email/webhooks/resend", express.raw({ type: "application/json", limit: "256kb" }), async (request, response) => {
-  try {
-    const rawBody = request.body.toString("utf8");
-    if (!verifyResendWebhook(rawBody, request.headers, process.env.RESEND_WEBHOOK_SECRET)) {
-      return response.status(401).json({ error: "Invalid webhook signature." });
-    }
-    const event = JSON.parse(rawBody);
-    const messageId = event?.data?.email_id || event?.data?.id;
-    const statusByType = {
-      "email.delivered": "DELIVERED",
-      "email.bounced": "BOUNCED",
-      "email.complained": "COMPLAINED",
-    };
-    const status = statusByType[event?.type];
-    if (messageId && status && appPool) {
-      await appPool.query(`
-        UPDATE public.email_notifications
-        SET status=$1, updated_at=now()
-        WHERE provider_message_id=$2
-          AND (
-            $1='COMPLAINED'
-            OR ($1='BOUNCED' AND status <> 'COMPLAINED')
-            OR ($1='DELIVERED' AND status NOT IN ('BOUNCED','COMPLAINED'))
-          )
-      `, [status, messageId]);
-    }
-    return response.json({ ok: true });
-  } catch {
-    return response.status(400).json({ error: "Invalid webhook payload." });
-  }
+app.post("/api/webhooks/resend", express.raw({ type: "application/json", limit: "256kb" }), async (request, response) => {
+  const result = await handleResendWebhook({
+    rawBody: request.body.toString("utf8"),
+    headers: request.headers,
+    secret: process.env.RESEND_WEBHOOK_SECRET,
+    database: appPool,
+  });
+  return response.status(result.statusCode).json(result.body);
 });
 app.use(express.json({ limit: "2mb" }));
 if (appPool) {
@@ -1060,7 +1039,7 @@ app.delete("/api/people/:id/ops-account", requireAuth, requireAccount, async (re
 });
 
 const taskStatuses = ["Not Started", "In Progress", "Blocked", "Submitted for Review", "Changes Requested", "Completed", "Cancelled"];
-const taskPriorities = ["Critical", "High", "Medium", "Low"];
+const taskPriorities = ["Critical", "Urgent", "High", "Normal", "Medium", "Low"];
 const taskTransitions = {
   "Not Started": ["In Progress", "Blocked", "Cancelled"],
   "In Progress": ["Blocked", "Submitted for Review", "Cancelled"],
@@ -1115,6 +1094,18 @@ function requestEmail(identity) {
   return identity.email || "";
 }
 
+function taskAssigneesFromRow(task) {
+  return Array.isArray(task.assignee_external_ids) && task.assignee_external_ids.length
+    ? task.assignee_external_ids
+    : task.assignee_external_id ? [task.assignee_external_id] : [];
+}
+
+function taskDepartmentsFromRow(task) {
+  return Array.isArray(task.department_ids) && task.department_ids.length
+    ? task.department_ids
+    : task.department ? [task.department] : [];
+}
+
 async function getTaskContext(request) {
   const identity = await getTaskIdentity(request);
   identity.email = request.appAccount.email;
@@ -1132,24 +1123,28 @@ async function getTaskContext(request) {
 }
 
 function canViewTask(task, identity) {
-  if (identity.role === "Superadmin") return identity.managerIds?.includes(task.assignee_external_id) || false;
+  const assignees = taskAssigneesFromRow(task);
+  if (identity.role === "Superadmin") return true;
   if (identity.role === "Admin") return true;
   if (identity.role === "Manager") {
     return task.creator_user_id === identity.userId
-      || task.assignee_external_id === identity.externalId
-      || identity.reportIds.includes(task.assignee_external_id);
+      || assignees.includes(identity.externalId)
+      || assignees.some((id) => identity.reportIds.includes(id))
+      || taskDepartmentsFromRow(task).includes(identity.department);
   }
-  return task.assignee_external_id === identity.externalId;
+  return assignees.includes(identity.externalId);
 }
 
 function canWorkTask(task, identity) {
-  return task.assignee_external_id === identity.externalId;
+  const assignees = taskAssigneesFromRow(task);
+  return assignees.includes(identity.externalId);
 }
 
 function canReviewTask(task, identity) {
+  const assignees = taskAssigneesFromRow(task);
   return ["Superadmin", "Admin"].includes(identity.role)
     || task.creator_user_id === identity.userId
-    || (identity.role === "Manager" && identity.reportIds.includes(task.assignee_external_id));
+    || (identity.role === "Manager" && assignees.some((id) => identity.reportIds.includes(id)));
 }
 
 async function isAssignablePerson(externalId) {
@@ -1178,8 +1173,20 @@ async function isAssignablePerson(externalId) {
   return Boolean(opsAccount.rowCount);
 }
 
+async function assigneeBelongsToDepartments(externalId, departmentIds) {
+  if (!externalId || !peoplePool) return false;
+  const match = /^(intern|account)-(\d+)$/.exec(externalId);
+  if (!match) return false;
+  const [, kind, rawId] = match;
+  const result = kind === "intern"
+    ? await peoplePool.query("SELECT department FROM public.interns WHERE id=$1 AND archived_at IS NULL", [Number(rawId)])
+    : await peoplePool.query("SELECT department FROM public.workspace_accounts WHERE id=$1", [Number(rawId)]);
+  const department = validateDepartment(result.rows[0]?.department, { allowUnassigned: false });
+  return Boolean(department && departmentIds.includes(department));
+}
+
 async function loadTask(taskId, identity) {
-  const result = await appPool.query("SELECT * FROM public.tasks WHERE id = $1", [taskId]);
+  const result = await appPool.query(`${taskSelect} WHERE t.id = $1`, [taskId]);
   const task = result.rows[0];
   if (!task || !canViewTask(task, identity)) return null;
   return task;
@@ -1196,7 +1203,9 @@ async function recordTaskActivity(client, taskId, identity, action, metadata = {
 
 async function getTaskManagerIds(client, task) {
   const managerIds = new Set();
-  if (!peoplePool || !task.assignee_external_id) return [];
+  const assignees = taskAssigneesFromRow(task);
+  if (!peoplePool || !assignees.length) return [];
+  for (const assignee of assignees) {
   const result = await peoplePool.query(`
     SELECT DISTINCT manager_id FROM (
       SELECT 'account-' || manager.id::text AS manager_id
@@ -1215,8 +1224,9 @@ async function getTaskManagerIds(client, task) {
       WHERE 'account-' || staff.id::text = $1
         AND manager.active = true
     ) managers
-  `, [task.assignee_external_id]);
+  `, [assignee]);
   result.rows.forEach((row) => managerIds.add(row.manager_id));
+  }
   const creator = await client.query(`
     SELECT email, role
     FROM public.ops_users
@@ -1307,6 +1317,19 @@ async function queueTaskAssigneeEmail(client, task, {
   });
 }
 
+async function queueTaskAssigneeEmails(client, task, buildEmail) {
+  const ids = [];
+  for (const assigneeId of taskAssigneesFromRow(task)) {
+    const input = buildEmail(assigneeId);
+    const id = await queueTaskAssigneeEmail(client, {
+      ...task,
+      assignee_external_id: assigneeId,
+    }, input);
+    if (id) ids.push(id);
+  }
+  return ids;
+}
+
 async function queueTaskManagerEmails(client, task, buildEmail) {
   return await isolateEmailQueue(client, async () => {
     const ids = [];
@@ -1357,18 +1380,22 @@ async function notifyTaskManagers(client, task, title, body) {
 }
 
 async function notifyTaskAssignee(client, task, identity, title, body) {
-  if (!task.assignee_external_id || task.assignee_external_id === identity.externalId) return;
+  const assignees = taskAssigneesFromRow(task).filter((id) => id !== identity.externalId);
+  if (!assignees.length) return;
   await client.query("SELECT pg_advisory_xact_lock(hashtext('workspace_state:notices'))");
   const current = await client.query("SELECT state_value FROM workspace_state WHERE state_key = 'notices' FOR UPDATE");
   const notices = Array.isArray(current.rows[0]?.state_value) ? current.rows[0].state_value : [];
-  notices.unshift({
-    id: crypto.randomUUID(),
-    userId: task.assignee_external_id,
-    title,
-    body,
-    read: false,
-    time: new Date().toISOString(),
-  });
+  const time = new Date().toISOString();
+  for (const assigneeId of assignees) {
+    notices.unshift({
+      id: crypto.randomUUID(),
+      userId: assigneeId,
+      title,
+      body,
+      read: false,
+      time,
+    });
+  }
   await client.query(`
     INSERT INTO workspace_state (state_key, state_value, updated_by)
     VALUES ('notices', $1::jsonb, $2)
@@ -1386,9 +1413,14 @@ const mapTask = (row) => ({
   project: row.project,
   githubUrl: row.github_url || undefined,
   department: row.department,
+  departmentIds: taskDepartmentsFromRow(row),
   createdBy: row.creator_external_id,
   creatorName: row.creator_name,
   assignee: row.assignee_external_id || undefined,
+  assigneeIds: taskAssigneesFromRow(row),
+  taskLeadId: row.task_lead_id || undefined,
+  startDate: dateOnly(row.start_date) || undefined,
+  deliverables: row.deliverables || undefined,
   priority: row.priority,
   status: row.status,
   due: dateOnly(row.due_date),
@@ -1405,6 +1437,9 @@ const mapTask = (row) => ({
 
 const taskSelect = `
   SELECT t.*, creator.display_name AS creator_name,
+    coalesce((SELECT jsonb_agg(td.department_id ORDER BY td.department_id) FROM public.task_departments td WHERE td.task_id=t.id), '[]'::jsonb) AS department_ids,
+    coalesce((SELECT jsonb_agg(ta.assignee_external_id ORDER BY ta.created_at) FROM public.task_assignees ta WHERE ta.task_id=t.id), '[]'::jsonb) AS assignee_external_ids,
+    (SELECT ta.assignee_external_id FROM public.task_assignees ta WHERE ta.task_id=t.id AND ta.assignment_role='lead' LIMIT 1) AS task_lead_id,
     coalesce((SELECT jsonb_agg(jsonb_build_object(
       'id', c.id, 'text', c.text, 'completed', c.completed, 'completedAt', c.completed_at, 'createdAt', c.created_at
     ) ORDER BY c.created_at) FROM public.task_checklist_items c WHERE c.task_id = t.id), '[]'::jsonb) AS checklist,
@@ -1433,6 +1468,25 @@ app.get("/api/tasks", requireAuth, requireAccount, async (request, response) => 
   }
 });
 
+app.delete("/api/tasks/:id", requireAuth, requireAccount, async (request, response) => {
+  const identity = await getTaskContext(request);
+  const task = await loadTask(request.params.id, identity);
+  if (!task) return response.status(404).json({ error: "Task not found." });
+  const administrator = ["Superadmin", "Admin"].includes(identity.role);
+  const managerOwner = identity.role === "Manager" && task.creator_user_id === identity.userId;
+  if (!administrator && !managerOwner) {
+    return response.status(403).json({ error: "Managers can only delete tasks they created." });
+  }
+  try {
+    const deleted = await appPool.query("DELETE FROM public.tasks WHERE id=$1 RETURNING id", [task.id]);
+    if (!deleted.rowCount) return response.status(404).json({ error: "Task not found." });
+    return response.status(204).end();
+  } catch (error) {
+    console.error("Task deletion failed:", error instanceof Error ? error.message : "Unknown error");
+    return response.status(503).json({ error: "Could not delete this task." });
+  }
+});
+
 app.post("/api/tasks", requireAuth, requireAccount, async (request, response) => {
   const identity = await getTaskContext(request);
   if (!["Superadmin", "Admin", "Manager"].includes(identity.role)) return response.status(403).json({ error: "Forbidden" });
@@ -1442,49 +1496,68 @@ app.post("/api/tasks", requireAuth, requireAccount, async (request, response) =>
   const githubUrl = String(request.body.githubUrl || "").trim().slice(0, 1000);
   const priority = String(request.body.priority || "");
   const dueDate = String(request.body.due || "");
-  const department = validateDepartment(identity.role === "Manager" ? identity.department : request.body.department, { allowUnassigned: false });
-  const assignee = String(request.body.assignee || "").trim() || null;
+  const requestedDepartments = Array.isArray(request.body.departmentIds) ? request.body.departmentIds : [request.body.department];
+  const departmentIds = [...new Set(requestedDepartments.map((value) => validateDepartment(value, { allowUnassigned: false })).filter(Boolean))];
+  const department = departmentIds[0];
+  const requestedAssignees = Array.isArray(request.body.assigneeIds) ? request.body.assigneeIds : [request.body.assignee];
+  const assigneeIds = [...new Set(requestedAssignees.map((value) => String(value || "").trim()).filter(Boolean))];
+  const assignee = assigneeIds[0] || null;
+  const taskLeadId = String(request.body.taskLeadId || "").trim() || null;
+  const startDate = String(request.body.startDate || "").trim() || null;
+  const deliverables = String(request.body.deliverables || "").trim().slice(0, 5000) || null;
   if (!title || !project) return response.status(400).json({ error: "Task name and project are required." });
   if (!/^https:\/\/(www\.)?github\.com\/.+/i.test(githubUrl)) return response.status(400).json({ error: "A valid GitHub link is required." });
   if (!dueDate || !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) return response.status(400).json({ error: "Due date is required." });
   if (dueDate < new Date().toISOString().slice(0, 10)) return response.status(400).json({ error: "Due date cannot be in the past." });
-  if (!taskPriorities.includes(priority) || !department) return response.status(400).json({ error: "Choose a valid priority and department." });
-  if (identity.role === "Manager" && assignee && assignee !== identity.externalId && !identity.reportIds.includes(assignee)) {
-    return response.status(403).json({ error: "Managers can only assign tasks to themselves or active direct reports." });
+  if (!taskPriorities.includes(priority) || !departmentIds.length) return response.status(400).json({ error: "Choose a valid priority and department." });
+  if (identity.role === "Manager" && !departmentIds.includes(identity.department)) {
+    return response.status(403).json({ error: "Managers must include their own department on a task." });
   }
-  if (assignee && !(await isAssignablePerson(assignee))) return response.status(400).json({ error: "Choose an active assignee." });
+  if (assigneeIds.some((id) => !identity.reportIds.includes(id) && id !== identity.externalId && identity.role === "Manager")) {
+    return response.status(403).json({ error: "Managers can only assign themselves or active direct reports." });
+  }
+  if ((await Promise.all(assigneeIds.map((id) => isAssignablePerson(id)))).some((valid) => !valid)) return response.status(400).json({ error: "Choose active assignees." });
+  if ((await Promise.all(assigneeIds.map((id) => assigneeBelongsToDepartments(id, departmentIds)))).some((valid) => !valid)) {
+    return response.status(400).json({ error: "Every assignee must belong to a participating department." });
+  }
+  if (taskLeadId && !assigneeIds.includes(taskLeadId)) return response.status(400).json({ error: "The Task Lead must be one of the assignees." });
   const client = await appPool.connect();
-  let emailId = null;
+  const emailIds = [];
   try {
     await client.query("BEGIN");
     const result = await client.query(`
       INSERT INTO public.tasks
-        (title, description, project, github_url, department, creator_user_id, creator_external_id, assignee_external_id, priority, due_date)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+        (title, description, project, github_url, department, creator_user_id, creator_external_id, assignee_external_id, priority, due_date, start_date, deliverables)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
       RETURNING *
-    `, [title, description, project, githubUrl, department, identity.userId, identity.externalId, assignee, priority, dueDate]);
-    await recordTaskActivity(client, result.rows[0].id, identity, "Task created", { assignee, priority, dueDate });
-    await notifyTaskAssignee(client, result.rows[0], identity, "New task assigned", `${identity.name} assigned you “${title}” in ${project}.`);
-    if (assignee) {
-      emailId = await queueTaskAssigneeEmail(client, result.rows[0], {
+    `, [title, description, project, githubUrl, department, identity.userId, identity.externalId, assignee, priority, dueDate, startDate, deliverables]);
+    await client.query("INSERT INTO public.task_departments (task_id, department_id) SELECT $1, unnest($2::text[]) ON CONFLICT DO NOTHING", [result.rows[0].id, departmentIds]);
+    if (assigneeIds.length) await client.query("INSERT INTO public.task_assignees (task_id, assignee_external_id, assignment_role) SELECT $1, unnest($2::text[]), 'assignee' ON CONFLICT DO NOTHING", [result.rows[0].id, assigneeIds]);
+    if (taskLeadId) await client.query("INSERT INTO public.task_assignees (task_id, assignee_external_id, assignment_role) VALUES ($1,$2,'lead') ON CONFLICT (task_id, assignee_external_id) DO UPDATE SET assignment_role='lead'", [result.rows[0].id, taskLeadId]);
+    const createdTask = { ...result.rows[0], department_ids: departmentIds, assignee_external_ids: assigneeIds, task_lead_id: taskLeadId };
+    await recordTaskActivity(client, result.rows[0].id, identity, "Task created", { assigneeIds, departmentIds, priority, dueDate });
+    for (const assignedId of assigneeIds) {
+      await notifyTaskAssignee(client, { ...createdTask, assignee_external_ids: [assignedId], assignee_external_id: assignedId }, identity, "New task assigned", `${identity.name} assigned you “${title}” in ${project}.`);
+      const queued = await queueTaskAssigneeEmail(client, { ...createdTask, assignee_external_id: assignedId }, {
         type: "task.assigned",
         subject: `New task assigned: ${title}`,
         intro: `You have been assigned a new task by ${identity.name}.`,
         details: [
           { label: "Task", value: title },
           { label: "Project", value: project },
-          { label: "Department", value: department },
+          { label: "Departments", value: departmentIds.join(", ") },
           { label: "Priority", value: priority },
           { label: "Due date", value: dueDate },
           { label: "Brief", value: description },
         ],
         ctaLabel: "Open task",
-        deduplicationKey: `task-assigned:${result.rows[0].id}:${assignee}`,
+         deduplicationKey: `task-assigned:${result.rows[0].id}:${assignedId}`,
       });
+      if (queued) emailIds.push(queued);
     }
     await client.query("COMMIT");
-    await deliverQueuedEmail(emailId);
-    return response.status(201).json({ task: mapTask({ ...result.rows[0], creator_name: identity.name }) });
+    await Promise.all(emailIds.map(deliverQueuedEmail));
+    return response.status(201).json({ task: mapTask({ ...createdTask, creator_name: identity.name }) });
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("Task creation failed:", error instanceof Error ? error.message : "Unknown error");
@@ -1513,20 +1586,41 @@ app.patch("/api/tasks/:id", requireAuth, requireAccount, async (request, respons
   if (nextStatus && (reviewerAction ? !canReviewTask(task, identity) : !canWorkTask(task, identity))) {
     return response.status(403).json({ error: "You are not allowed to update this task." });
   }
-  const metadataRequested = ["assignee", "due", "priority", "project", "department"].some((key) => Object.hasOwn(request.body, key));
-  if (metadataRequested && !["Superadmin", "Admin"].includes(identity.role)) {
-    return response.status(403).json({ error: "Only administrators can change task assignment and metadata." });
+  const metadataRequested = ["assignee", "assigneeIds", "due", "priority", "project", "department", "departmentIds", "taskLeadId", "startDate", "deliverables"].some((key) => Object.hasOwn(request.body, key));
+  if (metadataRequested && !["Superadmin", "Admin", "Manager"].includes(identity.role)) {
+    return response.status(403).json({ error: "Only managers and administrators can change task assignment and metadata." });
+  }
+  if (metadataRequested && identity.role === "Manager" && task.creator_user_id !== identity.userId) {
+    return response.status(403).json({ error: "Managers can only change collaboration settings on tasks they created." });
   }
   const priority = metadataRequested && request.body.priority ? String(request.body.priority) : task.priority;
   const dueDate = metadataRequested && request.body.due ? String(request.body.due) : dateOnly(task.due_date);
   const project = metadataRequested && request.body.project ? String(request.body.project).trim().slice(0, 200) : task.project;
-  const department = metadataRequested && request.body.department ? validateDepartment(request.body.department, { allowUnassigned: false }) : task.department;
-  const assignee = metadataRequested && Object.hasOwn(request.body, "assignee") ? String(request.body.assignee || "") || null : task.assignee_external_id;
-  if (metadataRequested && (!taskPriorities.includes(priority) || !/^\d{4}-\d{2}-\d{2}$/.test(dueDate) || !project || !department)) {
+  const departmentIds = metadataRequested && Array.isArray(request.body.departmentIds)
+    ? [...new Set(request.body.departmentIds.map((value) => validateDepartment(value, { allowUnassigned: false })).filter(Boolean))]
+    : metadataRequested && request.body.department ? [validateDepartment(request.body.department, { allowUnassigned: false })].filter(Boolean) : (task.department_ids || [task.department]);
+  const department = departmentIds[0];
+  const assigneeIds = metadataRequested && Array.isArray(request.body.assigneeIds)
+    ? [...new Set(request.body.assigneeIds.map((value) => String(value || "").trim()).filter(Boolean))]
+    : metadataRequested && Object.hasOwn(request.body, "assignee") ? [String(request.body.assignee || "")].filter(Boolean) : taskAssigneesFromRow(task);
+  const assignee = assigneeIds[0] || null;
+  const taskLeadId = metadataRequested && Object.hasOwn(request.body, "taskLeadId") ? String(request.body.taskLeadId || "") || null : task.task_lead_id;
+  const startDate = metadataRequested && Object.hasOwn(request.body, "startDate") ? String(request.body.startDate || "") || null : dateOnly(task.start_date);
+  const deliverables = metadataRequested && Object.hasOwn(request.body, "deliverables") ? String(request.body.deliverables || "").trim().slice(0, 5000) || null : task.deliverables;
+  if (metadataRequested && (!taskPriorities.includes(priority) || !/^\d{4}-\d{2}-\d{2}$/.test(dueDate) || !project || !departmentIds.length)) {
     return response.status(400).json({ error: "Choose valid task metadata and a due date." });
   }
-  if (metadataRequested && assignee && !(await isAssignablePerson(assignee))) {
-    return response.status(400).json({ error: "Choose an active assignee." });
+  if (metadataRequested && (await Promise.all(assigneeIds.map((id) => isAssignablePerson(id)))).some((valid) => !valid)) {
+    return response.status(400).json({ error: "Choose active assignees." });
+  }
+  if (metadataRequested && (await Promise.all(assigneeIds.map((id) => assigneeBelongsToDepartments(id, departmentIds)))).some((valid) => !valid)) {
+    return response.status(400).json({ error: "Every assignee must belong to a participating department." });
+  }
+  if (metadataRequested && identity.role === "Manager" && (!departmentIds.includes(identity.department) || assigneeIds.some((id) => id !== identity.externalId && !identity.reportIds.includes(id)))) {
+    return response.status(403).json({ error: "Managers can only collaborate within their department and active direct reports." });
+  }
+  if (taskLeadId && !assigneeIds.includes(taskLeadId)) {
+    return response.status(400).json({ error: "The Task Lead must be one of the assignees." });
   }
   const blockerReason = nextStatus === "Blocked" ? String(request.body.blockerReason || "").trim().slice(0, 1000) : task.blocker_reason;
   if (nextStatus === "Blocked" && !blockerReason) return response.status(400).json({ error: "Describe what is blocking the task." });
@@ -1534,7 +1628,7 @@ app.patch("/api/tasks/:id", requireAuth, requireAccount, async (request, respons
   const emailIds = [];
   try {
     await client.query("BEGIN");
-    const locked = await client.query("SELECT * FROM public.tasks WHERE id = $1 FOR UPDATE", [task.id]);
+    const locked = await client.query(`${taskSelect} WHERE t.id = $1 FOR UPDATE`, [task.id]);
     const lockedTask = locked.rows[0];
     if (!lockedTask) {
       await client.query("ROLLBACK");
@@ -1557,11 +1651,24 @@ app.patch("/api/tasks/:id", requireAuth, requireAccount, async (request, respons
         assignee_external_id = $4,
         priority = $5,
         due_date = $6,
+        start_date = $9,
+        deliverables = $10,
         project = $7,
         department = $8,
         updated_at = now()
       WHERE id = $3 RETURNING *
-    `, [nextStatus, blockerReason, task.id, assignee, priority, dueDate, project, department]);
+    `, [nextStatus, blockerReason, task.id, assignee, priority, dueDate, project, department, startDate, deliverables]);
+    if (metadataRequested) {
+      await client.query("DELETE FROM public.task_departments WHERE task_id=$1", [task.id]);
+      await client.query("INSERT INTO public.task_departments (task_id, department_id) SELECT $1, unnest($2::text[]) ON CONFLICT DO NOTHING", [task.id, departmentIds]);
+      await client.query("DELETE FROM public.task_assignees WHERE task_id=$1", [task.id]);
+      if (assigneeIds.length) await client.query("INSERT INTO public.task_assignees (task_id, assignee_external_id, assignment_role) SELECT $1, unnest($2::text[]), 'assignee'", [task.id, assigneeIds]);
+      if (taskLeadId) await client.query(`
+        INSERT INTO public.task_assignees (task_id, assignee_external_id, assignment_role)
+        VALUES ($1,$2,'lead')
+        ON CONFLICT (task_id, assignee_external_id) DO UPDATE SET assignment_role='lead'
+      `, [task.id, taskLeadId]);
+    }
     if (nextStatus) {
       await recordTaskActivity(client, task.id, identity, `Status changed to ${nextStatus}`, { from: lockedTask.status, to: nextStatus });
       if (["Changes Requested", "Completed"].includes(nextStatus)) {
@@ -1576,7 +1683,7 @@ app.patch("/api/tasks/:id", requireAuth, requireAccount, async (request, respons
           nextStatus === "Completed" ? "Work reviewed and approved" : "Changes requested",
           `${identity.name} reviewed “${lockedTask.title}”: ${feedback}`,
         );
-        const reviewEmailId = await queueTaskAssigneeEmail(client, lockedTask, {
+        const reviewEmailIds = await queueTaskAssigneeEmails(client, lockedTask, (assigneeId) => ({
           type: nextStatus === "Completed" ? "task.approved" : "task.changes_requested",
           subject: `${nextStatus === "Completed" ? "Task approved" : "Changes requested"}: ${lockedTask.title}`,
           intro: nextStatus === "Completed"
@@ -1590,34 +1697,36 @@ app.patch("/api/tasks/:id", requireAuth, requireAccount, async (request, respons
             { label: "Date", value: new Date().toLocaleDateString("en-ZA") },
           ],
           ctaLabel: nextStatus === "Completed" ? "View task" : "View feedback",
-          deduplicationKey: `${nextStatus === "Completed" ? "task-approved" : "task-changes"}:${task.id}:${lockedTask.updated_at?.toISOString?.() || Date.now()}`,
-        });
-        if (reviewEmailId) emailIds.push(reviewEmailId);
+          deduplicationKey: `${nextStatus === "Completed" ? "task-approved" : "task-changes"}:${task.id}:${assigneeId}:${lockedTask.updated_at?.toISOString?.() || Date.now()}`,
+        }));
+        emailIds.push(...reviewEmailIds);
       }
     }
     if (metadataRequested) {
-      const assignmentEventId = await recordTaskActivity(client, task.id, identity, "Task assignment or metadata changed", { assignee, priority, dueDate, project, department });
-      if (assignee && assignee !== lockedTask.assignee_external_id) {
-        const assignmentEmailId = await queueTaskAssigneeEmail(client, { ...lockedTask, assignee_external_id: assignee }, {
+      const previousAssigneeIds = taskAssigneesFromRow(lockedTask);
+      const assignmentEventId = await recordTaskActivity(client, task.id, identity, "Task assignment or metadata changed", { assigneeIds, departmentIds, priority, dueDate, project });
+      for (const assignedId of assigneeIds.filter((id) => !previousAssigneeIds.includes(id))) {
+        const assignmentEmailId = await queueTaskAssigneeEmail(client, { ...lockedTask, assignee_external_id: assignedId }, {
           type: "task.assigned",
           subject: `New task assigned: ${lockedTask.title}`,
           intro: `${identity.name} assigned this task to you.`,
           details: [
             { label: "Task", value: lockedTask.title },
             { label: "Project", value: project },
-            { label: "Department", value: department },
+            { label: "Departments", value: departmentIds.join(", ") },
             { label: "Priority", value: priority },
             { label: "Due date", value: dueDate },
           ],
           ctaLabel: "Open task",
-          deduplicationKey: `task-assigned:${task.id}:${assignee}:${assignmentEventId}`,
+          deduplicationKey: `task-assigned:${task.id}:${assignedId}:${assignmentEventId}`,
         });
         if (assignmentEmailId) emailIds.push(assignmentEmailId);
       }
     }
+    const updatedTask = await client.query(`${taskSelect} WHERE t.id = $1`, [task.id]);
     await client.query("COMMIT");
     await Promise.all(emailIds.map(deliverQueuedEmail));
-    return response.json({ task: mapTask({ ...result.rows[0], creator_name: task.creator_name }) });
+    return response.json({ task: mapTask({ ...updatedTask.rows[0], creator_name: task.creator_name }) });
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("Task update failed:", error instanceof Error ? error.message : "Unknown error");
@@ -1821,7 +1930,7 @@ app.post("/api/tasks/:id/submit", requireAuth, requireAccount, async (request, r
   const emailIds = [];
   try {
     await client.query("BEGIN");
-    const locked = await client.query("SELECT * FROM public.tasks WHERE id = $1 FOR UPDATE", [request.params.id]);
+    const locked = await client.query(`${taskSelect} WHERE t.id = $1 FOR UPDATE`, [request.params.id]);
     const task = locked.rows[0];
     if (!task || !canWorkTask(task, identity)) {
       await client.query("ROLLBACK");
@@ -1888,6 +1997,52 @@ app.get("/api/email-notifications", requireAuth, requireAccount, async (request,
   return response.json({ notifications: result.rows });
 });
 
+app.get("/api/email-notifications/health", requireAuth, requireAccount, async (request, response) => {
+  if (request.appAccount.app_role !== "Superadmin") return response.status(403).json({ error: "Forbidden" });
+  try {
+    const result = await appPool.query(`
+      SELECT
+        count(*)::int AS total,
+        count(*) FILTER (WHERE status IN ('PENDING','PROCESSING'))::int AS pending,
+        count(*) FILTER (WHERE status IN ('FAILED','BOUNCED','COMPLAINED'))::int AS failed,
+        count(*) FILTER (WHERE status IN ('SENT','DELIVERED'))::int AS successful,
+        max(updated_at) AS "lastUpdated"
+      FROM public.email_notifications
+    `);
+    const config = validateEmailConfiguration({ production: isProduction });
+    return response.json({ ok: true, enabled: config.enabled, configured: config.missing.length === 0, missing: config.missing, ...result.rows[0] });
+  } catch (error) {
+    console.error("Email health query failed:", error instanceof Error ? error.message : "Unknown error");
+    return response.status(503).json({ ok: false, error: "Email health is temporarily unavailable." });
+  }
+});
+
+app.post("/api/email-notifications/test", requireAuth, requireAccount, async (request, response) => {
+  if (request.appAccount.app_role !== "Superadmin") return response.status(403).json({ error: "Forbidden" });
+  const deduplicationKey = `test-email:${request.appAccount.id}:${crypto.randomUUID()}`;
+  try {
+    const queued = await queueTransactionalEmail(appPool, {
+      type: "weekly_review.ready",
+      recipient: request.appAccount.email,
+      recipientUserId: request.appAccount.id,
+      subject: "Olyxee Ops test notification",
+      title: "Olyxee Ops test email",
+      intro: "This confirms that transactional email delivery is configured for your Ops workspace.",
+      details: [{ label: "Recipient", value: request.appAccount.email }, { label: "Sent", value: new Date().toLocaleString("en-ZA") }],
+      ctaLabel: "Open Olyxee Ops",
+      ctaUrl: `${String(process.env.OPS_APP_URL || "").replace(/\/+$/, "")}/`,
+      deduplicationKey,
+    });
+    if (!queued.id) return response.status(503).json({ error: "The test email could not be queued." });
+    const result = await deliverEmailNotification(appPool, queued.id);
+    if (!result.delivered) return response.status(502).json({ error: "Test email failed." });
+    return response.json({ ok: true, status: "SENT" });
+  } catch (error) {
+    console.error("Test email failed:", error instanceof Error ? error.message : "Unknown error");
+    return response.status(502).json({ error: "Test email failed." });
+  }
+});
+
 app.post("/api/email-notifications/:id/retry", requireAuth, requireAccount, async (request, response) => {
   if (request.appAccount.app_role !== "Superadmin") return response.status(403).json({ error: "Forbidden" });
   const reset = await appPool.query(`
@@ -1914,18 +2069,21 @@ app.all("/api/email/process-scheduled", async (request, response) => {
   const todayDate = today.toISOString().slice(0, 10);
   const tomorrowDate = tomorrow.toISOString().slice(0, 10);
   const tasks = await appPool.query(`
-    SELECT * FROM public.tasks
-    WHERE status NOT IN ('Completed','Cancelled')
-      AND assignee_external_id IS NOT NULL
-      AND due_date <= $1::date
+    SELECT t.*,
+      coalesce(jsonb_agg(ta.assignee_external_id) FILTER (WHERE ta.assignee_external_id IS NOT NULL), '[]'::jsonb) AS assignee_external_ids
+    FROM public.tasks t
+    LEFT JOIN public.task_assignees ta ON ta.task_id=t.id
+    WHERE t.status NOT IN ('Completed','Cancelled') AND t.due_date <= $1::date
+    GROUP BY t.id
   `, [tomorrowDate]);
   const queuedIds = [];
+  const categoryCounts = { dueSoon: 0, overdue: 0, weeklyReview: 0, internshipEnding: 0 };
   for (const task of tasks.rows) {
     const dueDate = dateOnly(task.due_date);
     const overdue = dueDate < todayDate;
     const dueTomorrow = dueDate === tomorrowDate;
     if (!overdue && !dueTomorrow) continue;
-    const id = await queueTaskAssigneeEmail(appPool, task, {
+    const ids = await queueTaskAssigneeEmails(appPool, task, (assigneeId) => ({
       type: overdue ? "task.overdue" : "task.due_soon",
       subject: `Task ${overdue ? "overdue" : "due tomorrow"}: ${task.title}`,
       intro: overdue
@@ -1938,14 +2096,93 @@ app.all("/api/email/process-scheduled", async (request, response) => {
         { label: "Due date", value: dueDate },
       ],
       ctaLabel: "Open task",
-      deduplicationKey: `task-${overdue ? "overdue" : "due-soon"}:${task.id}:${dueDate}`,
-    });
-    if (id) queuedIds.push(id);
+      deduplicationKey: taskReminderKey(overdue ? "overdue" : "due-soon", task.id, dueDate, assigneeId),
+    }));
+    queuedIds.push(...ids);
+    categoryCounts[overdue ? "overdue" : "dueSoon"] += ids.length;
+  }
+  const weekStart = new Date(today);
+  weekStart.setUTCDate(weekStart.getUTCDate() - ((weekStart.getUTCDay() + 6) % 7));
+  const weekKey = weekStart.toISOString().slice(0, 10);
+  if (peoplePool) {
+    const interns = await peoplePool.query(`
+      SELECT id, full_name, email, supervisor_account_id, supervisor_email, supervisor_name, planned_end_date, completion_date
+      FROM public.interns
+      WHERE archived_at IS NULL AND lower(coalesce(employment_status,'')) = 'active'
+    `);
+    const appUrl = `${String(process.env.OPS_APP_URL || "").replace(/\/+$/, "")}/`;
+    const queueRecipient = async (recipient, input) => {
+      if (!recipient?.email) return null;
+      const result = await isolateEmailQueue(appPool, () => queueTransactionalEmail(appPool, {
+        ...input, recipient: recipient.email, recipientUserId: recipient.userId || null, ctaUrl: appUrl,
+      }));
+      return result?.id || null;
+    };
+    for (const intern of interns.rows) {
+      const externalId = `intern-${intern.id}`;
+      const statsResult = await appPool.query(`
+        WITH assigned AS (
+          SELECT t.id, t.status, t.due_date
+          FROM public.tasks t JOIN public.task_assignees ta ON ta.task_id=t.id
+          WHERE ta.assignee_external_id=$1 AND t.status <> 'Cancelled'
+        ), latest_help AS (
+          SELECT DISTINCT ON (u.task_id) u.task_id, u.update_type
+          FROM public.task_updates u JOIN assigned a ON a.id=u.task_id
+          ORDER BY u.task_id, u.created_at DESC
+        )
+        SELECT
+          count(*)::int AS assigned,
+          count(*) FILTER (WHERE status='Completed')::int AS completed,
+          count(*) FILTER (WHERE status='In Progress')::int AS "inProgress",
+          count(*) FILTER (WHERE status='Submitted for Review')::int AS "awaitingReview",
+          count(*) FILTER (WHERE due_date < $2::date AND status NOT IN ('Completed','Cancelled'))::int AS overdue,
+          (SELECT count(*)::int FROM public.task_updates u JOIN assigned a ON a.id=u.task_id WHERE u.created_at >= $3::timestamptz AND u.update_type IN ('Progress update','Submission','Resubmission')) AS "recentProgress",
+          (SELECT count(*)::int FROM latest_help WHERE update_type='Help requested') AS "unresolvedHelp"
+      FROM assigned
+    `, [externalId, todayDate, new Date(today.getTime() - 7 * 86400000).toISOString()]);
+      const summary = weeklySummary(statsResult.rows[0]);
+      const managerResult = await peoplePool.query(`
+        SELECT 'account-' || id::text AS external_id, coalesce(display_name,email) AS name, email
+        FROM public.workspace_accounts
+        WHERE active=true AND (
+          ($1::bigint IS NOT NULL AND id=$1)
+          OR lower(email)=lower($2)
+          OR lower(display_name)=lower($3)
+        ) ORDER BY CASE WHEN id=$1 THEN 0 ELSE 1 END LIMIT 1
+      `, [intern.supervisor_account_id, intern.supervisor_email || "", intern.supervisor_name || ""]);
+      const internAccount = await appPool.query("SELECT id FROM public.ops_users WHERE lower(email)=lower($1) AND active=true LIMIT 1", [intern.email]);
+      const internRecipient = intern.email ? { email: intern.email, userId: internAccount.rows[0]?.id } : null;
+      const manager = managerResult.rows[0];
+      const managerAccount = manager?.email ? await appPool.query("SELECT id FROM public.ops_users WHERE lower(email)=lower($1) AND active=true LIMIT 1", [manager.email]) : { rows: [] };
+      if (manager) manager.userId = managerAccount.rows[0]?.id || null;
+      const details = [
+        { label: "Assigned", value: summary.assigned }, { label: "Completed", value: summary.completed },
+        { label: "In progress", value: summary.inProgress }, { label: "Awaiting review", value: summary.awaitingReview },
+        { label: "Overdue", value: summary.overdue }, { label: "Recent progress updates", value: summary.recentProgress },
+        { label: "Unresolved help requests", value: summary.unresolvedHelp },
+      ];
+      const subject = `Weekly Ops review: ${intern.full_name}`;
+      const internId = await queueRecipient(internRecipient, { type: "weekly_review.ready", subject, intro: "Your factual weekly task summary is ready in Olyxee Ops.", details, ctaLabel: "Open weekly review", deduplicationKey: `weekly-review:${weekKey}:${externalId}` });
+      const managerId = await queueRecipient(manager, { type: "weekly_review.ready", subject, intro: `Weekly task summary for ${intern.full_name}.`, details: [{ label: "Intern", value: intern.full_name }, ...details], recipientUserId: managerAccount.rows[0]?.id, ctaLabel: "Open Olyxee Ops", deduplicationKey: `weekly-review:${weekKey}:${externalId}:${manager?.external_id || "manager"}` });
+      if (internId) { queuedIds.push(internId); categoryCounts.weeklyReview += 1; }
+      if (managerId) { queuedIds.push(managerId); categoryCounts.weeklyReview += 1; }
+      const endDate = intern.planned_end_date;
+      const offsets = reminderDays(endDate, today);
+      for (const offset of offsets) {
+        const reminderDetails = [{ label: "Intern", value: intern.full_name }, { label: "Planned end date", value: utcDate(endDate) }, { label: "Days remaining", value: offset }];
+        const subjectEnding = `Internship ending in ${offset} days: ${intern.full_name}`;
+        const endingInternId = await queueRecipient(internRecipient, { type: "internship.ending_soon", subject: subjectEnding, intro: "Your planned internship end date is approaching. Review next steps in Olyxee Ops.", details: reminderDetails, ctaLabel: "Open Olyxee Ops", deduplicationKey: `internship-ending:${externalId}:${utcDate(endDate)}:${offset}:intern` });
+        const endingManagerId = await queueRecipient(manager, { type: "internship.ending_soon", subject: subjectEnding, intro: `The planned internship end date for ${intern.full_name} is approaching.`, details: reminderDetails, ctaLabel: "Open Olyxee Ops", deduplicationKey: `internship-ending:${externalId}:${utcDate(endDate)}:${offset}:manager` });
+        if (endingInternId) { queuedIds.push(endingInternId); categoryCounts.internshipEnding += 1; }
+        if (endingManagerId) { queuedIds.push(endingManagerId); categoryCounts.internshipEnding += 1; }
+      }
+    }
   }
   const deliveryResults = await processPendingEmails(appPool, { limit: 50 });
   return response.json({
     ok: true,
     remindersQueued: queuedIds.length,
+    categoryCounts,
     emailsProcessed: deliveryResults.length,
   });
 });

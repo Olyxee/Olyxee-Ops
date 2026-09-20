@@ -60,7 +60,7 @@ export function renderTransactionalEmail({ title, intro, details = [], ctaLabel,
     "",
     `${ctaLabel}: ${ctaUrl}`,
     "",
-    "This is an automated operational notification from Olyxee Ops.",
+    "This is an automated notification from Olyxee Ops. Please do not reply to this email. Open Olyxee Ops to take action or respond.",
   ].join("\n");
   const htmlRows = rows.map(({ label, value }) => `
     <tr>
@@ -77,7 +77,7 @@ export function renderTransactionalEmail({ title, intro, details = [], ctaLabel,
           ${htmlRows ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 22px;border:1px solid #eee;border-radius:10px;overflow:hidden">${htmlRows}</table>` : ""}
           <a href="${escapeHtml(ctaUrl)}" style="display:inline-block;padding:12px 18px;border-radius:8px;background:#171717;color:#fff;text-decoration:none;font-size:13px;font-weight:700">${escapeHtml(ctaLabel)}</a>
         </td></tr>
-        <tr><td style="padding:18px 24px;background:#fafafa;color:#888;font-size:11px;line-height:1.5">This is an automated operational notification from Olyxee Ops.</td></tr>
+        <tr><td style="padding:18px 24px;background:#fafafa;color:#888;font-size:11px;line-height:1.5">This is an automated notification from Olyxee Ops. Please do not reply to this email. Open Olyxee Ops to take action or respond.</td></tr>
       </table>
     </td></tr></table>
   </body></html>`;
@@ -192,21 +192,25 @@ export async function processPendingEmails(pool, { limit = 25 } = {}) {
 }
 
 export function verifyResendWebhook(rawBody, headers, secret) {
-  if (!secret) return false;
-  const id = headers["svix-id"];
-  const timestamp = headers["svix-timestamp"];
-  const signatureHeader = headers["svix-signature"];
-  if (!id || !timestamp || !signatureHeader) return false;
-  if (Math.abs(Date.now() / 1000 - Number(timestamp)) > 300) return false;
-  const key = secret.startsWith("whsec_") ? secret.slice(6) : secret;
-  const expected = crypto.createHmac("sha256", Buffer.from(key, "base64"))
-    .update(`${id}.${timestamp}.${rawBody}`)
-    .digest("base64");
-  return signatureHeader.split(" ").some((entry) => {
-    const candidate = entry.includes(",") ? entry.split(",")[1] : entry.replace(/^v1,/, "");
-    if (!candidate) return false;
-    const left = Buffer.from(candidate);
-    const right = Buffer.from(expected);
-    return left.length === right.length && crypto.timingSafeEqual(left, right);
-  });
+  try {
+    if (!secret) return false;
+    const id = headers["svix-id"];
+    const timestamp = headers["svix-timestamp"];
+    const signatureHeader = headers["svix-signature"];
+    if (!id || !timestamp || !signatureHeader) return false;
+    if (!Number.isFinite(Number(timestamp)) || Math.abs(Date.now() / 1000 - Number(timestamp)) > 300) return false;
+    const key = secret.startsWith("whsec_") ? secret.slice(6) : secret;
+    const expected = crypto.createHmac("sha256", Buffer.from(key, "base64"))
+      .update(`${id}.${timestamp}.${rawBody}`)
+      .digest("base64");
+    return signatureHeader.split(" ").some((entry) => {
+      const candidate = entry.replace(/^v1,/, "");
+      if (!candidate) return false;
+      const left = Buffer.from(candidate);
+      const right = Buffer.from(expected);
+      return left.length === right.length && crypto.timingSafeEqual(left, right);
+    });
+  } catch {
+    return false;
+  }
 }

@@ -1,0 +1,308 @@
+Update the **Create Task** workflow in the Olyxee Ops platform so a task can involve **multiple departments**, while keeping the form clean, fast, and easy to complete.
+
+### 1. Multi-Department Tasks
+
+Currently, a task is associated with one department.
+
+Change this so a task can be linked to **one or multiple departments**.
+
+Examples:
+
+* AI Engineering + Data Engineering
+* R&D + AI Engineering
+* Data & Security + Software Engineering + R&D
+
+The database/model should support something similar to:
+
+```ts
+departmentIds: string[]
+```
+
+instead of:
+
+```ts
+departmentId: string
+```
+
+Keep backward compatibility with existing tasks that only have one department.
+
+### 2. Permission Rules
+
+**Superadmin**
+
+* Can create tasks involving any number of departments.
+* Can assign people from any selected department.
+* Can edit the participating departments later.
+
+**Manager**
+
+* Can create a task involving their own department.
+* Can add other departments when collaboration is required.
+* They must not automatically gain management permissions over members of another department.
+* They can select relevant collaborators from the participating departments where permissions allow.
+
+**Intern / Employee**
+
+* Cannot change participating departments unless their role already allows task editing.
+
+### 3. Redesign the Create Task Form
+
+The current form should be simplified.
+
+Use a clean professional layout with minimal visual noise.
+
+Suggested structure:
+
+**Task Details**
+
+Task title
+Short, required field.
+
+Description
+Larger textarea explaining the work.
+
+**Departments**
+
+Replace the current single department dropdown with a searchable **multi-select department field**.
+
+Example:
+
+```text
+Departments *
+
+[ AI Engineering × ] [ Data & Security × ]
+
++ Add department
+```
+
+Selected departments should appear as small neutral chips/tags.
+
+Avoid bright colours.
+
+Use white, light grey, dark grey, and the existing Olyxee accent colour only where necessary.
+
+### 4. Assignees
+
+After departments are selected, dynamically show members belonging to those departments.
+
+Example:
+
+```text
+Assignees
+
+Search team members...
+
+Alisha Fatima
+AI Engineering
+
+Mosa Maseko
+Data & Security
+```
+
+Allow multiple assignees.
+
+Clearly show each person's:
+
+* Name
+* Role
+* Department
+
+Do not show unrelated users unless Superadmin chooses to search across the company.
+
+### 5. Optional Task Lead
+
+For cross-department tasks, allow the creator to optionally choose a **Task Lead**.
+
+Example:
+
+```text
+Task Lead
+Alisha Fatima
+AI Engineering Manager
+```
+
+There can only be one Task Lead.
+
+The Task Lead coordinates the task but does not receive permanent permissions over other departments.
+
+### 6. Dates and Priority
+
+Keep this section compact:
+
+```text
+Start Date        Due Date
+[          ]      [          ]
+
+Priority
+[ Normal ▾ ]
+```
+
+Priority options:
+
+* Low
+* Normal
+* High
+* Urgent
+
+Do not use excessive colour for priority. Use subtle badges after the task has been created.
+
+### 7. Deliverables / Requirements
+
+Add an optional field:
+
+```text
+Deliverables / Expected Outcome
+```
+
+This should explain what needs to exist before the task can be considered complete.
+
+Example:
+
+```text
+- Complete API integration
+- Add tests
+- Deploy staging version
+- Submit technical documentation
+```
+
+### 8. Task Collaboration
+
+Because a task can involve multiple departments, everyone assigned to that task should share the same:
+
+* Task description
+* Progress
+* Comments
+* Updates
+* Attachments/links
+* Submission history
+* Review status
+
+Do **not** create duplicate copies of the task for each department.
+
+There must be **one task record** with multiple participating departments and assignees.
+
+### 9. Task Display
+
+On task cards and the task detail page, show participating departments compactly.
+
+Example:
+
+```text
+Integrate Orgni Data Pipeline
+
+AI Engineering · Data & Security
+
+Lead: Alisha Fatima
+4 collaborators
+
+Due 25 Sep 2026
+```
+
+If more than 2 departments are involved, use:
+
+```text
+AI Engineering · Data & Security · +1
+```
+
+Clicking `+1` can reveal the remaining department.
+
+### 10. Filtering
+
+Update task filters so users can filter by:
+
+* My Tasks
+* Department
+* Multiple departments
+* Task Lead
+* Assignee
+* Status
+* Priority
+* Due date
+
+A cross-department task should appear when filtering by **any participating department**.
+
+Example:
+
+If a task contains:
+
+```text
+AI Engineering
+Data & Security
+R&D
+```
+
+it should appear under all three department filters.
+
+### 11. Database / API Changes
+
+Update all relevant:
+
+* Database schemas
+* API validation
+* Create Task endpoint
+* Update Task endpoint
+* Task queries
+* Permissions
+* Filters
+* Frontend types
+* Task detail components
+* Task cards
+
+Do not solve this only at UI level.
+
+Persist the department relationships correctly in the backend/database.
+
+If the current schema uses a direct `departmentId`, migrate safely to either:
+
+```ts
+departmentIds: string[]
+```
+
+or preferably a proper relational join table if the application uses a relational database.
+
+Example:
+
+```text
+tasks
+task_departments
+departments
+```
+
+where:
+
+```text
+task_departments
+- task_id
+- department_id
+```
+
+Do not delete or corrupt existing task data during migration.
+
+### 12. UX Requirements
+
+The Create Task form should feel like an internal professional operations system, not a complicated project-management tool.
+
+Avoid:
+
+* Huge forms
+* Too many bordered cards
+* Excessive colours
+* Department-specific duplicated sections
+* Too many dropdowns
+* Showing every employee at once
+
+Prefer:
+
+* Searchable selectors
+* Multi-select fields
+* Progressive disclosure
+* Clear spacing
+* Short labels
+* Useful defaults
+* Keyboard-friendly inputs
+
+The primary action should simply be:
+
+**Create Task**
+
+The workflow should make creating a normal single-department task just as fast as before, while allowing cross-department collaboration when needed.
