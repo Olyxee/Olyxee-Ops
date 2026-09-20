@@ -374,21 +374,16 @@
   }
 }
 
-/* Dedicated feedback detail view; cards no longer open the task workflow. */
-body .feedback-detail-dialog {
-  width: min(620px, calc(100vw - 32px));
-  border-radius: 18px;
-}
-
-body .feedback-detail-dialog .modal-body {
-  padding: 0;
-  background: #f2f2f7;
+/* Dedicated feedback detail page; cards no longer open the task workflow. */
+.feedback-detail-page {
+  width: min(820px, 100%);
+  margin: 0 auto;
 }
 
 .feedback-detail {
   display: grid;
   gap: 14px;
-  padding: 18px;
+  margin-top: 20px;
 }
 
 .feedback-detail > header,
