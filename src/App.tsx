@@ -353,6 +353,20 @@ function UnifiedWorkspace({user,team,statuses,tasks,allTasks,projectsData,depart
           ]).filter(event=>{const time=new Date(event.date).getTime();return Number.isFinite(time)&&time>=weekStartMs&&time<=now.getTime()});
           const trendDays=Array.from({length:7},(_,index)=>{const day=new Date(weekStart);day.setDate(weekStart.getDate()+index);const next=new Date(day);next.setDate(day.getDate()+1);const count=datedEvents.filter(event=>{const time=new Date(event.date).getTime();return time>=day.getTime()&&time<next.getTime()}).length;return{day,count,label:day.toLocaleDateString(undefined,{weekday:"short"})}});
           const trendMax=Math.max(1,...trendDays.map(item=>item.count));
+           const weeklyPerformanceTasks=weeklyTasks;
+           const weeklyCompletedTasks=weeklyPerformanceTasks.filter(task=>task.completedAt&&Number.isFinite(new Date(task.completedAt).getTime())&&new Date(task.completedAt).getTime()>=weekStartMs&&new Date(task.completedAt).getTime()<=now.getTime());
+           const performanceCompleted=weeklyCompletedTasks.length;
+           const performanceTarget=weeklyPerformanceTasks.length;
+           const performancePercent=performanceTarget?Math.round(performanceCompleted/performanceTarget*100):0;
+           const performanceDays=Array.from({length:7},(_,index)=>{
+             const day=new Date(weekStart); day.setDate(weekStart.getDate()+index);
+             const next=new Date(day); next.setDate(day.getDate()+1);
+             const cumulative=weeklyCompletedTasks.filter(task=>{const time=new Date(task.completedAt!).getTime();return time<next.getTime()}).length;
+             return {day,cumulative,label:day.toLocaleDateString(undefined,{weekday:"short"})};
+           });
+           const performanceMax=Math.max(1,performanceTarget);
+           const performancePoints=performanceDays.map((item,index)=>`${index*100/6},${96-(item.cumulative/performanceMax*72)}`).join(" ");
+           const performanceArea=`0,96 ${performancePoints} 100,96`;
           const evidenceFor=(person:User)=>{
             const personTasks=departmentTaskList.filter(task=>taskAssignees(task).includes(person.id));
             const completed=personTasks.filter(task=>task.status==="Completed"&&task.completedAt&&new Date(task.completedAt).getTime()>=weekStartMs).length;
@@ -374,6 +388,20 @@ function UnifiedWorkspace({user,team,statuses,tasks,allTasks,projectsData,depart
        return <div className="department-detail">
          <button className="btn department-back" onClick={()=>setSelectedDepartment(null)}><ArrowLeft size={14}/> All departments</button>
           <Header eyebrow="Department workspace" title={selectedDepartment} subtitle={`${department[1]} · Weekly objectives, delivery performance, and team contribution.`}/>
+            <section className="panel department-performance" aria-labelledby="weekly-performance-title">
+              <div className="department-performance-head">
+                <div><span className="panel-kicker">Monday–Sunday · selected department tasks</span><h2 id="weekly-performance-title">Weekly performance</h2><p>{performanceTarget?`${performanceCompleted} of ${performanceTarget} weekly commitments completed`:"No weekly task commitments recorded for this department."}</p></div>
+                <div className="department-performance-stat"><strong>{performancePercent}%</strong><span>complete</span></div>
+              </div>
+              {performanceTarget?<div className="performance-chart-wrap">
+                <svg className="performance-chart" viewBox="0 0 100 100" role="img" aria-labelledby="weekly-performance-title weekly-performance-description" preserveAspectRatio="none">
+                  <title id="weekly-performance-description">Cumulative weekly delivery progress for {selectedDepartment}: {performanceCompleted} of {performanceTarget} commitments completed.</title>
+                  {[24,48,72,96].map(y=><line key={y} x1="0" x2="100" y1={y} y2={y} className="performance-gridline"/>)}<polygon points={performanceArea} className="performance-area"/><polyline points={performancePoints} className="performance-line"/>{performanceDays.map((item,index)=><circle key={item.label} cx={index*100/6} cy={96-(item.cumulative/performanceMax*72)} r="1.7" className="performance-point"/>)}
+                </svg>
+                <div className="performance-axis">{performanceDays.map(item=><span key={item.label}>{item.label}</span>)}</div>
+              </div>:<div className="department-performance-empty"><strong>No completion history yet</strong><span>The chart will stay flat until a department task is completed this week.</span></div>}
+              <div className="department-performance-context"><span><i className="context-dot context-complete"/><b>{performanceCompleted}</b> completed of <b>{performanceTarget}</b> target</span><span><i className="context-dot context-review"/><b>{inReview}</b> in review</span><span><i className="context-dot context-blocked"/><b>{blocked}</b> blockers</span></div>
+            </section>
            <div className="department-overview">
               <div><span className="stat-label">Weekly target</span><strong>{targetTotal}</strong><span className="row-meta">{weeklyTasks.length?"explicit task commitments":departmentObjectives.length?"manager objectives":"No weekly target recorded"}</span></div>
               <div><span className="stat-label">Progress</span><strong>{delivered} / {targetTotal}</strong><div className="department-progress"><span style={{width:`${completion}%`}}/></div></div>

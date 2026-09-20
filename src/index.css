@@ -146,6 +146,15 @@ body .app .nav.active{background:var(--paper);color:var(--accent);box-shadow:0 3
 /* Manager department detail: dense operational read, with evidence rather than presence signals. */
 .department-detail{max-width:1240px;margin:0 auto;padding-bottom:28px}
 .department-back{margin-bottom:18px}
+.department-performance{margin:18px 0 14px;padding:20px 22px 16px;overflow:hidden}
+.department-performance-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}
+.department-performance-head h2{margin:5px 0 5px;color:var(--ink);font-family:"Space Grotesk","DM Sans",sans-serif;font-size:20px;letter-spacing:-.045em}
+.department-performance-head p{margin:0;color:var(--muted);font-size:11px}
+.department-performance-stat{display:grid;justify-items:end;gap:2px;flex:0 0 auto}.department-performance-stat strong{color:var(--accent-dark);font:650 32px/1 "Space Grotesk","DM Sans",sans-serif;letter-spacing:-.07em}.department-performance-stat span{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.08em}
+.performance-chart-wrap{margin:18px 0 0}.performance-chart{display:block;width:100%;height:165px;overflow:visible}.performance-gridline{stroke:#e7edeb;stroke-width:.65}.performance-area{fill:rgba(76,125,118,.12)}.performance-line{fill:none;stroke:var(--accent);stroke-width:1.8;vector-effect:non-scaling-stroke}.performance-point{fill:#fff;stroke:var(--accent);stroke-width:1.4;vector-effect:non-scaling-stroke}
+.performance-axis{display:grid;grid-template-columns:repeat(7,1fr);margin-top:8px;color:#8a9490;font:600 9px "DM Mono",monospace;text-align:center;text-transform:uppercase}.performance-axis span:first-child{text-align:left}.performance-axis span:last-child{text-align:right}
+.department-performance-empty{display:grid;place-items:center;min-height:165px;margin-top:18px;border:1px dashed #d7e0dc;background:#fafcfb;color:var(--muted);text-align:center}.department-performance-empty strong{color:#60706a;font-size:12px}.department-performance-empty span{margin-top:5px;font-size:10px}
+.department-performance-context{display:flex;flex-wrap:wrap;gap:16px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:10px}.department-performance-context span{display:inline-flex;align-items:center;gap:5px}.department-performance-context b{color:var(--ink);font-family:"DM Mono",monospace}.context-dot{width:7px;height:7px;border-radius:50%}.context-complete{background:var(--accent)}.context-review{background:#b58c5d}.context-blocked{background:#a8675d}
 .department-overview{display:grid;grid-template-columns:1.1fr repeat(4,minmax(105px,1fr));gap:10px;margin:18px 0}
 .department-overview>div{display:grid;align-content:start;gap:7px;min-height:104px;padding:14px 15px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.92);box-shadow:0 5px 18px rgba(31,39,47,.045)}
 .department-overview strong{font-family:"Space Grotesk","DM Sans",sans-serif;font-size:24px;letter-spacing:-.05em}
@@ -174,6 +183,7 @@ body .app .nav.active{background:var(--paper);color:var(--accent);box-shadow:0 3
 .department-task-row:hover{background:#f6f9f8}
 @media(max-width:950px){.department-overview{grid-template-columns:repeat(3,1fr)}.department-overview>div:first-child{grid-column:span 3}.department-insights{grid-template-columns:1fr}}
 @media(max-width:620px){.department-detail{padding-bottom:10px}.department-overview{grid-template-columns:1fr 1fr;gap:8px}.department-overview>div:first-child{grid-column:span 2}.department-overview>div{min-height:91px;padding:12px}.department-insights{display:grid}.contribution-groups{grid-template-columns:1fr}.trend-chart{height:140px;padding-left:12px;padding-right:12px}}
+@media(max-width:620px){.department-performance{padding:17px 14px 14px}.department-performance-head h2{font-size:18px}.department-performance-stat strong{font-size:27px}.performance-chart{height:145px}.department-performance-context{gap:9px 13px}}
 /* Calm iOS-inspired entry surface for the secure Olyxee Ops workspace. */
 .login{position:relative;isolation:isolate;overflow:hidden;min-height:100dvh;padding:32px 20px 30px;color:#183d45;background:radial-gradient(circle at 14% 14%,rgba(181,224,218,.46),transparent 30%),radial-gradient(circle at 86% 82%,rgba(206,227,232,.56),transparent 34%),#edf2f1}
 .login:before{position:absolute;inset:0;z-index:-2;background:linear-gradient(130deg,rgba(255,255,255,.58),transparent 42%,rgba(216,237,234,.38));content:""}
