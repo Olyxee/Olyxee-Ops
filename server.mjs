@@ -1317,13 +1317,35 @@ app.patch("/api/tasks/:taskId/checklist/:itemId", requireAuth, requireAccount, a
   const task = await loadTask(request.params.taskId, identity);
   if (!task || !canWorkTask(task, identity)) return response.status(403).json({ error: "Only the assignee can update checklist progress." });
   const completed = Boolean(request.body.completed);
-  const result = await appPool.query(`
-    UPDATE public.task_checklist_items SET completed=$1, completed_at=CASE WHEN $1 THEN now() ELSE NULL END
-    WHERE id=$2 AND task_id=$3 RETURNING *
-  `, [completed, request.params.itemId, task.id]);
-  if (!result.rowCount) return response.status(404).json({ error: "Checklist item not found." });
-  await recordTaskActivity(appPool, task.id, identity, completed ? "Checklist item completed" : "Checklist item reopened");
-  return response.json({ item: result.rows[0] });
+  const comment = String(request.body.comment || "").trim().slice(0, 1000);
+  if (completed && !comment) return response.status(400).json({ error: "Add a short progress note before completing this item." });
+  const client = await appPool.connect();
+  try {
+    await client.query("BEGIN");
+    const result = await client.query(`
+      UPDATE public.task_checklist_items SET completed=$1, completed_at=CASE WHEN $1 THEN now() ELSE NULL END
+      WHERE id=$2 AND task_id=$3 RETURNING *
+    `, [completed, request.params.itemId, task.id]);
+    if (!result.rowCount) {
+      await client.query("ROLLBACK");
+      return response.status(404).json({ error: "Checklist item not found." });
+    }
+    if (completed) {
+      await client.query(`
+        INSERT INTO public.task_updates (task_id, author_user_id, author_name, author_role, update_type, message)
+        VALUES ($1,$2,$3,$4,'Progress update',$5)
+      `, [task.id, identity.userId, identity.name, identity.role, `Completed “${result.rows[0].text}” — ${comment}`]);
+    }
+    await recordTaskActivity(client, task.id, identity, completed ? "Checklist item completed" : "Checklist item reopened", completed ? { comment } : {});
+    await client.query("COMMIT");
+    return response.json({ item: result.rows[0] });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Checklist update failed:", error instanceof Error ? error.message : "Unknown error");
+    return response.status(503).json({ error: "Could not update checklist progress." });
+  } finally {
+    client.release();
+  }
 });
 
 app.post("/api/tasks/:id/updates", requireAuth, requireAccount, async (request, response) => {
@@ -1454,8 +1476,14 @@ app.get("/api/state/:key", requireAuth, requireAccount, async (request, response
   if (request.appAccount.app_role === "Member") {
     const identity = await getTaskIdentity(request);
     if (request.params.key === "projects") {
+      const assignedTaskProjects = await appPool.query(`
+        SELECT DISTINCT project
+        FROM public.tasks
+        WHERE assignee_external_id = $1 AND status <> 'Cancelled'
+      `, [identity.externalId]);
+      const taskProjectNames = new Set(assignedTaskProjects.rows.map((row) => row.project));
       value = Array.isArray(value)
-        ? value.filter((project) => (project.assigneeIds || []).includes(identity.externalId))
+        ? value.filter((project) => (project.assigneeIds || []).includes(identity.externalId) || taskProjectNames.has(project.name))
         : [];
     } else if (request.params.key === "notices") {
       value = Array.isArray(value) ? value.filter((notice) => notice.userId === identity.externalId) : [];
