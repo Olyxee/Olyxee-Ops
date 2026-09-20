@@ -374,6 +374,45 @@
   }
 }
 
+/* Frameless notification bell with a persistent unread count. */
+body .app .notification-trigger {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent !important;
+  color: #4f5a60 !important;
+  box-shadow: none !important;
+}
+
+body .app .notification-trigger:hover {
+  background: rgba(255, 255, 255, .44) !important;
+  color: #1f292e !important;
+}
+
+.notification-count {
+  position: absolute;
+  top: 1px;
+  right: -2px;
+  min-width: 17px;
+  height: 17px;
+  display: grid;
+  place-items: center;
+  padding: 0 4px;
+  border: 2px solid rgba(247, 252, 251, .95);
+  border-radius: 999px;
+  background: #a84d45;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1;
+  box-sizing: border-box;
+}
+
 .workspace-board-member .workspace-tasks .workspace-list {
   gap: 0;
   margin: 14px;
