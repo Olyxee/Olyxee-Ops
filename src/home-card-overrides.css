@@ -757,6 +757,131 @@ body .settings-dialog .modal-foot .btn.primary:hover {
   }
 }
 
+/* Feedback page: final approved work, review message, and completion grade. */
+.intern-approved-feedback {
+  gap: 12px;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.intern-approved-feedback > button {
+  grid-template-columns: 36px minmax(0, 1fr) 58px;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid #d8d8dc;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .04);
+}
+
+.intern-approved-feedback > button:hover {
+  border-color: #aeaeb2;
+  background: #fafafa;
+}
+
+.intern-approved-feedback .intern-update-mark.approved {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #1d1d1f;
+  color: #fff;
+}
+
+.intern-approved-copy {
+  min-width: 0;
+}
+
+.intern-approved-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.intern-approved-heading b {
+  color: #1d1d1f;
+  font-size: 13px;
+}
+
+.intern-approved-heading strong {
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: #e5e5ea;
+  color: #3a3a3c;
+  font-size: 8px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.intern-approved-feedback .intern-approved-copy > p {
+  margin: 9px 0 12px;
+  color: #3a3a3c;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.intern-feedback-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.intern-feedback-meta small {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  color: #8e8e93;
+  font-size: 9px;
+}
+
+.intern-speed-grade {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-content: center;
+  gap: 1px;
+  border: 1px solid #d1d1d6;
+  border-radius: 12px;
+  background: #f2f2f7;
+  text-align: center;
+}
+
+.intern-speed-grade small {
+  margin: 0;
+  color: #8e8e93;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.intern-speed-grade b {
+  color: #1d1d1f;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.intern-speed-grade.grade-a,
+.intern-speed-grade.grade-b {
+  background: #e5e5e7;
+}
+
+@media (max-width: 560px) {
+  .intern-approved-feedback > button {
+    grid-template-columns: 34px minmax(0, 1fr) 48px;
+    padding: 14px;
+  }
+
+  .intern-speed-grade {
+    width: 46px;
+    height: 50px;
+  }
+}
+
 /* Settings navigation refinement: one continuous monochrome surface. */
 body .settings-dialog .settings-layout,
 body .settings-dialog .settings-sidebar,
