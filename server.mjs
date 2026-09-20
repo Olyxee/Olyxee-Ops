@@ -930,7 +930,7 @@ const taskTransitions = {
   "In Progress": ["Blocked", "Submitted for Review", "Cancelled"],
   "Blocked": ["In Progress", "Cancelled"],
   "Submitted for Review": ["Changes Requested", "Completed"],
-  "Changes Requested": ["In Progress", "Blocked", "Submitted for Review"],
+  "Changes Requested": ["In Progress", "Blocked"],
   "Completed": [],
   "Cancelled": [],
 };
@@ -1056,6 +1056,66 @@ async function recordTaskActivity(client, taskId, identity, action, metadata = {
   `, [taskId, identity.userId, identity.name, action, JSON.stringify(metadata)]);
 }
 
+async function getTaskManagerIds(client, task) {
+  const managerIds = new Set();
+  if (!peoplePool || !task.assignee_external_id) return [];
+  const result = await peoplePool.query(`
+    SELECT DISTINCT manager_id FROM (
+      SELECT 'account-' || manager.id::text AS manager_id
+      FROM public.interns intern
+      JOIN public.workspace_accounts manager
+        ON intern.supervisor_account_id = manager.id
+         OR lower(trim(coalesce(intern.supervisor_email, ''))) = lower(trim(coalesce(manager.email, '')))
+         OR lower(trim(coalesce(intern.supervisor_name, ''))) = lower(trim(coalesce(manager.display_name, '')))
+      WHERE 'intern-' || intern.id::text = $1
+        AND intern.archived_at IS NULL
+        AND manager.active = true
+      UNION
+      SELECT 'account-' || manager.id::text
+      FROM public.workspace_accounts staff
+      JOIN public.workspace_accounts manager ON staff.reports_to_account_id = manager.id
+      WHERE 'account-' || staff.id::text = $1
+        AND manager.active = true
+    ) managers
+  `, [task.assignee_external_id]);
+  result.rows.forEach((row) => managerIds.add(row.manager_id));
+  const creator = await client.query(`
+    SELECT email, role
+    FROM public.ops_users
+    WHERE id = $1 AND active = true
+  `, [task.creator_user_id]);
+  if (["Superadmin", "Admin", "Manager"].includes(creator.rows[0]?.role)) {
+    const creatorPerson = await resolveExternalPerson(creator.rows[0].email);
+    if (creatorPerson?.external_id) managerIds.add(creatorPerson.external_id);
+  }
+  return [...managerIds];
+}
+
+async function notifyTaskManagers(client, task, title, body) {
+  const managerIds = await getTaskManagerIds(client, task);
+  if (!managerIds.length) return;
+  await client.query("SELECT pg_advisory_xact_lock(hashtext('workspace_state:notices'))");
+  const current = await client.query("SELECT state_value FROM workspace_state WHERE state_key = 'notices' FOR UPDATE");
+  const notices = Array.isArray(current.rows[0]?.state_value) ? current.rows[0].state_value : [];
+  const time = new Date().toISOString();
+  for (const managerId of managerIds) {
+    notices.unshift({
+      id: crypto.randomUUID(),
+      userId: managerId,
+      title,
+      body,
+      read: false,
+      time,
+    });
+  }
+  await client.query(`
+    INSERT INTO workspace_state (state_key, state_value, updated_by)
+    VALUES ('notices', $1::jsonb, $2)
+    ON CONFLICT (state_key) DO UPDATE
+    SET state_value = EXCLUDED.state_value, updated_by = EXCLUDED.updated_by, updated_at = now()
+  `, [JSON.stringify(notices), task.creator_user_id]);
+}
+
 const dateOnly = (value) => value instanceof Date ? value.toISOString().slice(0, 10) : String(value || "").slice(0, 10);
 const mapTask = (row) => ({
   id: row.id,
@@ -1095,7 +1155,7 @@ const taskSelect = `
     ) ORDER BY e.created_at) FROM public.task_evidence e WHERE e.task_id = t.id), '[]'::jsonb) AS evidence,
     coalesce((SELECT jsonb_agg(jsonb_build_object(
       'id', a.id, 'actorName', a.actor_name, 'action', a.action, 'metadata', a.metadata, 'createdAt', a.created_at
-    ) ORDER BY a.created_at) FROM public.task_activity a WHERE a.task_id = t.id), '[]'::jsonb) AS activity_log
+    ) ORDER BY a.created_at DESC) FROM public.task_activity a WHERE a.task_id = t.id), '[]'::jsonb) AS activity_log
   FROM public.tasks t
   JOIN public.ops_users creator ON creator.id = t.creator_user_id
 `;
@@ -1186,31 +1246,56 @@ app.patch("/api/tasks/:id", requireAuth, requireAccount, async (request, respons
   }
   const blockerReason = nextStatus === "Blocked" ? String(request.body.blockerReason || "").trim().slice(0, 1000) : task.blocker_reason;
   if (nextStatus === "Blocked" && !blockerReason) return response.status(400).json({ error: "Describe what is blocking the task." });
-  const result = await appPool.query(`
-    UPDATE public.tasks SET
-      status = coalesce($1, status),
-      blocker_reason = CASE WHEN $1 = 'Blocked' THEN $2 WHEN $1 = 'In Progress' THEN NULL ELSE blocker_reason END,
-      submitted_at = CASE WHEN $1 = 'Submitted for Review' THEN now() ELSE submitted_at END,
-      completed_at = CASE WHEN $1 = 'Completed' THEN now() ELSE completed_at END,
-      assignee_external_id = $4,
-      priority = $5,
-      due_date = $6,
-      project = $7,
-      department = $8,
-      updated_at = now()
-    WHERE id = $3 RETURNING *
-  `, [nextStatus, blockerReason, task.id, assignee, priority, dueDate, project, department]);
-  if (nextStatus) {
-    await recordTaskActivity(appPool, task.id, identity, `Status changed to ${nextStatus}`, { from: task.status, to: nextStatus });
-    if (nextStatus === "Changes Requested") {
-      await appPool.query(`
-        INSERT INTO public.task_updates (task_id, author_user_id, author_name, author_role, update_type, message)
-        VALUES ($1,$2,$3,$4,'Review feedback',$5)
-      `, [task.id, identity.userId, identity.name, identity.role, feedback]);
+  const client = await appPool.connect();
+  try {
+    await client.query("BEGIN");
+    const locked = await client.query("SELECT * FROM public.tasks WHERE id = $1 FOR UPDATE", [task.id]);
+    const lockedTask = locked.rows[0];
+    if (!lockedTask) {
+      await client.query("ROLLBACK");
+      return response.status(404).json({ error: "Task not found." });
     }
+    if (nextStatus && (!taskStatuses.includes(nextStatus) || !(taskTransitions[lockedTask.status] || []).includes(nextStatus))) {
+      await client.query("ROLLBACK");
+      return response.status(409).json({ error: `This task cannot move from ${lockedTask.status} to ${nextStatus}.` });
+    }
+    if (nextStatus && (reviewerAction ? !canReviewTask(lockedTask, identity) : !canWorkTask(lockedTask, identity))) {
+      await client.query("ROLLBACK");
+      return response.status(403).json({ error: "You are not allowed to update this task." });
+    }
+    const result = await client.query(`
+      UPDATE public.tasks SET
+        status = coalesce($1, status),
+        blocker_reason = CASE WHEN $1 = 'Blocked' THEN $2 WHEN $1 = 'In Progress' THEN NULL ELSE blocker_reason END,
+        submitted_at = CASE WHEN $1 = 'Submitted for Review' THEN now() ELSE submitted_at END,
+        completed_at = CASE WHEN $1 = 'Completed' THEN now() ELSE completed_at END,
+        assignee_external_id = $4,
+        priority = $5,
+        due_date = $6,
+        project = $7,
+        department = $8,
+        updated_at = now()
+      WHERE id = $3 RETURNING *
+    `, [nextStatus, blockerReason, task.id, assignee, priority, dueDate, project, department]);
+    if (nextStatus) {
+      await recordTaskActivity(client, task.id, identity, `Status changed to ${nextStatus}`, { from: lockedTask.status, to: nextStatus });
+      if (nextStatus === "Changes Requested") {
+        await client.query(`
+          INSERT INTO public.task_updates (task_id, author_user_id, author_name, author_role, update_type, message)
+          VALUES ($1,$2,$3,$4,'Review feedback',$5)
+        `, [task.id, identity.userId, identity.name, identity.role, feedback]);
+      }
+    }
+    if (metadataRequested) await recordTaskActivity(client, task.id, identity, "Task assignment or metadata changed", { assignee, priority, dueDate, project, department });
+    await client.query("COMMIT");
+    return response.json({ task: mapTask({ ...result.rows[0], creator_name: task.creator_name }) });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Task update failed:", error instanceof Error ? error.message : "Unknown error");
+    return response.status(503).json({ error: "Could not update this task." });
+  } finally {
+    client.release();
   }
-  if (metadataRequested) await recordTaskActivity(appPool, task.id, identity, "Task assignment or metadata changed", { assignee, priority, dueDate, project, department });
-  return response.json({ task: mapTask({ ...result.rows[0], creator_name: task.creator_name }) });
 });
 
 app.post("/api/tasks/:id/checklist", requireAuth, requireAccount, async (request, response) => {
@@ -1247,6 +1332,12 @@ app.post("/api/tasks/:id/updates", requireAuth, requireAccount, async (request, 
   const linkUrl = String(request.body.linkUrl || "").trim().slice(0, 2000) || null;
   if (!message) return response.status(400).json({ error: "Write an update before posting." });
   if (linkUrl && !/^https?:\/\/\S+$/i.test(linkUrl)) return response.status(400).json({ error: "Enter a valid supporting URL." });
+  if (type !== "General comment" && !(type === "Progress update" && canWorkTask(task, identity))) {
+    return response.status(403).json({ error: "This update type is reserved for the task workflow." });
+  }
+  if (type === "Progress update" && !["In Progress", "Changes Requested"].includes(task.status)) {
+    return response.status(409).json({ error: "Start or continue the task before posting progress." });
+  }
   const result = await appPool.query(`
     INSERT INTO public.task_updates (task_id, author_user_id, author_name, author_role, update_type, message, link_url)
     VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *
@@ -1255,10 +1346,51 @@ app.post("/api/tasks/:id/updates", requireAuth, requireAccount, async (request, 
   return response.status(201).json({ update: result.rows[0] });
 });
 
+app.post("/api/tasks/:id/help", requireAuth, requireAccount, async (request, response) => {
+  const identity = await getTaskContext(request);
+  const task = await loadTask(request.params.id, identity);
+  if (!task || !canWorkTask(task, identity)) return response.status(403).json({ error: "Only the assignee can request help." });
+  if (!["Not Started", "In Progress", "Changes Requested"].includes(task.status)) {
+    return response.status(409).json({ error: "Help requests are unavailable while this task is under review or closed." });
+  }
+  const categories = [
+    "Requirements unclear",
+    "Technical blocker",
+    "Missing access or permissions",
+    "Waiting on someone",
+    "Deadline issue",
+    "Other",
+  ];
+  const category = String(request.body.category || "");
+  const explanation = String(request.body.explanation || "").trim().slice(0, 1000);
+  if (!categories.includes(category) || !explanation) {
+    return response.status(400).json({ error: "Choose what you need help with and add a short explanation." });
+  }
+  const client = await appPool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(`
+      INSERT INTO public.task_updates (task_id, author_user_id, author_name, author_role, update_type, message)
+      VALUES ($1,$2,$3,$4,'Help requested',$5)
+    `, [task.id, identity.userId, identity.name, identity.role, `${category}: ${explanation}`]);
+    await recordTaskActivity(client, task.id, identity, "Help requested", { category, explanation });
+    await notifyTaskManagers(client, task, "Help requested", `${identity.name} requested help with ${task.title}: ${category}.`);
+    await client.query("COMMIT");
+    return response.status(201).json({ ok: true });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Help request failed:", error instanceof Error ? error.message : "Unknown error");
+    return response.status(503).json({ error: "Could not send this help request." });
+  } finally {
+    client.release();
+  }
+});
+
 app.post("/api/tasks/:id/evidence", requireAuth, requireAccount, async (request, response) => {
   const identity = await getTaskContext(request);
   const task = await loadTask(request.params.id, identity);
   if (!task || !canWorkTask(task, identity)) return response.status(403).json({ error: "Only the assignee can add evidence." });
+  if (task.status !== "In Progress") return response.status(409).json({ error: "Continue the task before adding evidence." });
   const label = String(request.body.label || "").trim().slice(0, 120);
   const url = String(request.body.url || "").trim().slice(0, 2000);
   if (!label || (!/^https?:\/\/\S+$/i.test(url) && !/^\/api\/assets\/[0-9a-f-]+$/i.test(url))) {
@@ -1273,20 +1405,34 @@ app.post("/api/tasks/:id/evidence", requireAuth, requireAccount, async (request,
 
 app.post("/api/tasks/:id/submit", requireAuth, requireAccount, async (request, response) => {
   const identity = await getTaskContext(request);
-  const task = await loadTask(request.params.id, identity);
-  if (!task || !canWorkTask(task, identity)) return response.status(403).json({ error: "Only the assignee can submit this task." });
-  if (!["In Progress", "Changes Requested"].includes(task.status)) return response.status(409).json({ error: "Start the task before submitting it." });
   const summary = String(request.body.summary || "").trim().slice(0, 3000);
   if (!summary) return response.status(400).json({ error: "Submission summary is required." });
   const client = await appPool.connect();
   try {
     await client.query("BEGIN");
+    const locked = await client.query("SELECT * FROM public.tasks WHERE id = $1 FOR UPDATE", [request.params.id]);
+    const task = locked.rows[0];
+    if (!task || !canWorkTask(task, identity)) {
+      await client.query("ROLLBACK");
+      return response.status(403).json({ error: "Only the assignee can submit this task." });
+    }
+    if (task.status !== "In Progress") {
+      await client.query("ROLLBACK");
+      return response.status(409).json({ error: task.status === "Submitted for Review" ? "This task is already awaiting review." : "Start or continue the task before submitting it." });
+    }
+    const priorSubmissions = await client.query(`
+      SELECT count(*)::int AS count
+      FROM public.task_updates
+      WHERE task_id = $1 AND update_type IN ('Submission', 'Resubmission')
+    `, [task.id]);
+    const resubmission = priorSubmissions.rows[0].count > 0;
     await client.query(`
       INSERT INTO public.task_updates (task_id, author_user_id, author_name, author_role, update_type, message)
-      VALUES ($1,$2,$3,$4,'Submission',$5)
-    `, [task.id, identity.userId, identity.name, identity.role, summary]);
+      VALUES ($1,$2,$3,$4,$5,$6)
+    `, [task.id, identity.userId, identity.name, identity.role, resubmission ? "Resubmission" : "Submission", summary]);
     await client.query("UPDATE public.tasks SET status='Submitted for Review', submitted_at=now(), updated_at=now() WHERE id=$1", [task.id]);
-    await recordTaskActivity(client, task.id, identity, "Task submitted for review");
+    await recordTaskActivity(client, task.id, identity, resubmission ? "Task resubmitted for review" : "Task submitted for review");
+    await notifyTaskManagers(client, task, resubmission ? "Work resubmitted for review" : "Work submitted for review", `${identity.name} ${resubmission ? "resubmitted" : "submitted"} ${task.title} for review.`);
     await client.query("COMMIT");
     return response.json({ ok: true });
   } catch (error) {

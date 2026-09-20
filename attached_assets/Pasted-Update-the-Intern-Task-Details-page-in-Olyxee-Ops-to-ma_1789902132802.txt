@@ -1,0 +1,301 @@
+Update the **Intern Task Details page** in Olyxee Ops to make it much simpler and reduce unnecessary admin work for interns.
+
+The intern experience should focus only on:
+
+**Understand the task → Do the work → Update progress → Submit for review**
+
+Do not require interns to manage project-management details.
+
+### Changes required
+
+Remove the current **Progress Checklist** section from the intern task page.
+
+Interns should not be required to:
+
+* Create checklist items
+* Manage subtasks
+* Enter completion percentages
+* Configure task structure
+* Manage priority, department, project, due dates, or assignment information
+
+Those responsibilities belong to Managers/Admins.
+
+### New Intern Task Page Structure
+
+At the top, keep:
+
+* Back to Tasks
+* Task ID
+* Project
+* Department
+* Task title
+* Current status
+* Priority
+* Due date
+
+Example:
+
+`OLX-0006 · Orgni · Data & Security`
+
+`Programming`
+
+`In Progress · Medium priority · Due 21 Sep 2026`
+
+### 1. Task Brief
+
+Show the task description clearly.
+
+Heading:
+
+`Task brief`
+
+Supporting text:
+
+`What you need to deliver.`
+
+If no description exists, display:
+
+`No description was provided for this task.`
+
+Do not show unnecessary empty fields.
+
+### 2. Progress Update
+
+Replace the checklist system with a simple progress-update workflow.
+
+Show:
+
+`Progress update`
+
+Supporting text:
+
+`Briefly share what you have completed, what you are currently working on, or anything blocking you.`
+
+Provide one text area.
+
+Placeholder:
+
+`Example: Finished the database schema and API endpoints. I am testing permissions now. No blockers.`
+
+Button:
+
+`Post update`
+
+When submitted:
+
+* Save the update permanently
+* Add the intern name and timestamp
+* Add the update automatically to the Activity timeline
+* Make it visible to the assigned Manager/Admin
+* Do not require percentages or checklist completion
+
+Allow multiple progress updates over the lifetime of the task.
+
+### 3. Submit Work
+
+Create a clean section called:
+
+`Submit for review`
+
+Supporting text:
+
+`When your work is ready, send it to your manager for review.`
+
+Fields:
+
+**Submission summary — required**
+
+Placeholder:
+
+`Briefly explain what you completed and anything the reviewer should know.`
+
+**Evidence link — optional**
+
+Examples may include:
+
+* GitHub PR
+* GitHub repository
+* Google Drive document
+* Figma
+* deployed URL
+* research document
+
+**Evidence file — optional**
+
+Allow the intern to upload a relevant file if supported.
+
+The intern should only need to provide:
+
+1. A submission summary
+2. Optional evidence
+
+Button:
+
+`Submit for review`
+
+When submitted:
+
+* Change status to `Submitted for Review`
+* Record submission timestamp
+* Record who submitted it
+* Notify the assigned Manager/Admin
+* Add the submission to Activity
+* Prevent duplicate submissions while it is awaiting review
+
+### 4. Manager Review State
+
+If the Manager approves the work:
+
+Status becomes:
+
+`Completed`
+
+Show:
+
+`Work approved`
+
+If the Manager requests changes:
+
+Status becomes:
+
+`Changes Requested`
+
+Display the Manager's feedback prominently near the top of the task.
+
+Example:
+
+`Changes requested by Alisha Fatima`
+
+`Please add validation for duplicate records and include the missing tests.`
+
+Then allow the intern to continue working and later click:
+
+`Resubmit for review`
+
+Keep previous submissions and review feedback in the Activity history.
+
+### 5. Comments and Questions
+
+Keep comments, but simplify them.
+
+Heading:
+
+`Discussion`
+
+Input placeholder:
+
+`Ask a question or leave a comment...`
+
+Do not make the intern choose complicated comment categories.
+
+A normal comment is enough.
+
+Managers and interns should both be able to reply.
+
+Show:
+
+* Person's name
+* Role
+* Timestamp
+* Comment
+
+### 6. I Need Help
+
+Keep the `I need help` action.
+
+When clicked, open a small modal with:
+
+`What do you need help with?`
+
+Options:
+
+* Requirements unclear
+* Technical blocker
+* Missing access or permissions
+* Waiting on someone
+* Deadline issue
+* Other
+
+Then require a short explanation.
+
+Submitting this should:
+
+* Notify the assigned Manager
+* Add a visible `Help requested` indicator on the task
+* Add an Activity entry
+
+Do not automatically change the entire task status to Blocked unless the Manager chooses to.
+
+### 7. Activity
+
+Keep Activity as an automatic audit trail.
+
+Interns should never manually create Activity entries.
+
+Activity should automatically record events such as:
+
+* Task assigned
+* Task started
+* Progress update posted
+* Comment added
+* Help requested
+* Evidence uploaded
+* Submitted for review
+* Changes requested
+* Resubmitted
+* Approved
+* Completed
+
+Display newest or oldest consistently in a clean timeline.
+
+### Status flow
+
+Use this workflow:
+
+`Not Started`
+→ `In Progress`
+→ `Submitted for Review`
+→ either:
+`Changes Requested`
+→ `In Progress`
+→ `Submitted for Review`
+
+or:
+
+`Submitted for Review`
+→ `Completed`
+
+Do not allow interns to mark their own work as `Completed`.
+
+Only the Manager/Admin reviewing the work can approve it and complete the task.
+
+### UX requirement
+
+The Intern Task page should feel like a **work page**, not an admin dashboard.
+
+Keep the interface minimal, professional, and easy to understand.
+
+Avoid:
+
+* Too many cards
+* Too many colors
+* Excessive badges
+* Large forms
+* Configuration controls
+* Checklist management
+* Progress percentages
+* Duplicate information
+
+The primary intern actions should be obvious:
+
+`Post progress update`
+
+`Ask a question`
+
+`I need help`
+
+`Submit for review`
+
+Managers manage the task structure.
+
+Interns simply do the work and report what happened.

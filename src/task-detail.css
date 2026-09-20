@@ -1018,3 +1018,289 @@
     position: static;
   }
 }
+
+/* Focused intern work page: brief, updates, review, discussion, and audit. */
+.task-detail-work-page {
+  max-width: 760px;
+}
+
+.task-detail-work-page .task-workspace-head {
+  padding-bottom: 18px;
+}
+
+.task-work-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  color: #6e7d82;
+  font-size: 11px;
+}
+
+.task-work-meta > span {
+  padding-left: 9px;
+  border-left: 1px solid #dce4e4;
+}
+
+.intern-feedback-banner,
+.intern-approved-banner,
+.intern-help-indicator {
+  display: grid;
+  gap: 5px;
+  margin: 16px 0;
+  padding: 14px 16px;
+  border: 1px solid #e0c9c5;
+  border-left: 3px solid #b85b50;
+  border-radius: 10px;
+  background: #fff8f6;
+  color: #713e39;
+  font-size: 12px;
+}
+
+.intern-feedback-banner p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.intern-approved-banner,
+.intern-help-indicator {
+  display: flex;
+  align-items: center;
+  border-color: #c5dfd2;
+  border-left-color: #258065;
+  background: #f2faf6;
+  color: #286a58;
+}
+
+.intern-help-indicator {
+  border-color: #e3d5b8;
+  border-left-color: #a7762d;
+  background: #fffaf0;
+  color: #78551e;
+}
+
+.intern-work-sections {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.intern-work-section {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid #dfe6e6;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(28, 48, 53, .035);
+}
+
+.intern-section-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: #16877c;
+}
+
+.intern-section-heading > svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.intern-section-heading h2 {
+  margin: 0;
+  color: #182b32;
+  font-size: 15px;
+  letter-spacing: -.02em;
+}
+
+.intern-section-heading p {
+  margin: 3px 0 0;
+  color: #718087;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.intern-brief {
+  margin: 2px 0 0;
+  color: #43565d;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.intern-action {
+  justify-self: start;
+}
+
+.intern-submit-section {
+  border-color: #c8dfd5;
+}
+
+.intern-submit-form {
+  display: grid;
+  gap: 11px;
+}
+
+.intern-submit-form .form-label {
+  display: grid;
+  gap: 6px;
+}
+
+.intern-evidence-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.intern-evidence-list a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 9px;
+  border: 1px solid #d7e6df;
+  border-radius: 7px;
+  color: #286a58;
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.intern-file-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #6e7d82;
+  font-size: 11px;
+}
+
+.intern-awaiting {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 12px;
+  border-radius: 8px;
+  background: #f3f8f6;
+  color: #397260;
+  font-size: 11px;
+}
+
+.intern-discussion {
+  display: grid;
+  gap: 9px;
+}
+
+.intern-discussion article {
+  padding: 11px 0;
+  border-bottom: 1px solid #edf0f0;
+}
+
+.intern-discussion article > div {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.intern-discussion article b {
+  color: #26383d;
+  font-size: 11px;
+}
+
+.intern-discussion article span {
+  color: #849094;
+  font-size: 10px;
+}
+
+.intern-discussion article p {
+  margin: 7px 0 0;
+  color: #43565d;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.intern-discussion article a {
+  display: inline-block;
+  margin-top: 6px;
+  color: #287d74;
+  font-size: 10px;
+}
+
+.intern-empty {
+  color: #7b878b;
+  font-size: 11px;
+}
+
+.intern-primary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin: 14px 0;
+}
+
+.intern-activity {
+  border: 1px solid #dfe6e6;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.intern-activity summary {
+  padding: 14px 16px;
+  color: #40545a;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  list-style: none;
+}
+
+.intern-activity summary::-webkit-details-marker {
+  display: none;
+}
+
+.intern-activity summary span {
+  float: right;
+  min-width: 22px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: #f1f5f4;
+  color: #718087;
+  font-size: 9px;
+  text-align: center;
+}
+
+.intern-activity > div {
+  display: grid;
+  gap: 0;
+  padding: 0 16px 9px;
+}
+
+.intern-activity article {
+  display: grid;
+  gap: 3px;
+  padding: 10px 0;
+  border-top: 1px solid #edf0f0;
+}
+
+.intern-activity article b {
+  color: #35494e;
+  font-size: 11px;
+}
+
+.intern-activity article span {
+  color: #849094;
+  font-size: 10px;
+}
+
+@media (max-width: 600px) {
+  .task-detail-work-page .task-workspace-head .title {
+    font-size: 28px;
+  }
+
+  .intern-work-section {
+    padding: 16px;
+  }
+
+  .intern-primary-actions .btn,
+  .intern-action {
+    width: 100%;
+    justify-content: center;
+  }
+}
