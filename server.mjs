@@ -13,6 +13,7 @@ import {
 } from "./shared/departments.mjs";
 
 const app = express();
+const onlinePresence = new Map();
 const port = Number(process.env.PORT || 5000);
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -222,6 +223,28 @@ app.get("/api/me", requireAuth, requireAccount, async (request, response) => {
     avatarUrl: profile.avatarUrl,
     contactDetails: profile.contactDetails,
     githubUsername: profile.githubUsername,
+  });
+});
+
+app.post("/api/presence/heartbeat", requireAuth, requireAccount, async (request, response) => {
+  const person = await resolveExternalPerson(request.appAccount.email);
+  if (!person?.external_id) return response.status(403).json({ error: "Your staff profile could not be resolved." });
+  onlinePresence.set(person.external_id, Date.now());
+  return response.json({ online: true });
+});
+
+app.get("/api/presence", requireAuth, requireAccount, async (request, response) => {
+  if (!["Superadmin", "Admin", "Manager"].includes(request.appAccount.app_role)) {
+    return response.status(403).json({ error: "Only managers and administrators can view team presence." });
+  }
+  const cutoff = Date.now() - 90_000;
+  for (const [userId, lastSeen] of onlinePresence) {
+    if (lastSeen < cutoff) onlinePresence.delete(userId);
+  }
+  return response.json({
+    onlineUserIds: [...onlinePresence.entries()]
+      .filter(([, lastSeen]) => lastSeen >= cutoff)
+      .map(([userId]) => userId),
   });
 });
 
