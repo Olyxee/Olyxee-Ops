@@ -1123,6 +1123,7 @@ const mapTask = (row) => ({
   title: row.title,
   description: row.description,
   project: row.project,
+  githubUrl: row.github_url || undefined,
   department: row.department,
   createdBy: row.creator_external_id,
   creatorName: row.creator_name,
@@ -1177,11 +1178,13 @@ app.post("/api/tasks", requireAuth, requireAccount, async (request, response) =>
   const title = String(request.body.title || "").trim().slice(0, 200);
   const description = String(request.body.description || "").trim().slice(0, 5000);
   const project = String(request.body.project || "").trim().slice(0, 200);
+  const githubUrl = String(request.body.githubUrl || "").trim().slice(0, 1000);
   const priority = String(request.body.priority || "");
   const dueDate = String(request.body.due || "");
   const department = validateDepartment(identity.role === "Manager" ? identity.department : request.body.department, { allowUnassigned: false });
   const assignee = String(request.body.assignee || "").trim() || null;
   if (!title || !project) return response.status(400).json({ error: "Task name and project are required." });
+  if (!/^https:\/\/(www\.)?github\.com\/.+/i.test(githubUrl)) return response.status(400).json({ error: "A valid GitHub link is required." });
   if (!dueDate || !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) return response.status(400).json({ error: "Due date is required." });
   if (dueDate < new Date().toISOString().slice(0, 10)) return response.status(400).json({ error: "Due date cannot be in the past." });
   if (!taskPriorities.includes(priority) || !department) return response.status(400).json({ error: "Choose a valid priority and department." });
@@ -1194,10 +1197,10 @@ app.post("/api/tasks", requireAuth, requireAccount, async (request, response) =>
     await client.query("BEGIN");
     const result = await client.query(`
       INSERT INTO public.tasks
-        (title, description, project, department, creator_user_id, creator_external_id, assignee_external_id, priority, due_date)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+        (title, description, project, github_url, department, creator_user_id, creator_external_id, assignee_external_id, priority, due_date)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
       RETURNING *
-    `, [title, description, project, department, identity.userId, identity.externalId, assignee, priority, dueDate]);
+    `, [title, description, project, githubUrl, department, identity.userId, identity.externalId, assignee, priority, dueDate]);
     await recordTaskActivity(client, result.rows[0].id, identity, "Task created", { assignee, priority, dueDate });
     await client.query("COMMIT");
     return response.status(201).json({ task: mapTask({ ...result.rows[0], creator_name: identity.name }) });

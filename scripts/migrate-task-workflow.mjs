@@ -28,6 +28,7 @@ await pool.query(`
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
   );
+  ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS github_url text;
   CREATE INDEX IF NOT EXISTS tasks_assignee_idx ON public.tasks(assignee_external_id);
   CREATE INDEX IF NOT EXISTS tasks_creator_idx ON public.tasks(creator_user_id);
   CREATE INDEX IF NOT EXISTS tasks_department_idx ON public.tasks(department);
