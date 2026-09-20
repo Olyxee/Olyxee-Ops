@@ -133,7 +133,9 @@
 }
 .workspace-review-home .review-objective-row {
   position: relative;
-  display: block !important;
+  display: grid !important;
+  grid-template-columns: minmax(0,1fr) 42px !important;
+  align-items: center;
   min-width: 0;
   overflow: hidden;
   border: 1px solid #e3e7e9 !important;
@@ -148,11 +150,11 @@
 .workspace-review-home .review-objective-row:hover { transform: translateY(-1px); box-shadow: 0 7px 16px rgba(31,39,47,.07) !important; }
 .workspace-review-home .review-objective-open {
   display: grid;
-  grid-template-columns: 30px minmax(0,1fr) 18px !important;
+  grid-template-columns: 30px minmax(0,1fr) auto !important;
   gap: 11px !important;
   width: 100%;
-  min-height: 146px;
-  padding: 16px 13px !important;
+  min-height: 88px;
+  padding: 12px 10px 12px 13px !important;
   background: #fff !important;
   color: #20252b !important;
 }
@@ -161,16 +163,26 @@
 .workspace-review-home .review-objective-in-progress .review-objective-open:before { background: #7892a0; }
 .workspace-review-home .review-objective-at-risk .review-objective-open:before { background: #bd9361; }
 .workspace-review-home .review-objective-marker { width: 30px; height: 30px; border-radius: 9px; }
-.workspace-review-home .review-objective-copy { align-self: stretch; gap: 8px; }
+.workspace-review-home .review-objective-copy {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  grid-template-areas:
+    "title owner"
+    "details owner";
+  align-items: center;
+  align-self: center;
+  gap: 5px 22px;
+}
 .workspace-review-home .review-objective-copy > b { color: #20252b !important; font-size: 13px !important; line-height: 1.3; white-space: normal; }
-.workspace-review-home .review-objective-details { gap: 7px; }
-.workspace-review-home .review-objective-owner { align-items: center; gap: 7px; margin-top: auto; }
+.workspace-review-home .review-objective-copy > b { grid-area: title; }
+.workspace-review-home .review-objective-details { grid-area: details; gap: 7px; }
+.workspace-review-home .review-objective-owner { grid-area: owner; align-items: center; gap: 7px; margin: 0; padding-left: 18px; border-left: 1px solid #edf0f2; }
 .workspace-review-home .review-objective-owner > span:last-child { display: grid; gap: 1px; min-width: 0; }
 .workspace-review-home .review-objective-owner small { font-size: 8px; letter-spacing: .08em; }
 .workspace-review-home .review-objective-owner strong { font-size: 10px; }
 .workspace-review-home .review-objective-owner-avatar { display: grid; flex: 0 0 auto; }
 .workspace-review-home .review-objective-owner-avatar .avatar { border: 1px solid #e5e9e9; }
-.workspace-review-home .review-objective-meta { display: flex; align-items: flex-end; align-self: stretch; flex-direction: column; justify-content: space-between; gap: 8px; }
+.workspace-review-home .review-objective-meta { display: flex; align-items: center; align-self: center; flex-direction: row; justify-content: flex-end; gap: 10px; }
 .workspace-review-home .review-objective-people {
   display: flex !important;
   align-items: center;
@@ -196,16 +208,20 @@
 }
 .workspace-review-home .workspace-objective-state { min-width: auto; padding: 4px 6px; border-radius: 6px; font-size: 8px; }
 .workspace-review-home .review-objective-chevron { align-self: center; color: #a2abad; }
-.workspace-review-home .review-objective-edit { position: absolute; right: 8px; bottom: 8px; width: 26px !important; height: 26px !important; margin: 0 !important; border-color: #e5e9eb !important; background: #fafbfb !important; color: #778286 !important; box-shadow: none !important; backdrop-filter: none; }
+.workspace-review-home .review-objective-edit { position: static; justify-self: center; width: 26px !important; height: 26px !important; margin: 0 !important; border-color: #e5e9eb !important; background: #fafbfb !important; color: #778286 !important; box-shadow: none !important; backdrop-filter: none; }
 .workspace-review-home .review-objective-edit:hover { border-color: #b8d0ca !important; background: #edf5f2 !important; color: #39746d !important; transform: none; }
 @media (max-width:700px) {
   .workspace-review-home .review-home-objective-list { grid-template-columns: 1fr !important; padding: 11px !important; }
-  .workspace-review-home .review-objective-open { min-height: 128px; }
+  .workspace-review-home .review-objective-open { min-height: 84px; }
+  .workspace-review-home .review-objective-copy { grid-template-columns: minmax(0,1fr); grid-template-areas: "title" "details"; }
+  .workspace-review-home .review-objective-owner { display: none; }
 }
 @media (max-width:420px) {
-  .workspace-review-home .review-objective-open { grid-template-columns: 27px minmax(0,1fr) 16px !important; gap: 9px !important; padding: 14px 11px !important; }
+  .workspace-review-home .review-objective-row { grid-template-columns: minmax(0,1fr) 36px !important; }
+  .workspace-review-home .review-objective-open { grid-template-columns: 27px minmax(0,1fr) auto !important; gap: 9px !important; padding: 11px 8px 11px 11px !important; }
   .workspace-review-home .review-objective-marker { width: 27px; height: 27px; }
-  .workspace-review-home .review-objective-copy > b { font-size: 12px; }
+  .workspace-review-home .review-objective-copy > b { font-size: 12px !important; }
+  .workspace-review-home .workspace-objective-state { display: none; }
 }
 
 /* Focused Weekly Review page: weekly objectives only. */
