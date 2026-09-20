@@ -757,6 +757,88 @@ body .settings-dialog .modal-foot .btn.primary:hover {
   }
 }
 
+/* Settings navigation refinement: one continuous monochrome surface. */
+body .settings-dialog .settings-layout,
+body .settings-dialog .settings-sidebar,
+body .settings-dialog .settings-panel {
+  background: #f5f5f7 !important;
+}
+
+body .settings-dialog .settings-sidebar {
+  gap: 2px !important;
+  padding: 18px 10px 18px 16px !important;
+  border-right: 0 !important;
+}
+
+body .settings-dialog .settings-sidebar button {
+  min-height: 44px !important;
+  grid-template-columns: 24px minmax(0, 1fr) !important;
+  gap: 8px !important;
+  padding: 7px 9px !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  color: #3a3a3c !important;
+  box-shadow: none !important;
+}
+
+body .settings-dialog .settings-sidebar button:hover {
+  background: #ebebed !important;
+}
+
+body .settings-dialog .settings-sidebar button.active {
+  background: #e5e5e7 !important;
+  color: #000 !important;
+  box-shadow: none !important;
+}
+
+body .settings-dialog .settings-tab-icon,
+body .settings-dialog .settings-sidebar button.active .settings-tab-icon {
+  width: 24px !important;
+  height: 24px !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: #000 !important;
+}
+
+body .settings-dialog .settings-tab-icon svg {
+  width: 17px !important;
+  height: 17px !important;
+  stroke-width: 1.9 !important;
+}
+
+body .settings-dialog .settings-tab-copy {
+  gap: 0 !important;
+}
+
+body .settings-dialog .settings-tab-copy b {
+  font-size: 11px !important;
+  font-weight: 650 !important;
+}
+
+body .settings-dialog .settings-tab-copy small,
+body .settings-dialog .settings-tab-chevron {
+  display: none !important;
+}
+
+body .settings-dialog .settings-panel {
+  padding-left: 18px !important;
+}
+
+@media (max-width: 700px) {
+  body .settings-dialog .settings-sidebar {
+    padding: 8px 10px !important;
+    border-bottom: 0 !important;
+  }
+
+  body .settings-dialog .settings-sidebar button {
+    grid-template-columns: 24px 1fr !important;
+  }
+
+  body .settings-dialog .settings-panel {
+    padding-left: 14px !important;
+  }
+}
+
 .workspace-board-member .workspace-tasks .workspace-list {
   gap: 0;
   margin: 14px;
