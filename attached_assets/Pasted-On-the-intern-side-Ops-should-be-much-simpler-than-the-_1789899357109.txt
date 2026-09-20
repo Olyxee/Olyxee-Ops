@@ -1,0 +1,138 @@
+On the **intern side**, Ops should be much simpler than the Superadmin or Manager view. The intern should mainly see **their own work, deadlines, submissions, feedback, and progress**.
+
+A clean flow would be:
+
+1. **Dashboard**
+
+   * Welcome + current internship/project
+   * Tasks due soon
+   * Overdue tasks
+   * Tasks waiting for review
+   * Recently approved/completed work
+   * Simple progress summary
+
+2. **My Tasks**
+   The intern only sees tasks assigned to them. Each task should show:
+
+   * Task title
+   * Description/instructions
+   * Assigned by
+   * Project
+   * Priority
+   * Due date
+   * Current status
+   * Checklist/subtasks
+   * Relevant links/files
+
+   Suggested statuses:
+   **Not Started → In Progress → Submitted for Review → Changes Requested / Approved → Completed**
+
+3. **Task Workspace**
+   When the intern opens a task, they should actually be able to work through the lifecycle.
+
+   For example:
+
+   **Manager assigns:**
+   `Research authentication approaches for Orgni`
+
+   Intern opens it and clicks **Start Task**.
+
+   They can then:
+
+   * Mark checklist items complete
+   * Add progress updates
+   * Add comments/questions
+   * Paste GitHub/Drive/Figma/etc. links
+   * Upload evidence/files where applicable
+   * Describe blockers
+
+4. **Submit for Review**
+   This is important. An intern should not directly mark assigned work as fully completed.
+
+   They click **Submit for Review** and provide something like:
+
+   > Completed authentication research. Compared Entra ID, Supabase Auth and Auth0. Recommendation and architecture notes attached below.
+
+   Then they attach/link the actual work.
+
+   Status becomes:
+
+   **Submitted for Review**
+
+5. **Manager Review**
+   The intern then sees one of two outcomes:
+
+   **Approved**
+   → Task becomes Completed.
+
+   **Changes Requested**
+   → Manager leaves feedback such as:
+   “Add a comparison of token refresh behaviour and update the architecture diagram.”
+
+   The intern gets the task back, makes changes, and resubmits it.
+
+6. **Updates / Comments**
+   Every task should have one shared activity thread between the intern and manager.
+
+   Example:
+
+   **Intern — 10:14**
+
+   > Database schema completed. Starting API integration.
+
+   **Manager — 11:03**
+
+   > Make sure RLS policies are tested before integration.
+
+   **Intern — 15:41**
+
+   > RLS tests completed. PR #42 attached.
+
+   This prevents updates from getting scattered across WhatsApp or Teams.
+
+7. **My Projects**
+   Interns should see projects they are assigned to, but not necessarily every company project.
+
+   Example:
+
+   **Orgni**
+
+   * 8 tasks
+   * 5 completed
+   * 2 in progress
+   * 1 awaiting review
+
+   Clicking the project shows their work within that project.
+
+8. **Notifications**
+   Intern should get notifications when:
+
+   * A task is assigned
+   * Due date changes
+   * Manager comments
+   * Changes are requested
+   * Work is approved
+   * A deadline is approaching
+
+The important permission model is:
+
+**Intern**
+→ sees themselves and their assigned work.
+
+**Manager**
+→ sees and manages people/work under their responsibility.
+
+**Superadmin**
+→ sees the entire organisation.
+
+So the intern Ops experience should feel roughly like:
+
+**Dashboard → My Tasks → Open Task → Work → Update Progress → Submit → Manager Reviews → Revise/Complete**
+
+I would avoid giving interns lots of administrative screens. They shouldn't need access to intern management, organisation-wide analytics, employee directories, department configuration, account controls, or project administration unless specifically granted.
+
+For Olyxee, I would make the intern navigation something like:
+
+**Home | My Tasks | Projects | Updates | Profile**
+
+That keeps Ops focused on actually getting work done rather than looking like another HR system.
