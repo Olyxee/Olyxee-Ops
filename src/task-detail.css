@@ -1305,6 +1305,204 @@
   }
 }
 
+/* Focused manager review page. */
+.task-detail-manager {
+  max-width: 1040px;
+  color: #2c2c2e;
+}
+
+.manager-task-head {
+  margin-top: 22px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e5e5ea;
+}
+
+.manager-task-head .title {
+  margin-bottom: 10px;
+}
+
+.manager-review-callout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 18px;
+  padding: 20px;
+  border: 1px solid #d1d1d6;
+  border-radius: 14px;
+  background: #f7f7f8;
+}
+
+.manager-review-callout small,
+.manager-task-side small {
+  color: #8e8e93;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.manager-review-callout h2 {
+  margin: 4px 0 6px;
+  font-size: 18px;
+}
+
+.manager-review-callout p {
+  margin: 0;
+  color: #636366;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.manager-decision-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.manager-task-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.manager-task-main {
+  overflow: hidden;
+  border: 1px solid #d1d1d6;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.manager-task-section {
+  padding: 20px;
+  border-bottom: 1px solid #e5e5ea;
+}
+
+.manager-task-section:last-child {
+  border-bottom: 0;
+}
+
+.manager-section-title h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.manager-section-title p {
+  margin: 4px 0 0;
+  color: #8e8e93;
+  font-size: 11px;
+}
+
+.manager-task-brief {
+  margin: 14px 0 0;
+  color: #3a3a3c;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.manager-submission {
+  margin-top: 13px;
+  padding: 14px;
+  border-radius: 10px;
+  background: #f7f7f8;
+}
+
+.manager-submission p {
+  margin: 0 0 7px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.manager-submission small {
+  color: #8e8e93;
+  font-size: 10px;
+}
+
+.manager-collapsible {
+  padding: 0;
+}
+
+.manager-collapsible > summary,
+.manager-task-side details > summary {
+  padding: 17px 20px;
+  color: #3a3a3c;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+
+.manager-collapsible > summary::-webkit-details-marker,
+.manager-task-side details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.manager-collapsible > summary span,
+.manager-task-side details > summary span {
+  float: right;
+  color: #8e8e93;
+  font-size: 11px;
+}
+
+.manager-collapsible-body {
+  display: grid;
+  gap: 13px;
+  padding: 0 20px 20px;
+}
+
+.manager-inline-form {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #f7f7f8;
+}
+
+.manager-task-side {
+  align-self: start;
+  overflow: hidden;
+  border: 1px solid #d1d1d6;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.manager-task-side > section {
+  display: grid;
+  gap: 6px;
+  padding: 15px 17px;
+  border-bottom: 1px solid #e5e5ea;
+}
+
+.manager-task-side > section b {
+  color: #3a3a3c;
+  font-size: 12px;
+}
+
+.manager-task-side details .task-activity {
+  padding: 0 17px 14px;
+}
+
+.task-detail-manager .btn {
+  border-radius: 10px;
+}
+
+@media (max-width: 760px) {
+  .manager-review-callout {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .manager-decision-actions .btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .manager-task-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Calm, iOS-like intern work page. */
 .task-detail-work-page {
   --task-accent: #636366;
