@@ -2471,6 +2471,14 @@ app.get("/api/assets/:id", requireAuth, requireAccount, async (request, response
     `, [`/api/assets/${asset.id}`]);
     authorized = evidence.rows.some((task) => canViewTask(task, identity));
     if (!authorized) {
+        const objectiveResult = await appPool.query("SELECT state_value FROM workspace_state WHERE state_key = 'objectives'");
+        const objectives = Array.isArray(objectiveResult.rows[0]?.state_value) ? objectiveResult.rows[0].state_value : [];
+        authorized = objectives.some((objective) => (
+          objective.managerId === identity.externalId
+          && (objective.resources || []).some((resource) => resource.url === `/api/assets/${asset.id}`)
+        ));
+      }
+      if (!authorized) {
       const projectResult = await appPool.query("SELECT state_value FROM workspace_state WHERE state_key = 'projects'");
       const projects = Array.isArray(projectResult.rows[0]?.state_value) ? projectResult.rows[0].state_value : [];
       authorized = projects.some((project) => (

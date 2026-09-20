@@ -2917,3 +2917,14 @@ body .weekly-review-page .review-decision-grid{gap:15px!important}
 body .weekly-review-page .review-task-row{min-height:96px!important;padding:16px 17px!important}
 @media(max-width:820px){body .weekly-review-page .review-health{grid-template-columns:165px minmax(0,1fr) 155px!important}body .weekly-review-page .review-objective-grid,body .weekly-review-page .review-decision-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 @media(max-width:560px){body .workspace-section:has(.weekly-review-page){padding:0!important}body .weekly-review-page{padding:0 0 34px!important}body .weekly-review-page .weekly-review-hero{align-items:flex-start!important;padding:22px 19px!important;border-radius:15px!important}body .weekly-review-page .weekly-review-hero h1{font-size:34px!important}body .weekly-review-page .review-health{grid-template-columns:1fr!important;padding:18px!important}body .weekly-review-page .review-objective-grid,body .weekly-review-page .review-decision-grid{grid-template-columns:1fr!important}body .weekly-review-page .review-metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important}body .weekly-review-page .review-task-row{min-height:104px!important}}
+/* Shared in-app back control: icon-only, native-feeling, and safe to tap on mobile. */
+.back-button{box-sizing:border-box;display:inline-grid;place-items:center;width:40px;min-width:40px;height:40px;min-height:40px;margin:0 0 18px;padding:0;border:1px solid #dfe3e6;border-radius:12px;background:rgba(255,255,255,.96);color:#52636b;box-shadow:0 2px 5px rgba(31,39,47,.08),0 1px 1px rgba(31,39,47,.04);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.back-button:hover{background:#f3f6f7;border-color:#cbd4d8;color:#315f5a;box-shadow:0 4px 10px rgba(31,39,47,.1)}
+.back-button:active{background:#e9eef0;transform:scale(.95)}
+.back-button:focus-visible{outline:3px solid rgba(76,125,118,.24);outline-offset:3px}
+.back-button svg{display:block}
+.back-button.workspace-back{margin:0 0 22px}
+.back-button.department-back{margin:0 0 18px}
+.focused-review-nav .back-button{margin:0}
+.task-detail>.back-button{margin-bottom:18px}
+@media(max-width:620px){.back-button{width:40px;min-width:40px;height:40px;min-height:40px}.back-button.workspace-back{margin-bottom:18px}}

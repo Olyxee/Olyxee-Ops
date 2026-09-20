@@ -183,6 +183,55 @@ body .app .nav.active{background:var(--paper);color:var(--accent);box-shadow:0 3
 .department-task-row:hover{background:#f6f9f8}
 @media(max-width:950px){.department-overview{grid-template-columns:repeat(3,1fr)}.department-overview>div:first-child{grid-column:span 3}.department-insights{grid-template-columns:1fr}}
 @media(max-width:620px){.department-detail{padding-bottom:10px}.department-overview{grid-template-columns:1fr 1fr;gap:8px}.department-overview>div:first-child{grid-column:span 2}.department-overview>div{min-height:91px;padding:12px}.department-insights{display:grid}.contribution-groups{grid-template-columns:1fr}.trend-chart{height:140px;padding-left:12px;padding-right:12px}}
+
+/* Objective evidence: a quiet, persistent file register beneath the focused work surface. */
+.objective-resources-card{margin-top:16px;padding:22px 25px}
+.objective-resources-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding-bottom:15px;border-bottom:1px solid var(--line)}
+.objective-resources-head h2{margin:4px 0 4px;color:var(--ink);font:650 18px/1.15 "Space Grotesk","DM Sans",sans-serif;letter-spacing:-.04em}
+.objective-resources-head p{margin:0;color:var(--muted);font-size:11px}
+.objective-upload{display:inline-flex;align-items:center;gap:7px;cursor:pointer;white-space:nowrap}
+.objective-resource-list{display:grid}
+.objective-resource{display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;gap:12px;min-width:0;padding:13px 0;border-bottom:1px solid #edf0f1;color:inherit;text-decoration:none}
+.objective-resource:last-child{border-bottom:0}
+.objective-resource:hover{background:#fafcfb}
+.objective-resource-icon{display:grid;place-items:center;width:32px;height:32px;border:1px solid #d7e5e1;border-radius:9px;background:#edf5f3;color:var(--accent)}
+.objective-resource-copy{display:grid;gap:4px;min-width:0}
+.objective-resource-copy strong{overflow:hidden;color:var(--ink);font-size:12px;text-overflow:ellipsis;white-space:nowrap}
+.objective-resource-copy small{overflow:hidden;color:var(--muted);font-size:10px;text-overflow:ellipsis;white-space:nowrap}
+.objective-resource-action{display:inline-flex;align-items:center;gap:4px;color:var(--accent-dark);font-size:10px;font-weight:700}
+.objective-resources-empty{padding:20px 0 3px;color:var(--muted);font-size:11px}
+.objective-upload-error{margin:12px 0 0;padding:9px 11px;border:1px solid #ead2ce;border-radius:8px;background:#fcf2f0;color:#965b54;font-size:11px}
+@media(max-width:620px){.objective-resources-card{padding:19px}.objective-resources-head{display:block}.objective-upload{margin-top:14px}.objective-resource{grid-template-columns:34px minmax(0,1fr);gap:10px}.objective-resource-action{display:none}}
+
+/* Focused objective refinement: compact title bar, inset metadata groups, no oversized hero treatment. */
+.weekly-review-focused{max-width:860px;padding-bottom:28px}
+.focused-review-nav{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;margin-bottom:13px;color:#8a9298;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase}
+.focused-review-nav .workspace-back{justify-self:start;margin:0;color:#68747b;font-size:11px;letter-spacing:0;text-transform:none}
+.focused-review-nav>span{text-align:center}
+.focused-review-nav>.btn{justify-self:end;min-height:32px;padding:6px 10px;font-size:11px;letter-spacing:0;text-transform:none}
+.objective-detail-card{padding:22px 24px;border-radius:14px!important;box-shadow:0 5px 18px rgba(31,39,47,.045)!important}
+.objective-detail-card:before{width:3px}
+.focused-objective-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+.focused-objective-heading h1{max-width:560px;margin:5px 0 0;color:var(--ink);font:650 clamp(22px,3vw,30px)/1.1 "Space Grotesk","DM Sans",sans-serif;letter-spacing:-.045em}
+.focused-objective-owner{display:flex;align-items:center;gap:9px;min-width:190px;padding:7px 10px;border:1px solid #e2e7e9;border-radius:10px;background:#f7f8f9}
+.focused-objective-owner .avatar{flex:0 0 auto}
+.focused-objective-owner>span:last-child{display:grid;gap:3px;min-width:0}
+.focused-objective-owner small{color:#899299;font-size:9px;letter-spacing:.04em;text-transform:uppercase}
+.focused-objective-owner strong{overflow:hidden;color:var(--ink);font-size:11px;text-overflow:ellipsis;white-space:nowrap}
+.objective-owner-fallback{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#e8efed;color:var(--accent)}
+.objective-detail-description{padding:19px 0 17px}
+.objective-detail-description p{max-width:690px;margin:7px 0 0;color:#4f5960;font-size:13px;line-height:1.55}
+.objective-detail-facts{grid-template-columns:repeat(4,1fr);gap:8px;margin:0;padding:8px;border:1px solid #e2e6e8;border-radius:11px;background:#f3f5f6}
+.objective-detail-facts div{min-height:64px;padding:10px 11px;border:1px solid #e6e9eb;border-radius:8px;background:#fff}
+.objective-detail-facts dt{font-size:9px;letter-spacing:.07em}
+.objective-detail-facts dd{font-size:12px}
+.objective-control-row{display:flex;align-items:flex-end;gap:10px;margin-top:15px;padding-top:15px;border-top:1px solid var(--line)}
+.objective-control-row>div,.objective-control-row>.objective-status-control{display:grid;align-content:start;gap:7px;min-height:48px;padding:0 14px;border-right:1px solid #e5e8e9}
+.objective-control-row>div:first-child{padding-left:0}.objective-control-row>div:nth-child(2){min-width:104px}.objective-control-row>.objective-status-control{margin:0;padding-right:0;border-right:0}
+.objective-control-row .objective-status-control .select{min-width:145px;min-height:34px;padding-top:5px;padding-bottom:5px}
+.objective-control-row .review-priority{justify-self:start}
+.objective-control-row .workspace-objective-state{justify-self:start}
+@media(max-width:620px){.focused-review-nav{grid-template-columns:1fr auto}.focused-review-nav>span{display:none}.focused-objective-heading{display:grid;gap:14px}.focused-objective-owner{min-width:0;justify-self:stretch}.objective-detail-card{padding:19px 18px}.objective-detail-facts{grid-template-columns:1fr 1fr;padding:6px}.objective-detail-facts div{min-height:58px}.objective-control-row{align-items:stretch;flex-wrap:wrap}.objective-control-row>div,.objective-control-row>.objective-status-control{flex:1 1 40%;padding:0 10px;border-right:0}.objective-control-row>div:first-child{padding-left:0}.objective-control-row>.objective-status-control{flex-basis:100%;padding:11px 0 0;border-top:1px solid #edf0f1}.objective-control-row .objective-status-control .select{width:100%}}
 @media(max-width:620px){.department-performance{padding:17px 14px 14px}.department-performance-head h2{font-size:18px}.department-performance-stat strong{font-size:27px}.performance-chart{height:145px}.department-performance-context{gap:9px 13px}}
 /* Calm iOS-inspired entry surface for the secure Olyxee Ops workspace. */
 .login{position:relative;isolation:isolate;overflow:hidden;min-height:100dvh;padding:32px 20px 30px;color:#183d45;background:radial-gradient(circle at 14% 14%,rgba(181,224,218,.46),transparent 30%),radial-gradient(circle at 86% 82%,rgba(206,227,232,.56),transparent 34%),#edf2f1}
