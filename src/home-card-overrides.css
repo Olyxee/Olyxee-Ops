@@ -374,6 +374,149 @@
   }
 }
 
+/* Dedicated feedback detail view; cards no longer open the task workflow. */
+body .feedback-detail-dialog {
+  width: min(620px, calc(100vw - 32px));
+  border-radius: 18px;
+}
+
+body .feedback-detail-dialog .modal-body {
+  padding: 0;
+  background: #f2f2f7;
+}
+
+.feedback-detail {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.feedback-detail > header,
+.feedback-detail > section,
+.feedback-detail > dl {
+  margin: 0;
+  border: 1px solid #d8d8dc;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.feedback-detail > header {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 54px;
+  align-items: center;
+  gap: 13px;
+  padding: 17px;
+}
+
+.feedback-detail-check {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #1d1d1f;
+  color: #fff;
+}
+
+.feedback-detail > header > div {
+  min-width: 0;
+}
+
+.feedback-detail > header small {
+  color: #636366;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.feedback-detail h2 {
+  margin: 4px 0 3px;
+  color: #1d1d1f;
+  font-size: 17px;
+  line-height: 1.25;
+}
+
+.feedback-detail > header p {
+  margin: 0;
+  color: #8e8e93;
+  font-size: 10px;
+}
+
+.feedback-detail > section {
+  padding: 18px;
+}
+
+.feedback-detail > section > span {
+  color: #8e8e93;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.feedback-detail blockquote {
+  margin: 11px 0 14px;
+  color: #1d1d1f;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.feedback-detail > section > small {
+  color: #8e8e93;
+  font-size: 10px;
+}
+
+.feedback-detail > dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow: hidden;
+}
+
+.feedback-detail > dl > div {
+  padding: 14px 16px;
+  border-right: 1px solid #e5e5e7;
+  border-bottom: 1px solid #e5e5e7;
+}
+
+.feedback-detail > dl > div:nth-child(2n) {
+  border-right: 0;
+}
+
+.feedback-detail > dl > div:nth-last-child(-n+2) {
+  border-bottom: 0;
+}
+
+.feedback-detail dt {
+  color: #8e8e93;
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.feedback-detail dd {
+  margin: 5px 0 0;
+  color: #1d1d1f;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (max-width: 520px) {
+  .feedback-detail {
+    padding: 12px;
+  }
+
+  .feedback-detail > header {
+    grid-template-columns: 38px minmax(0, 1fr) 48px;
+    padding: 14px;
+  }
+
+  .feedback-detail-check {
+    width: 36px;
+    height: 36px;
+  }
+}
+
 /* Topbar wordmark: distinctive, legible, and balanced as one product name. */
 body .app .workspace-brand .workspace-wordmark {
   display: inline-flex !important;
