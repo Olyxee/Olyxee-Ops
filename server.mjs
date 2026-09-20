@@ -1349,6 +1349,20 @@ app.put("/api/state/:key", requireAuth, requireAccount, async (request, response
       return response.status(403).json({ error: "You can update only your own work status." });
     }
   } else if (appRole === "Manager") {
+    if (request.params.key === "projects") {
+      if (!Array.isArray(request.body.value)) {
+        return response.status(400).json({ error: "Projects must be provided as a list." });
+      }
+      const current = await appPool.query("SELECT state_value FROM workspace_state WHERE state_key = 'projects'");
+      const currentProjects = Array.isArray(current.rows[0]?.state_value) ? current.rows[0].state_value : [];
+      const incomingById = new Map(request.body.value.map((project) => [project.id, project]));
+      const unchanged = currentProjects.length === request.body.value.length
+        && currentProjects.every((project) => JSON.stringify(incomingById.get(project.id)) === JSON.stringify(project));
+      if (!unchanged) {
+        return response.status(403).json({ error: "Use the project controls to update intern assignments." });
+      }
+      return response.json({ ok: true });
+    }
     if (request.params.key !== "objectives") {
       return response.status(403).json({ error: "Managers can update only their own weekly objectives and work status." });
     }
@@ -1449,22 +1463,49 @@ app.post("/api/projects", requireAuth, requireAccount, requireAdmin, async (requ
   }
 });
 
-app.patch("/api/projects/:id", requireAuth, requireAccount, requireAdmin, async (request, response) => {
+app.patch("/api/projects/:id", requireAuth, requireAccount, async (request, response) => {
+  const role = request.appAccount.app_role;
+  if (!["Superadmin", "Admin", "Manager"].includes(role)) {
+    return response.status(403).json({ error: "Forbidden" });
+  }
   const githubUrl = String(request.body.githubUrl || "").trim();
-  if (!/^https?:\/\/(www\.)?github\.com\/.+/i.test(githubUrl)) return response.status(400).json({ error: "Enter a valid GitHub repository URL." });
   const logoUrl = typeof request.body.logoUrl === "string" ? request.body.logoUrl : undefined;
-  if (logoUrl !== undefined && logoUrl.length > 500000) return response.status(400).json({ error: "Project logo is too large." });
-  if (logoUrl && !logoUrl.startsWith("data:image/") && !logoUrl.startsWith("/api/assets/")) {
-    return response.status(400).json({ error: "Project logo must be an uploaded image." });
+  if (role !== "Manager") {
+    if (!/^https?:\/\/(www\.)?github\.com\/.+/i.test(githubUrl)) return response.status(400).json({ error: "Enter a valid GitHub repository URL." });
+    if (logoUrl !== undefined && logoUrl.length > 500000) return response.status(400).json({ error: "Project logo is too large." });
+    if (logoUrl && !logoUrl.startsWith("data:image/") && !logoUrl.startsWith("/api/assets/")) {
+      return response.status(400).json({ error: "Project logo must be an uploaded image." });
+    }
   }
   const result = await appPool.query("SELECT state_value FROM workspace_state WHERE state_key = 'projects'");
   const projects = result.rows[0]?.state_value || [];
   const project = projects.find((item) => item.id === request.params.id);
   if (!project) return response.status(404).json({ error: "Project not found." });
-  project.githubUrl = githubUrl;
-  if (logoUrl !== undefined) project.logoUrl = logoUrl || undefined;
-  if (request.appAccount.app_role === "Superadmin") {
+  if (role !== "Manager") {
+    project.githubUrl = githubUrl;
+    if (logoUrl !== undefined) project.logoUrl = logoUrl || undefined;
+  }
+  if (role === "Superadmin") {
     project.assigneeIds = Array.isArray(request.body.assigneeIds) ? [...new Set(request.body.assigneeIds.map(String))] : project.assigneeIds;
+  } else if (role === "Manager") {
+    const identity = await getTaskContext(request);
+    const managerInternIds = identity.reportIds.filter((id) => /^intern-\d+$/.test(id));
+    const currentIds = Array.isArray(project.assigneeIds) ? project.assigneeIds.map(String) : [];
+    const requestedIds = Array.isArray(request.body.assigneeIds) ? [...new Set(request.body.assigneeIds.map(String))] : currentIds;
+    const invalidIds = requestedIds.filter((id) => !currentIds.includes(id) && !managerInternIds.includes(id));
+    if (invalidIds.length) {
+      return response.status(403).json({ error: "Managers can only add interns who report to them." });
+    }
+    const requestedManagerInternIds = requestedIds.filter((id) => managerInternIds.includes(id));
+    const newlyAssignedIds = requestedManagerInternIds.filter((id) => !currentIds.includes(id));
+    const activeChecks = await Promise.all(newlyAssignedIds.map((id) => isAssignablePerson(id)));
+    if (activeChecks.some((active) => !active)) {
+      return response.status(400).json({ error: "Choose an active intern." });
+    }
+    project.assigneeIds = [
+      ...currentIds.filter((id) => !managerInternIds.includes(id)),
+      ...requestedManagerInternIds,
+    ];
   }
   await appPool.query(`
     UPDATE workspace_state
