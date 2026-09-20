@@ -1116,6 +1116,27 @@ async function notifyTaskManagers(client, task, title, body) {
   `, [JSON.stringify(notices), task.creator_user_id]);
 }
 
+async function notifyTaskAssignee(client, task, identity, title, body) {
+  if (!task.assignee_external_id || task.assignee_external_id === identity.externalId) return;
+  await client.query("SELECT pg_advisory_xact_lock(hashtext('workspace_state:notices'))");
+  const current = await client.query("SELECT state_value FROM workspace_state WHERE state_key = 'notices' FOR UPDATE");
+  const notices = Array.isArray(current.rows[0]?.state_value) ? current.rows[0].state_value : [];
+  notices.unshift({
+    id: crypto.randomUUID(),
+    userId: task.assignee_external_id,
+    title,
+    body,
+    read: false,
+    time: new Date().toISOString(),
+  });
+  await client.query(`
+    INSERT INTO workspace_state (state_key, state_value, updated_by)
+    VALUES ('notices', $1::jsonb, $2)
+    ON CONFLICT (state_key) DO UPDATE
+    SET state_value = EXCLUDED.state_value, updated_by = EXCLUDED.updated_by, updated_at = now()
+  `, [JSON.stringify(notices), identity.userId]);
+}
+
 const dateOnly = (value) => value instanceof Date ? value.toISOString().slice(0, 10) : String(value || "").slice(0, 10);
 const mapTask = (row) => ({
   id: row.id,
@@ -1202,6 +1223,7 @@ app.post("/api/tasks", requireAuth, requireAccount, async (request, response) =>
       RETURNING *
     `, [title, description, project, githubUrl, department, identity.userId, identity.externalId, assignee, priority, dueDate]);
     await recordTaskActivity(client, result.rows[0].id, identity, "Task created", { assignee, priority, dueDate });
+    await notifyTaskAssignee(client, result.rows[0], identity, "New task assigned", `${identity.name} assigned you “${title}” in ${project}.`);
     await client.query("COMMIT");
     return response.status(201).json({ task: mapTask({ ...result.rows[0], creator_name: identity.name }) });
   } catch (error) {
@@ -1287,6 +1309,13 @@ app.patch("/api/tasks/:id", requireAuth, requireAccount, async (request, respons
           INSERT INTO public.task_updates (task_id, author_user_id, author_name, author_role, update_type, message)
           VALUES ($1,$2,$3,$4,'Review feedback',$5)
         `, [task.id, identity.userId, identity.name, identity.role, feedback]);
+        await notifyTaskAssignee(
+          client,
+          lockedTask,
+          identity,
+          nextStatus === "Completed" ? "Work reviewed and approved" : "Changes requested",
+          `${identity.name} reviewed “${lockedTask.title}”: ${feedback}`,
+        );
       }
     }
     if (metadataRequested) await recordTaskActivity(client, task.id, identity, "Task assignment or metadata changed", { assignee, priority, dueDate, project, department });
@@ -1307,9 +1336,21 @@ app.post("/api/tasks/:id/checklist", requireAuth, requireAccount, async (request
   if (!task || (!canWorkTask(task, identity) && !canReviewTask(task, identity))) return response.status(403).json({ error: "Forbidden" });
   const text = String(request.body.text || "").trim().slice(0, 300);
   if (!text) return response.status(400).json({ error: "Checklist text is required." });
-  const result = await appPool.query("INSERT INTO public.task_checklist_items (task_id, text) VALUES ($1,$2) RETURNING *", [task.id, text]);
-  await recordTaskActivity(appPool, task.id, identity, "Checklist item added", { text });
-  return response.status(201).json({ item: result.rows[0] });
+  const client = await appPool.connect();
+  try {
+    await client.query("BEGIN");
+    const result = await client.query("INSERT INTO public.task_checklist_items (task_id, text) VALUES ($1,$2) RETURNING *", [task.id, text]);
+    await recordTaskActivity(client, task.id, identity, "Checklist item added", { text });
+    await notifyTaskAssignee(client, task, identity, "Checklist updated", `${identity.name} added “${text}” to ${task.title}.`);
+    await client.query("COMMIT");
+    return response.status(201).json({ item: result.rows[0] });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Checklist item creation failed:", error instanceof Error ? error.message : "Unknown error");
+    return response.status(503).json({ error: "Could not add the checklist item." });
+  } finally {
+    client.release();
+  }
 });
 
 app.patch("/api/tasks/:taskId/checklist/:itemId", requireAuth, requireAccount, async (request, response) => {
@@ -1363,12 +1404,24 @@ app.post("/api/tasks/:id/updates", requireAuth, requireAccount, async (request, 
   if (type === "Progress update" && !["In Progress", "Changes Requested"].includes(task.status)) {
     return response.status(409).json({ error: "Start or continue the task before posting progress." });
   }
-  const result = await appPool.query(`
-    INSERT INTO public.task_updates (task_id, author_user_id, author_name, author_role, update_type, message, link_url)
-    VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *
-  `, [task.id, identity.userId, identity.name, identity.role, type, message, linkUrl]);
-  await recordTaskActivity(appPool, task.id, identity, `${type} added`);
-  return response.status(201).json({ update: result.rows[0] });
+  const client = await appPool.connect();
+  try {
+    await client.query("BEGIN");
+    const result = await client.query(`
+      INSERT INTO public.task_updates (task_id, author_user_id, author_name, author_role, update_type, message, link_url)
+      VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *
+    `, [task.id, identity.userId, identity.name, identity.role, type, message, linkUrl]);
+    await recordTaskActivity(client, task.id, identity, `${type} added`);
+    await notifyTaskAssignee(client, task, identity, "New task comment", `${identity.name} commented on “${task.title}”: ${message}`);
+    await client.query("COMMIT");
+    return response.status(201).json({ update: result.rows[0] });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Task comment failed:", error instanceof Error ? error.message : "Unknown error");
+    return response.status(503).json({ error: "Could not post this task comment." });
+  } finally {
+    client.release();
+  }
 });
 
 app.post("/api/tasks/:id/help", requireAuth, requireAccount, async (request, response) => {
