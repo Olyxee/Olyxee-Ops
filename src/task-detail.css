@@ -1304,3 +1304,167 @@
     justify-content: center;
   }
 }
+
+/* Calm, iOS-like intern work page. */
+.task-detail-work-page {
+  --task-accent: #636366;
+  --task-accent-soft: #f2f2f4;
+  color: #2c2c2e;
+}
+
+.task-detail-work-page .task-workspace-head .eyebrow {
+  color: #8e8e93;
+}
+
+.task-detail-work-page .task-workspace-head .title,
+.task-detail-work-page .intern-section-heading h2 {
+  color: #2c2c2e;
+}
+
+.task-detail-work-page .btn {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid #d1d1d6;
+  border-radius: 10px;
+  background: #f2f2f4;
+  color: #3a3a3c;
+  box-shadow: none;
+  font-weight: 650;
+}
+
+.task-detail-work-page .btn:hover:not(:disabled) {
+  border-color: #c7c7cc;
+  background: #e5e5ea;
+  color: #1c1c1e;
+}
+
+.task-detail-work-page .btn.primary,
+.task-detail-work-page .btn.danger {
+  border-color: #8e8e93;
+  background: #8e8e93;
+  color: #fff;
+}
+
+.task-detail-work-page .btn.primary:hover:not(:disabled),
+.task-detail-work-page .btn.danger:hover:not(:disabled) {
+  border-color: #636366;
+  background: #636366;
+  color: #fff;
+}
+
+.task-detail-work-page .btn:disabled {
+  border-color: #e5e5ea;
+  background: #f7f7f8;
+  color: #aeaeb2;
+  opacity: 1;
+}
+
+.task-detail-work-page .intern-primary-actions {
+  margin: 16px 0;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e5ea;
+}
+
+.task-detail-work-page .intern-work-sections {
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid #d1d1d6;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .04);
+}
+
+.task-detail-work-page .intern-work-section,
+.task-detail-work-page .intern-submit-section {
+  padding: 22px;
+  border: 0;
+  border-bottom: 1px solid #e5e5ea;
+  border-radius: 0;
+  background: #fff;
+  box-shadow: none;
+}
+
+.task-detail-work-page .intern-work-section:last-child {
+  border-bottom: 0;
+}
+
+.task-detail-work-page .intern-section-heading {
+  gap: 0;
+  color: #636366;
+}
+
+.task-detail-work-page .intern-section-heading > svg {
+  display: none;
+}
+
+.task-detail-work-page .intern-section-heading h2 {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -.015em;
+}
+
+.task-detail-work-page .intern-section-heading p {
+  max-width: 620px;
+  margin-top: 4px;
+  color: #8e8e93;
+  font-size: 12px;
+}
+
+.task-detail-work-page .input,
+.task-detail-work-page .textarea,
+.task-detail-work-page .select {
+  border-color: #d1d1d6;
+  border-radius: 10px;
+  background: #f7f7f8;
+  color: #2c2c2e;
+  box-shadow: none;
+}
+
+.task-detail-work-page .input:focus,
+.task-detail-work-page .textarea:focus,
+.task-detail-work-page .select:focus {
+  border-color: #8e8e93;
+  outline: 2px solid rgba(142, 142, 147, .16);
+}
+
+.task-detail-work-page .intern-submit-section {
+  border-color: #e5e5ea;
+}
+
+.task-detail-work-page .intern-evidence-list a {
+  border-color: #d1d1d6;
+  background: #f7f7f8;
+  color: #3a3a3c;
+}
+
+.task-detail-work-page .intern-awaiting {
+  background: #f2f2f4;
+  color: #636366;
+}
+
+.task-detail-work-page .intern-discussion article {
+  border-color: #e5e5ea;
+}
+
+.task-detail-work-page .intern-activity {
+  margin-top: 12px;
+  border-color: #d1d1d6;
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.task-detail-work-page .intern-activity summary {
+  color: #636366;
+}
+
+.task-detail-work-page .intern-activity summary span {
+  background: #f2f2f4;
+  color: #8e8e93;
+}
+
+@media (max-width: 600px) {
+  .task-detail-work-page .intern-work-section,
+  .task-detail-work-page .intern-submit-section {
+    padding: 17px;
+  }
+}
