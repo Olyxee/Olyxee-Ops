@@ -983,11 +983,21 @@ async function getTaskContext(request) {
   const identity = await getTaskIdentity(request);
   identity.email = request.appAccount.email;
   identity.reportIds = await getManagerReportIds(identity);
+  if (identity.role === "Superadmin" && peoplePool) {
+    const managers = await peoplePool.query(`
+      SELECT 'account-' || id::text AS id
+      FROM public.workspace_accounts
+      WHERE active = true
+        AND (manage_interns = true OR manage_projects = true)
+    `);
+    identity.managerIds = managers.rows.map((row) => row.id);
+  }
   return identity;
 }
 
 function canViewTask(task, identity) {
-  if (["Superadmin", "Admin"].includes(identity.role)) return true;
+  if (identity.role === "Superadmin") return identity.managerIds?.includes(task.assignee_external_id) || false;
+  if (identity.role === "Admin") return true;
   if (identity.role === "Manager") {
     return task.creator_user_id === identity.userId
       || task.assignee_external_id === identity.externalId
@@ -1145,6 +1155,10 @@ app.patch("/api/tasks/:id", requireAuth, requireAccount, async (request, respons
   const task = await loadTask(request.params.id, identity);
   if (!task) return response.status(404).json({ error: "Task not found." });
   const nextStatus = request.body.status ? String(request.body.status) : null;
+  const feedback = String(request.body.feedback || "").trim().slice(0, 3000);
+  if (nextStatus === "Changes Requested" && !feedback) {
+    return response.status(400).json({ error: "Feedback is required when requesting changes." });
+  }
   const reviewerAction = nextStatus && ["Changes Requested", "Completed", "Cancelled"].includes(nextStatus);
   if (nextStatus && (!taskStatuses.includes(nextStatus) || !(taskTransitions[task.status] || []).includes(nextStatus))) {
     return response.status(409).json({ error: `This task cannot move from ${task.status} to ${nextStatus}.` });
@@ -1186,7 +1200,15 @@ app.patch("/api/tasks/:id", requireAuth, requireAccount, async (request, respons
       updated_at = now()
     WHERE id = $3 RETURNING *
   `, [nextStatus, blockerReason, task.id, assignee, priority, dueDate, project, department]);
-  if (nextStatus) await recordTaskActivity(appPool, task.id, identity, `Status changed to ${nextStatus}`, { from: task.status, to: nextStatus });
+  if (nextStatus) {
+    await recordTaskActivity(appPool, task.id, identity, `Status changed to ${nextStatus}`, { from: task.status, to: nextStatus });
+    if (nextStatus === "Changes Requested") {
+      await appPool.query(`
+        INSERT INTO public.task_updates (task_id, author_user_id, author_name, author_role, update_type, message)
+        VALUES ($1,$2,$3,$4,'Review feedback',$5)
+      `, [task.id, identity.userId, identity.name, identity.role, feedback]);
+    }
+  }
   if (metadataRequested) await recordTaskActivity(appPool, task.id, identity, "Task assignment or metadata changed", { assignee, priority, dueDate, project, department });
   return response.json({ task: mapTask({ ...result.rows[0], creator_name: task.creator_name }) });
 });
@@ -1239,7 +1261,9 @@ app.post("/api/tasks/:id/evidence", requireAuth, requireAccount, async (request,
   if (!task || !canWorkTask(task, identity)) return response.status(403).json({ error: "Only the assignee can add evidence." });
   const label = String(request.body.label || "").trim().slice(0, 120);
   const url = String(request.body.url || "").trim().slice(0, 2000);
-  if (!label || !/^https?:\/\/\S+$/i.test(url)) return response.status(400).json({ error: "Add a label and valid evidence URL." });
+  if (!label || (!/^https?:\/\/\S+$/i.test(url) && !/^\/api\/assets\/[0-9a-f-]+$/i.test(url))) {
+    return response.status(400).json({ error: "Add a label and valid evidence URL." });
+  }
   const result = await appPool.query(`
     INSERT INTO public.task_evidence (task_id, submitted_by, label, url) VALUES ($1,$2,$3,$4) RETURNING *
   `, [task.id, identity.userId, label, url]);
@@ -1277,7 +1301,24 @@ app.get("/api/state/:key", requireAuth, requireAccount, async (request, response
   if (!stateKeys.has(request.params.key)) return response.status(404).json({ error: "Unknown state collection." });
   const result = await appPool.query("SELECT state_value FROM workspace_state WHERE state_key = $1", [request.params.key]);
   if (!result.rows[0]) return response.status(404).json({ error: "State collection has not been initialized." });
-  return response.json({ value: result.rows[0].state_value });
+  let value = result.rows[0].state_value;
+  if (request.appAccount.app_role === "Member") {
+    const identity = await getTaskIdentity(request);
+    if (request.params.key === "projects") {
+      value = Array.isArray(value)
+        ? value.filter((project) => (project.assigneeIds || []).includes(identity.externalId))
+        : [];
+    } else if (request.params.key === "notices") {
+      value = Array.isArray(value) ? value.filter((notice) => notice.userId === identity.externalId) : [];
+    } else if (request.params.key === "staff-statuses") {
+      value = Array.isArray(value) ? value.filter((status) => status.userId === identity.externalId) : [];
+    } else if (request.params.key === "departments") {
+      value = Array.isArray(value) ? value.filter((department) => department[0] === identity.department) : [];
+    } else if (["audit", "objectives"].includes(request.params.key)) {
+      value = [];
+    }
+  }
+  return response.json({ value });
 });
 
 app.put("/api/state/:key", requireAuth, requireAccount, async (request, response) => {
@@ -1434,6 +1475,9 @@ app.patch("/api/projects/:id", requireAuth, requireAccount, requireAdmin, async 
 });
 
 app.post("/api/projects/:id/resources", requireAuth, requireAccount, async (request, response) => {
+  if (!["Admin", "Superadmin"].includes(request.appAccount.app_role)) {
+    return response.status(403).json({ error: "Only administrators can upload project resources." });
+  }
   const { name, kind, url } = request.body || {};
   if (!name || !["document", "image"].includes(kind) || !url) return response.status(400).json({ error: "A valid uploaded resource is required." });
   const result = await appPool.query("SELECT state_value FROM workspace_state WHERE state_key = 'projects'");
@@ -1475,13 +1519,33 @@ app.post("/api/assets", requireAuth, requireAccount, upload.single("file"), asyn
 
 app.get("/api/assets/:id", requireAuth, requireAccount, async (request, response) => {
   const result = await appPool.query(`
-    SELECT storage_path, mime_type, original_filename
+    SELECT id, owner_user_id, storage_path, mime_type, original_filename
     FROM public.app_assets
     WHERE id = $1
-      AND $2 IS NOT NULL
-  `, [request.params.id, request.appAccount.id]);
+  `, [request.params.id]);
   const asset = result.rows[0];
   if (!asset) return response.status(404).json({ error: "Asset not found." });
+  let authorized = asset.owner_user_id === request.appAccount.id
+    || ["Admin", "Superadmin"].includes(request.appAccount.app_role);
+  if (!authorized) {
+    const identity = await getTaskContext(request);
+    const evidence = await appPool.query(`
+      SELECT t.*
+      FROM public.task_evidence e
+      JOIN public.tasks t ON t.id = e.task_id
+      WHERE e.url = $1
+    `, [`/api/assets/${asset.id}`]);
+    authorized = evidence.rows.some((task) => canViewTask(task, identity));
+    if (!authorized) {
+      const projectResult = await appPool.query("SELECT state_value FROM workspace_state WHERE state_key = 'projects'");
+      const projects = Array.isArray(projectResult.rows[0]?.state_value) ? projectResult.rows[0].state_value : [];
+      authorized = projects.some((project) => (
+        (project.assigneeIds || []).includes(identity.externalId)
+        && (project.resources || []).some((resource) => resource.url === `/api/assets/${asset.id}`)
+      ));
+    }
+  }
+  if (!authorized) return response.status(404).json({ error: "Asset not found." });
   response.type(asset.mime_type);
   response.set("Cache-Control", "private, max-age=3600");
   response.set("Content-Disposition", `inline; filename="${asset.original_filename.replace(/"/g, "")}"`);
