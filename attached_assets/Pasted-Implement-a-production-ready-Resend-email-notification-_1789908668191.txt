@@ -1,0 +1,834 @@
+Implement a production-ready **Resend email notification system** in Olyxee Ops.
+
+Resend is already connected to our Olyxee domain. Build the application integration around it.
+
+The goal is:
+
+`Important event happens in Ops → correct person receives a concise email → email links them back into Ops`
+
+Do not make email the source of truth. The actual task, review, user, and internship state must remain inside Olyxee Ops.
+
+## 1. Environment Configuration
+
+Use environment variables for all email configuration.
+
+Required variables:
+
+```env
+RESEND_API_KEY=
+EMAIL_FROM=
+EMAIL_REPLY_TO=
+OPS_APP_URL=
+```
+
+Example values:
+
+```env
+EMAIL_FROM="Olyxee Ops <ops@olyxee.com>"
+EMAIL_REPLY_TO="ops@olyxee.com"
+OPS_APP_URL="https://ops.olyxee.com"
+```
+
+Do not hard-code:
+
+* API keys
+* domain names
+* production URLs
+* sender addresses
+
+Validate required environment variables on backend startup.
+
+Never expose `RESEND_API_KEY` to the frontend.
+
+## 2. Central Notification Service
+
+Do not call Resend directly from React components or random API handlers.
+
+Create a centralized backend notification/email service.
+
+Suggested structure:
+
+```text
+server/
+  services/
+    notifications/
+      emailService
+      templates
+      events
+```
+
+Exact paths can follow the existing project architecture.
+
+The email service should handle:
+
+* Resend API calls
+* recipient validation
+* sender configuration
+* template rendering
+* logging
+* failures
+* retries
+* deduplication where necessary
+
+Create a reusable function conceptually like:
+
+```ts
+sendTransactionalEmail({
+  type,
+  recipient,
+  subject,
+  templateData,
+  relatedUserId,
+  relatedTaskId
+})
+```
+
+Adapt this to the existing stack.
+
+## 3. Notification Events
+
+Create centralized application events for:
+
+```text
+user.created
+task.assigned
+task.progress_updated
+task.submitted
+task.changes_requested
+task.approved
+task.help_requested
+task.due_soon
+task.overdue
+internship.ending_soon
+weekly_review.ready
+```
+
+Business logic should trigger events.
+
+Notification handlers should decide whether an email should be sent.
+
+Avoid tightly coupling task CRUD logic directly to Resend.
+
+## 4. New Account Email
+
+When a Superadmin or authorized Manager creates a new Ops user, automatically send an onboarding email.
+
+Do NOT email a permanent password.
+
+Preferred flow:
+
+1. Create user account.
+2. Generate secure account setup/password creation token.
+3. Token should expire.
+4. Send user a secure setup link.
+5. User creates their password.
+6. Mark setup token as used.
+
+Email subject:
+
+```text
+Your Olyxee Ops account is ready
+```
+
+Email content must include:
+
+* user's first name
+* role
+* department if available
+* login email
+* button: `Set up your account`
+* Olyxee Ops URL
+* expiry information for setup link
+
+Example destination:
+
+```text
+https://ops.olyxee.com/setup-account?token=...
+```
+
+Use the application's existing auth/password-reset mechanism where possible instead of creating a second security system.
+
+If the application already uses Supabase Auth, Firebase, Clerk, Auth.js or another auth provider, integrate with its secure invite/reset flow instead of inventing custom password handling.
+
+## 5. Account Creation Must Not Fail Because Email Failed
+
+If account creation succeeds but Resend fails:
+
+* keep the user account
+* record email as failed
+* allow retry
+* do not rollback the account
+
+Show the Superadmin/Manager something like:
+
+```text
+Account created. Invitation email could not be delivered.
+```
+
+Provide:
+
+`Resend invitation`
+
+Do not expose technical provider errors directly to normal users.
+
+## 6. Task Assignment Email
+
+When a task is newly assigned, email the assignee.
+
+Subject:
+
+```text
+New task assigned: [Task Title]
+```
+
+Include:
+
+* assignee name
+* task title
+* project
+* department
+* assigned by
+* priority
+* due date
+* short task brief
+* CTA: `Open task`
+
+Link directly to the task.
+
+Example:
+
+```text
+${OPS_APP_URL}/tasks/[taskId]
+```
+
+Use the actual routing structure of the project.
+
+Do not send assignment emails when unrelated task metadata changes.
+
+## 7. Intern Progress Update Email
+
+When an intern posts a progress update, notify the Manager responsible for that intern/task.
+
+Subject:
+
+```text
+Progress update: [Task Title]
+```
+
+Include:
+
+* intern name
+* task title
+* progress update
+* timestamp
+* CTA: `View task`
+
+Do not send the email back to the person who posted the update.
+
+Do not send progress emails to unrelated Managers.
+
+## 8. Submit for Review Email
+
+When an intern clicks:
+
+`Submit for review`
+
+Send the assigned Manager an email immediately.
+
+Subject:
+
+```text
+Work ready for review: [Task Title]
+```
+
+Include:
+
+* intern
+* project
+* task
+* submission summary
+* evidence URL if present
+* submitted timestamp
+* CTA: `Review work`
+
+This is an important/actionable notification.
+
+## 9. Changes Requested Email
+
+When the Manager requests changes:
+
+* update task status to `Changes Requested`
+* save review feedback
+* email the assignee
+
+Subject:
+
+```text
+Changes requested: [Task Title]
+```
+
+Include:
+
+* Manager name
+* review feedback
+* task title
+* CTA: `View feedback`
+
+Do not send an email with an empty feedback message.
+
+## 10. Task Approved Email
+
+When the Manager approves submitted work:
+
+* set appropriate approved/completed state
+* persist reviewer and timestamp
+* email the assignee
+
+Subject:
+
+```text
+Task approved: [Task Title]
+```
+
+Include:
+
+* task
+* project
+* reviewer
+* optional final feedback
+* completion date
+* CTA: `View task`
+
+Only Manager/Admin roles can approve.
+
+Interns must never trigger their own approval email by changing a frontend status.
+
+Enforce this in backend authorization.
+
+## 11. Help Requested Email
+
+When an intern uses:
+
+`I need help`
+
+Send the relevant Manager an immediate email.
+
+Subject:
+
+```text
+Help requested: [Intern Name] — [Task Title]
+```
+
+Include:
+
+* intern name
+* project
+* task
+* help category
+* explanation
+* timestamp
+* CTA: `Open task`
+
+Supported categories:
+
+```text
+Requirements unclear
+Technical blocker
+Missing access or permissions
+Waiting on someone
+Deadline issue
+Other
+```
+
+## 12. Comments
+
+Do not email every normal comment.
+
+For the first implementation:
+
+* store comments normally
+* keep discussion inside Ops
+* do not send general comment emails
+
+Design the notification service so mentions can be added later.
+
+## 13. Due-Date Notifications
+
+Implement scheduled due-date email processing.
+
+Send:
+
+### Due tomorrow
+
+Subject:
+
+```text
+Task due tomorrow: [Task Title]
+```
+
+### Overdue
+
+Subject:
+
+```text
+Task overdue: [Task Title]
+```
+
+Do not send duplicate reminders repeatedly.
+
+Store enough notification state to know that a particular reminder has already been sent.
+
+Example deduplication identity:
+
+```text
+taskId + notificationType + dueDate
+```
+
+If the due date changes, future reminders should use the new date.
+
+## 14. Weekly Review Email
+
+Implement a weekly intern review email.
+
+Generate the review from real Ops data.
+
+For each active intern include:
+
+* tasks assigned during the review period
+* tasks completed
+* tasks in progress
+* tasks submitted for review
+* overdue tasks
+* recent progress updates
+* changes requested
+* unresolved help requests
+
+Example factual summary:
+
+```text
+This week, Judas completed 3 tasks, has 2 tasks in progress,
+and has 1 submission awaiting review.
+```
+
+Do not automatically generate:
+
+* subjective performance scores
+* rankings
+* personality assessments
+* employee ratings
+
+Send the review to:
+
+* intern
+* responsible Manager
+
+If Superadmin should receive copies, make that configurable instead of hard-coded.
+
+CTA:
+
+`Open weekly review`
+
+## 15. Internship End Reminders
+
+For active interns with an end date, send Manager/Superadmin reminders:
+
+* 14 days before end date
+* 7 days before end date
+
+Subject:
+
+```text
+Internship ending soon: [Intern Name]
+```
+
+Include:
+
+* intern
+* department
+* Manager
+* start date
+* end date
+* open tasks
+* pending reviews
+* CTA: `View intern`
+
+Deduplicate these reminders.
+
+## 16. Email Templates
+
+Create reusable responsive HTML email templates.
+
+Style:
+
+* clean
+* professional
+* minimal
+* Olyxee branding
+* mostly neutral/black/white/grey
+* one clear primary CTA
+* mobile friendly
+
+Every template should contain:
+
+* Olyxee Ops identity
+* email title
+* concise body
+* relevant event details
+* one primary CTA
+* footer
+
+Footer example:
+
+```text
+This is an automated operational notification from Olyxee Ops.
+```
+
+Do not make the emails look like marketing newsletters.
+
+## 17. Plain-Text Version
+
+Every transactional email should also have a plain-text version where supported.
+
+Do not rely only on HTML.
+
+## 18. Email Delivery Log
+
+Create an email notification log in the database.
+
+Suggested fields:
+
+```text
+id
+type
+recipientEmail
+recipientUserId
+relatedTaskId
+relatedInternshipId
+subject
+provider
+providerMessageId
+status
+failureReason
+createdAt
+sentAt
+updatedAt
+deduplicationKey
+retryCount
+```
+
+Statuses:
+
+```text
+PENDING
+SENT
+FAILED
+```
+
+If delivery webhooks are added, support statuses such as:
+
+```text
+DELIVERED
+BOUNCED
+COMPLAINED
+```
+
+Do not store API keys, passwords or setup tokens in this log.
+
+## 19. Superadmin Email Log UI
+
+Add a simple Superadmin-only page or section:
+
+`Email Notifications`
+
+Show a clean table:
+
+```text
+Recipient
+Type
+Related item
+Date
+Status
+```
+
+Clicking an entry can show:
+
+* subject
+* recipient
+* sent time
+* provider message ID
+* safe failure reason
+* related task/user
+
+For failed emails provide:
+
+`Retry`
+
+Do not expose secrets or raw sensitive payloads.
+
+Keep the UI minimal.
+
+## 20. Retry Behaviour
+
+Implement safe retry behaviour for failed transactional emails.
+
+Use a reasonable retry limit.
+
+Do not create infinite retry loops.
+
+Retrying must not create duplicate audit records or trigger duplicate business actions.
+
+For example, retrying an email must not resubmit a task.
+
+## 21. Idempotency / Duplicate Protection
+
+This is important.
+
+Prevent duplicate emails caused by:
+
+* React re-renders
+* API retries
+* page refreshes
+* duplicate requests
+* background job reruns
+
+Use backend-generated notification events and deduplication keys.
+
+For example:
+
+```text
+task-submitted:[taskId]:[submissionId]
+```
+
+or:
+
+```text
+account-invite:[userId]:[inviteVersion]
+```
+
+If the same event is processed again, do not send the same email twice.
+
+## 22. Scheduled Jobs
+
+Use the project's existing scheduling/background-job infrastructure if available.
+
+If none exists, implement a clean server-side scheduler appropriate for the current deployment architecture.
+
+Scheduled jobs will be needed for:
+
+* due tomorrow reminders
+* overdue reminders
+* weekly review emails
+* internship ending reminders
+
+Do not depend on a user's browser being open.
+
+Do not implement scheduling with frontend `setInterval`.
+
+If the app is deployed on Vercel, structure scheduled processing so it can work with Vercel Cron or the project's existing backend infrastructure.
+
+## 23. Resend Webhooks
+
+Prepare support for Resend delivery webhooks.
+
+Webhook endpoint should:
+
+* verify the webhook according to Resend's recommended method
+* update the email log
+* never trust arbitrary unauthenticated payloads
+
+Handle relevant delivery events where supported, such as:
+
+* delivered
+* bounced
+* complained
+
+Do not expose the webhook secret to frontend code.
+
+## 24. Authorization
+
+Enforce permissions on the backend.
+
+Examples:
+
+* Intern can post progress for their assigned task.
+* Intern can submit their own assigned work.
+* Manager can review work they are authorized to manage.
+* Only authorized Manager/Admin can approve or request changes.
+* Only Superadmin can view the full email delivery log.
+
+Do not rely on hiding frontend buttons for security.
+
+## 25. Transaction Boundaries
+
+For important business actions:
+
+Example:
+
+```text
+Intern submits work
+↓
+submission is committed successfully
+↓
+notification event created
+↓
+email attempted
+```
+
+Do not mark the business transaction as failed just because Resend is temporarily unavailable.
+
+Email delivery should be secondary to preserving Ops data correctly.
+
+## 26. Activity Integration
+
+Email notifications should complement the existing Activity timeline.
+
+Examples:
+
+```text
+Task submitted for review
+Manager requested changes
+Task approved
+Help requested
+```
+
+Do not add noisy Activity entries such as:
+
+```text
+Email sent
+Email opened
+Email delivered
+```
+
+Those belong in the email log, not the normal task activity feed.
+
+## 27. Database Migration
+
+Add any required database tables/columns through proper migrations.
+
+Do not manually modify production database state.
+
+Preserve existing records.
+
+Do not break current task/user/internship data.
+
+## 28. Test Mode
+
+Add a safe development/test mode.
+
+Development must not accidentally send real production emails to all staff.
+
+Allow a configuration such as:
+
+```env
+EMAIL_ENABLED=true
+```
+
+When disabled:
+
+* record/log the intended email locally
+* do not call Resend
+
+Do not silently disable production email if required configuration is valid.
+
+## 29. Required Tests
+
+Add tests for at least:
+
+* account created → invitation email event
+* task assigned → assignee email
+* progress update → Manager email
+* submit for review → Manager email
+* changes requested → intern email
+* approve → intern email
+* help requested → Manager email
+* duplicate event does not send duplicate email
+* email failure does not rollback task/account action
+* unauthorized user cannot trigger Manager-only notifications
+* reminder deduplication
+* expired account setup token cannot be reused
+
+Mock the Resend API in automated tests.
+
+Do not send real emails during test execution.
+
+## 30. Final Verification
+
+After implementation, verify the full flows manually:
+
+### Account flow
+
+```text
+Superadmin creates intern
+→ account created
+→ secure invitation email sent
+→ intern opens setup link
+→ creates password
+→ logs into Ops
+```
+
+### Task flow
+
+```text
+Manager assigns task
+→ intern receives email
+→ intern opens direct task link
+→ posts progress
+→ Manager receives update email
+→ intern submits
+→ Manager receives review email
+→ Manager requests changes
+→ intern receives feedback email
+→ intern resubmits
+→ Manager approves
+→ intern receives approval email
+```
+
+### Help flow
+
+```text
+Intern selects I need help
+→ reason saved
+→ Manager receives email
+→ Manager opens correct task
+```
+
+### Scheduled flow
+
+Verify:
+
+```text
+Due tomorrow
+Overdue
+Weekly review
+14-day internship reminder
+7-day internship reminder
+```
+
+## Important
+
+Before changing the project, inspect the existing:
+
+* backend architecture
+* authentication system
+* database schema
+* task model
+* user model
+* internship model
+* role/permission implementation
+* deployment configuration
+
+Reuse existing patterns instead of creating duplicate systems.
+
+Do not replace working authentication or task logic just to add email.
+
+Implement Resend as a clean notification layer around the existing Ops system.
+
+At the end, return a concise implementation report containing:
+
+1. Files changed
+2. Database migrations added
+3. Environment variables required
+4. Email events implemented
+5. Scheduled jobs implemented
+6. Any remaining configuration required from me
+7. Exact steps to test the system locally and in production
