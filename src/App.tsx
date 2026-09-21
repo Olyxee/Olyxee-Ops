@@ -743,7 +743,7 @@ function InternTaskDetail({task,user,team,onBack,update,refresh,flash}:{task:Tas
   const [email,setEmail]=useState(person?.email||"");
   const [department,setDepartment]=useState(person?.department||(isManager(user)?user.department:departmentOptions[0]||""));
   const [employmentType,setEmploymentType]=useState<EmploymentType>(person?employmentOf(person):isManager(user)?"Intern":"Employee");
-  const [accessRole,setAccessRole]=useState<AccessRole>(person?accessOf(person):"Member");
+   const [accessRole,setAccessRole]=useState<AccessRole>(person?livePerson?(person.accessRole==="Manager"?"Manager":"Member"):accessOf(person):"Member");
   const [accountStatus,setAccountStatus]=useState<AccountStatus>(person?accountOf(person):"Pending");
   const [reportsTo,setReportsTo]=useState(person?.reportsTo||(isManager(user)?user.id:""));
   const [provisioning,setProvisioning]=useState(false);
