@@ -20,6 +20,10 @@ import {
   isOfficialDepartment,
   resolveDepartment,
 } from "./shared/departments.mjs";
+import {
+  redeemAccountSetupToken,
+  upsertAccountForSetup,
+} from "./server/services/accounts/account-setup.mjs";
 
 const app = express();
 const onlinePresence = new Map();
@@ -828,6 +832,10 @@ app.post("/api/people/:id/ops-access", requireAuth, requireAccount, async (reque
     return response.status(403).json({ error: "You do not have permission to create Ops login credentials." });
   }
   if (!peoplePool || !appPool) return response.status(503).json({ error: "Required databases are not configured." });
+  const emailConfig = validateEmailConfiguration();
+  if (!emailConfig.enabled || emailConfig.missing.length) {
+    return response.status(503).json({ error: "Account invitation email delivery is not configured." });
+  }
 
   const match = /^(intern|account)-(\d+)$/.exec(request.params.id);
   if (!match) return response.status(400).json({ error: "Invalid person identifier." });
@@ -879,15 +887,12 @@ app.post("/api/people/:id/ops-access", requireAuth, requireAccount, async (reque
     let emailId = null;
     try {
       await client.query("BEGIN");
-      const accountResult = await client.query(`
-        INSERT INTO public.ops_users (email, password_hash, display_name, role, active)
-        VALUES ($1, $2, $3, $4, true)
-        ON CONFLICT (email) DO UPDATE
-        SET display_name = EXCLUDED.display_name,
-            role = EXCLUDED.role,
-            updated_at = now()
-        RETURNING id, role
-      `, [String(person.email).trim().toLowerCase(), temporaryPasswordHash, person.name || person.email, role]);
+      const accountResult = await upsertAccountForSetup(client, {
+        email: String(person.email).trim().toLowerCase(),
+        passwordHash: temporaryPasswordHash,
+        displayName: person.name || person.email,
+        role,
+      });
       await client.query("UPDATE public.account_setup_tokens SET used_at=now() WHERE user_id=$1 AND used_at IS NULL", [accountResult.rows[0].id]);
       const tokenResult = await client.query(`
         INSERT INTO public.account_setup_tokens (user_id, token_hash, expires_at)
@@ -912,16 +917,19 @@ app.post("/api/people/:id/ops-access", requireAuth, requireAccount, async (reque
         deduplicationKey: `account-invite:${accountResult.rows[0].id}:${tokenResult.rows[0].id}`,
       }));
       emailId = queued?.id || null;
+      if (!emailId) throw new Error("Account invitation could not be queued.");
       await client.query("COMMIT");
-      await deliverQueuedEmail(emailId);
-      return response.json({
+      const delivery = await deliverQueuedEmail(emailId);
+      const delivered = Boolean(delivery?.delivered);
+      return response.status(delivered ? 200 : 502).json({
         name: person.name || person.email,
         email: String(person.email).trim().toLowerCase(),
         role: accountResult.rows[0].role,
-        invitationStatus: emailId ? "queued" : "not_queued",
-        message: emailId
-          ? "Account created. The secure invitation email is being delivered."
-          : "Account created. Invitation email could not be queued.",
+        invitationStatus: delivered ? "sent" : "failed",
+        message: delivered
+          ? "The secure account setup email was sent."
+          : "The setup link was created, but the invitation email could not be delivered. Retry it from the email notification log.",
+        ...(delivered ? {} : { error: "The account invitation email could not be delivered." }),
       });
     } catch (error) {
       await client.query("ROLLBACK");
@@ -946,19 +954,12 @@ app.post("/api/auth/setup-account", async (request, response) => {
   const client = await appPool.connect();
   try {
     await client.query("BEGIN");
-    const setup = await client.query(`
-      SELECT id, user_id
-      FROM public.account_setup_tokens
-      WHERE token_hash=$1 AND used_at IS NULL AND expires_at > now()
-      FOR UPDATE
-    `, [tokenHash]);
-    if (!setup.rowCount) {
+    const passwordHash = await bcrypt.hash(password, 12);
+    const setup = await redeemAccountSetupToken(client, { tokenHash, passwordHash });
+    if (!setup) {
       await client.query("ROLLBACK");
       return response.status(410).json({ error: "This setup link has expired or has already been used." });
     }
-    const passwordHash = await bcrypt.hash(password, 12);
-    await client.query("UPDATE public.ops_users SET password_hash=$1, updated_at=now() WHERE id=$2", [passwordHash, setup.rows[0].user_id]);
-    await client.query("UPDATE public.account_setup_tokens SET used_at=now() WHERE id=$1", [setup.rows[0].id]);
     await client.query("COMMIT");
     return response.json({ ok: true });
   } catch (error) {
@@ -1264,9 +1265,10 @@ async function resolveEmailRecipient(externalId) {
 }
 
 async function deliverQueuedEmail(id) {
-  if (!id) return;
-  await deliverEmailNotification(appPool, id).catch((error) => {
+  if (!id) return { delivered: false, reason: "missing_id" };
+  return deliverEmailNotification(appPool, id).catch((error) => {
     console.error("Queued email processing failed:", error instanceof Error ? error.message : "Unknown error");
+    return { delivered: false, reason: "processing_failure" };
   });
 }
 
