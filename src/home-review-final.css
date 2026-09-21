@@ -949,6 +949,115 @@ body .weekly-review-page .review-objective-card::before {
   content: none !important;
 }
 
+/* Real department health trend shared by Manager and Superadmin. */
+body .department-trend-chart {
+  width: min(100%,860px);
+  margin: 18px auto 0;
+}
+
+body .department-trend-plot {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 600 / 190;
+  min-height: 190px;
+  max-height: 250px;
+}
+
+body .department-trend-plot .manager-health-grid {
+  position: absolute;
+  inset: 20px 28px 16px;
+  display: grid;
+  grid-template-rows: repeat(3,1fr);
+  pointer-events: none;
+}
+
+body .department-trend-plot .manager-health-grid i { border-top: 1px dashed #dfe2e5; }
+body .department-trend-plot svg { position: relative; display: block; width: 100%; height: 100%; overflow: visible; }
+body .department-trend-plot .manager-health-area { fill: rgba(55,120,166,.07); }
+
+body .department-trend-segment {
+  fill: none;
+  stroke: #a8adb3;
+  stroke-width: 3;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+body .department-trend-segment.up { stroke: #347fb4; }
+body .department-trend-segment.down { stroke: #c85a54; }
+body .department-trend-segment.steady { stroke: #a8adb3; stroke-dasharray: 4 5; }
+
+body .department-trend-point {
+  fill: #fff;
+  stroke: #a8adb3;
+  stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
+}
+
+body .department-trend-point.up { stroke: #347fb4; }
+body .department-trend-point.down { stroke: #c85a54; }
+body .department-trend-point:last-of-type { fill: #fff; stroke-width: 3.5; }
+
+body .department-trend-chart .manager-detail-hours {
+  grid-template-columns: repeat(8,minmax(0,1fr));
+  margin-top: 2px;
+  color: #8e8e93;
+}
+
+body .department-trend-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 15px;
+  padding-top: 13px;
+  border-top: 1px solid #ececee;
+}
+
+body .department-trend-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 13px;
+}
+
+body .department-trend-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #6e6e73;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+body .department-trend-legend i {
+  width: 14px;
+  height: 3px;
+  border-radius: 999px;
+  background: #a8adb3;
+}
+
+body .department-trend-legend i.up { background: #347fb4; }
+body .department-trend-legend i.down { background: #c85a54; }
+body .department-trend-latest {
+  padding: 7px 10px;
+  border-radius: 9px;
+  background: #f2f2f7;
+  color: #48484a;
+  font-size: 8px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+body .admin-department-health .department-trend-chart { margin-top: 14px; }
+
+@media (max-width:700px) {
+  body .department-trend-plot { min-height: 150px; }
+  body .department-trend-chart .manager-detail-hours .hide-chart-label { visibility: hidden; }
+  body .department-trend-footer { align-items: flex-start; flex-direction: column; gap: 10px; }
+  body .department-trend-latest { white-space: normal; }
+}
+
 /* Focused Weekly Review page: weekly objectives only. */
 body .weekly-review-page .review-objective-health {
   grid-template-columns: 190px minmax(180px,1fr) minmax(320px,auto) !important;

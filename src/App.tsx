@@ -32,18 +32,29 @@ const objectivesForUser=(objectives:WeeklyObjective[],user:User,team:User[])=>{
     return Boolean(user.department&&owner?.department===user.department);
   });
 };
-const departmentHealthCurveFor=(tasks:Task[],blockedCount:number,reviewCount:number,now:number)=>{
-  const hour=60*60*1000; const currentHour=Math.floor(now/hour)*hour;
-  return Array.from({length:8},(_,index)=>{
-    const cutoff=currentHour-(7-index)*hour;
-    const completed=tasks.filter(task=>task.completedAt&&new Date(task.completedAt).getTime()<=cutoff).length;
-    const submitted=tasks.filter(task=>task.submittedAt&&new Date(task.submittedAt).getTime()<=cutoff).length;
-    const activityTimes=tasks.flatMap(task=>[task.completedAt,task.submittedAt].filter(Boolean).map(value=>new Date(value as string).getTime())).filter(time=>time<=cutoff);
-    const latestActivity=activityTimes.length?Math.max(...activityTimes):cutoff-(index+1)*hour;
-    const inactiveHours=Math.max(0,Math.floor((cutoff-latestActivity)/hour));
-    const score=Math.max(18,Math.min(92,72+completed*9+submitted*4-blockedCount*13-reviewCount*5-Math.min(32,inactiveHours*4)));
-    return{label:new Date(cutoff).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),score};
+type DepartmentHealthPoint={label:string;score:number;event:string;direction:"up"|"down"|"steady"};
+const departmentHealthCurveFor=(tasks:Task[],now:number):DepartmentHealthPoint[]=>{
+  const day=24*60*60*1000;
+  const currentDay=Math.floor(now/day)*day;
+  const time=(value?:string)=>value?new Date(value.length===10?`${value}T12:00:00`:value).getTime():NaN;
+  const createdAt=(task:Task)=>time(task.createdDate||task.startDate);
+  const raw=Array.from({length:8},(_,index)=>{
+    const start=currentDay-(7-index)*day;
+    const cutoff=start+day-1;
+    const existed=tasks.filter(task=>!Number.isFinite(createdAt(task))||createdAt(task)<=cutoff);
+    const completed=existed.filter(task=>task.completedAt&&time(task.completedAt)<=cutoff).length;
+    const submitted=existed.filter(task=>task.submittedAt&&time(task.submittedAt)<=cutoff&&(!task.completedAt||time(task.completedAt)>cutoff)).length;
+    const overdue=existed.filter(task=>time(task.due)<cutoff&&(!task.completedAt||time(task.completedAt)>cutoff)&&task.status!=="Cancelled").length;
+    const blocked=existed.filter(task=>task.status==="Blocked"&&(!task.completedAt||time(task.completedAt)>cutoff)).length;
+    const active=existed.filter(task=>(!task.completedAt||time(task.completedAt)>cutoff)&&task.status!=="Cancelled").length;
+    const addedToday=tasks.filter(task=>{const value=createdAt(task);return Number.isFinite(value)&&value>=start&&value<=cutoff}).length;
+    const completedToday=tasks.filter(task=>{const value=time(task.completedAt);return Number.isFinite(value)&&value>=start&&value<=cutoff}).length;
+    const submittedToday=tasks.filter(task=>{const value=time(task.submittedAt);return Number.isFinite(value)&&value>=start&&value<=cutoff}).length;
+    const score=Math.max(12,Math.min(96,55+completed*7+submitted*3+active-Math.min(35,overdue*7)-blocked*9));
+    const event=completedToday?`${completedToday} ${completedToday===1?"task":"tasks"} completed`:submittedToday?`${submittedToday} sent for review`:addedToday?`${addedToday} ${addedToday===1?"task":"tasks"} added`:blocked?`${blocked} blocked`:overdue?`${overdue} overdue`:"No recorded task event";
+    return{label:new Date(start).toLocaleDateString([],{month:"short",day:"numeric"}),score,event};
   });
+  return raw.map((point,index)=>({...point,direction:index===0||point.score===raw[index-1].score?"steady":point.score>raw[index-1].score?"up":"down"}));
 };
 const dayGreeting=()=>{const hour=new Date().getHours();return hour<12?"Good morning":hour<18?"Good afternoon":"Good evening"};
 function Avatar({person,size=30}:{person?:User;size?:number}){const [failed,setFailed]=useState(false);useEffect(()=>setFailed(false),[person?.avatarUrl]);return person?.avatarUrl&&!failed?<img className="avatar avatar-image" src={person.avatarUrl} alt={`${person.name}'s profile`} style={{width:size,height:size}} onError={()=>setFailed(true)}/>:<div className="avatar avatar-placeholder" style={{width:size,height:size}} aria-label={`${person?.name||"Team member"} profile placeholder`}><UserRound size={Math.max(14,Math.round(size*.48))} strokeWidth={1.7}/></div>}
@@ -217,7 +228,7 @@ function UnifiedWorkspace({user,team,statuses,tasks,allTasks,projectsData,depart
    const departmentBlocked=departmentGoalTasks.filter(task=>task.status==="Blocked").length;
    const departmentOpen=departmentGoalTasks.filter(task=>task.status!=="Completed").length;
     const departmentReview=departmentGoalTasks.filter(task=>task.status==="Submitted for Review");
-    const departmentHealthCurve=useMemo(()=>departmentHealthCurveFor(departmentGoalTasks,departmentBlocked,departmentReview.length,healthNow),[departmentGoalTasks,departmentBlocked,departmentReview.length,healthNow]);
+    const departmentHealthCurve=useMemo(()=>departmentHealthCurveFor(departmentGoalTasks,healthNow),[departmentGoalTasks,healthNow]);
     const departmentHealth=departmentHealthCurve[departmentHealthCurve.length-1]?.score||50;
     const departmentHealthState=departmentHealth>=68?"On track":departmentHealth>=44?"Needs attention":"At risk";
     const departmentAction=departmentReview[0]?`Review “${departmentReview[0].title}” and leave feedback now.`:departmentGoalTasks.find(task=>task.status==="Blocked")?`Resolve the blocker on “${departmentGoalTasks.find(task=>task.status==="Blocked")?.title}”.`:departmentOpen===0?`Create the next priority task for ${user.department}.`:`Review active work or create a focused task to lift ${user.department} delivery.`;
@@ -451,21 +462,29 @@ function UnifiedWorkspace({user,team,statuses,tasks,allTasks,projectsData,depart
  if(view==="Audit Log")return <><Header eyebrow="Traceability" title="Audit Log" subtitle="Every important change has an actor and a timestamp."/><div className="panel table-wrap"><table className="table"><thead><tr><th>Event</th><th>Actor</th><th>When</th></tr></thead><tbody>{audit.map(event=><tr key={event.id}><td>{event.action}</td><td>{event.actor}</td><td className="mono">{event.time}</td></tr>)}</tbody></table>{!audit.length&&<div className="empty">No audit events recorded.</div>}</div></>;
    return <><Header eyebrow="Workspace controls" title="Settings" subtitle="Olyxee Ops database configuration and workspace status."/><div className="panel detail-section" style={{maxWidth:680}}><h3>Data storage</h3><div className="row"><div><b>Ops database</b><div className="row-meta">Accounts and operational workspace data</div></div><span className="badge green">Connected</span></div><div className="row"><div><b>People database</b><div className="row-meta">Employee and intern directory</div></div><span className="badge green">Connected</span></div><div className="row"><div><b>Tasks</b><div className="row-meta">{tasks.length} current records</div></div></div></div></>;
 }
+function DepartmentTrendChart({curve,label}:{curve:DepartmentHealthPoint[];label:string}){
+  const x=(index:number)=>28+index*(544/Math.max(1,curve.length-1));
+  const y=(score:number)=>168-score*1.35;
+  const area=`M ${x(0)} 174 ${curve.map((point,index)=>`L ${x(index)} ${y(point.score)}`).join(" ")} L ${x(curve.length-1)} 174 Z`;
+  const latest=curve[curve.length-1];
+  return <div className="department-trend-chart">
+    <div className="department-trend-plot"><div className="manager-health-grid"><i/><i/><i/></div><svg viewBox="0 0 600 190" preserveAspectRatio="xMidYMid meet" role="img" aria-label={`${label}, currently ${latest?.score||0} out of 100`}><path className="manager-health-area" d={area}/>{curve.slice(1).map((point,index)=>{const previous=curve[index];return <line key={`${point.label}-${index}`} className={`department-trend-segment ${point.direction}`} x1={x(index)} y1={y(previous.score)} x2={x(index+1)} y2={y(point.score)}/>})}{curve.map((point,index)=><circle key={point.label} className={`department-trend-point ${point.direction}`} cx={x(index)} cy={y(point.score)} r={index===curve.length-1?5:3}><title>{point.label}: {point.score}/100 · {point.event}</title></circle>)}</svg></div>
+    <div className="manager-detail-hours">{curve.map((point,index)=><span key={point.label} className={index%2&&index!==curve.length-1?"hide-chart-label":""}>{point.label}</span>)}</div>
+    <div className="department-trend-footer"><div className="department-trend-legend"><span><i className="up"/>Recovery / momentum</span><span><i className="down"/>Health declined</span><span><i className="steady"/>No score change</span></div><span className="department-trend-latest">{latest?.event}</span></div>
+  </div>;
+}
 function DepartmentHealthPanel({departmentName,tasks}:{departmentName:string;tasks:Task[]}){
   const goalTasks=tasks.some(task=>task.weeklyCommitment)?tasks.filter(task=>task.weeklyCommitment):tasks;
-  const blocked=goalTasks.filter(task=>task.status==="Blocked").length;
-  const inReview=goalTasks.filter(task=>task.status==="Submitted for Review").length;
-  const curve=departmentHealthCurveFor(goalTasks,blocked,inReview,Date.now());
+  const curve=departmentHealthCurveFor(goalTasks,Date.now());
   const score=curve[curve.length-1]?.score||50;
   const state=score>=68?"On track":score>=44?"Needs attention":"At risk";
   return <section className="panel admin-department-health" aria-labelledby="admin-department-health-title">
-    <div className="admin-department-health-head"><div><span className="panel-kicker">Last 8 hours</span><h2 id="admin-department-health-title">Delivery health</h2><p>Completion, review movement, blockers, and inactivity for {departmentName}.</p></div><div className="admin-department-health-score"><strong>{score}</strong><span>/ 100</span><small className={`manager-detail-state ${state.toLowerCase().replace(/\s+/g,"-")}`}>{state}</small></div></div>
-    <div className="admin-department-health-plot"><div className="manager-health-grid"><i/><i/><i/></div><svg viewBox="0 0 600 190" preserveAspectRatio="none" role="img" aria-label={`${departmentName} delivery health, currently ${score} out of 100`}><path className="manager-health-area" d={`M 18 174 ${curve.map((item,index)=>`L ${18+index*(564/7)} ${174-item.score*1.48}`).join(" ")} L 582 174 Z`}/><path className="manager-health-line" d={`M ${curve.map((item,index)=>`${18+index*(564/7)} ${174-item.score*1.48}`).join(" L ")}`}/>{curve.map((item,index)=><circle key={item.label} cx={18+index*(564/7)} cy={174-item.score*1.48} r={index===curve.length-1?5:3}/>)}</svg></div>
-    <div className="manager-detail-hours">{curve.map(item=><span key={item.label}>{item.label}</span>)}</div>
+    <div className="admin-department-health-head"><div><span className="panel-kicker">Last 8 days</span><h2 id="admin-department-health-title">Delivery health</h2><p>Calculated from real task creation, review, completion, blocker, and overdue signals for {departmentName}.</p></div><div className="admin-department-health-score"><strong>{score}</strong><span>/ 100</span><small className={`manager-detail-state ${state.toLowerCase().replace(/\s+/g,"-")}`}>{state}</small></div></div>
+    <DepartmentTrendChart curve={curve} label={`${departmentName} delivery health`}/>
   </section>;
 }
 function ManagerDepartmentDetail({user,department,tasks,objectives,team,onBack,onOpen}:{user:User;department:[string,string,string];tasks:Task[];objectives:WeeklyObjective[];team:User[];onBack:()=>void;onOpen:(id:string)=>void}){
-  const curve=departmentHealthCurveFor(tasks.filter(task=>task.weeklyCommitment).length?tasks.filter(task=>task.weeklyCommitment):tasks,tasks.filter(task=>task.status==="Blocked").length,tasks.filter(task=>task.status==="Submitted for Review").length,Date.now());
+  const curve=departmentHealthCurveFor(tasks.filter(task=>task.weeklyCommitment).length?tasks.filter(task=>task.weeklyCommitment):tasks,Date.now());
   const directReports=team.filter(person=>person.reportsTo===user.id&&person.department===department[0]&&isCurrentTeamMember(person));
   const active=tasks.filter(task=>!["Completed","Cancelled"].includes(task.status));
   const review=tasks.filter(task=>task.status==="Submitted for Review").length;
@@ -478,7 +497,7 @@ function ManagerDepartmentDetail({user,department,tasks,objectives,team,onBack,o
   return <div className="manager-department-detail">
     <button type="button" className="manager-detail-back" onClick={onBack} aria-label="Back to Manager Home" title="Back to Manager Home"><ArrowLeft size={18}/></button>
     <header className="manager-detail-header"><div><span className="panel-kicker">Department health</span><h1>{department[0]}</h1><p>Led by {lead?.name||department[1]}</p></div><span className={`manager-detail-state ${state.toLowerCase().replace(/\s+/g,"-")}`}>{state}</span></header>
-    <section className="panel manager-detail-chart" aria-labelledby="manager-health-detail-title"><div className="manager-detail-chart-head"><div><span className="panel-kicker">Last 8 hours</span><h2 id="manager-health-detail-title">Hourly delivery health</h2><p>Completion, review movement, and inactivity signals for current department work.</p></div><strong>{score}<small>/ 100</small></strong></div><div className="manager-detail-plot"><div className="manager-health-grid"><i/><i/><i/></div><svg viewBox="0 0 600 190" preserveAspectRatio="none" role="img" aria-label={`${department[0]} hourly delivery health, currently ${score} out of 100`}><path className="manager-health-area" d={`M 18 174 ${curve.map((item,index)=>`L ${18+index*(564/7)} ${174-item.score*1.48}`).join(" ")} L 582 174 Z`}/><path className="manager-health-line" d={`M ${curve.map((item,index)=>`${18+index*(564/7)} ${174-item.score*1.48}`).join(" L ")}`}/>{curve.map((item,index)=><circle key={item.label} cx={18+index*(564/7)} cy={174-item.score*1.48} r={index===curve.length-1?5:3}/>)}</svg></div><div className="manager-detail-hours">{curve.map(item=><span key={item.label}>{item.label}</span>)}</div></section>
+    <section className="panel manager-detail-chart" aria-labelledby="manager-health-detail-title"><div className="manager-detail-chart-head"><div><span className="panel-kicker">Last 8 days</span><h2 id="manager-health-detail-title">Delivery health trend</h2><p>Calculated from real task creation, review, completion, blocker, and overdue signals.</p></div><strong>{score}<small>/ 100</small></strong></div><DepartmentTrendChart curve={curve} label={`${department[0]} delivery health`}/></section>
     <div className="manager-detail-metrics"><div><span>Direct reports</span><strong>{directReports.length}</strong></div><div><span>Active work</span><strong>{active.length}</strong></div><div><span>Awaiting review</span><strong>{review}</strong></div><div><span>Blocked / overdue</span><strong className={blockedOrOverdue?"metric-alert":""}>{blockedOrOverdue}</strong></div></div>
     <div className="manager-detail-columns"><section className="panel"><div className="panel-head"><span><span className="panel-kicker">This week</span><span className="panel-title">Current objectives</span></span><span className="mono">{objectives.length}</span></div><div className="list">{objectives.map(objective=><div className="row" key={objective.id}><div className="row-main"><div className="row-title">{objective.title}</div><div className="row-meta">{objective.priority} priority · Due {objective.dueDate}</div></div><Status s={objective.status}/></div>)}{!objectives.length&&<div className="empty">No weekly objectives assigned.</div>}</div></section><section className="panel"><div className="panel-head"><span><span className="panel-kicker">{attention.length?"Needs attention":"In progress"}</span><span className="panel-title">Work to review</span></span><span className="mono">{shown.length}</span></div><div className="list">{shown.map(task=><button className="row manager-detail-task" key={task.id} onClick={()=>onOpen(task.id)}><div className="row-main"><div className="row-title">{task.title}</div><div className="row-meta">{task.project} · Due {task.due}</div></div><Status s={task.status}/><ChevronRight size={14}/></button>)}{!shown.length&&<div className="empty">No active tasks need attention.</div>}</div></section></div>
   </div>;
