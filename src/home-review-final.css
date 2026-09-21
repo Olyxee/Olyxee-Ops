@@ -339,6 +339,7 @@ body .objective-resources-card { margin-top: 16px; padding: 22px !important; bor
 
 /* Superadmin department detail: one health chart, compact metrics, objectives, and tasks. */
 body .department-detail { max-width: 1160px; }
+body .workspace-section:has(.department-detail) > .workspace-back { display: none; }
 body .department-detail .department-performance,
 body .department-detail .department-trend,
 body .department-detail .department-contribution { display: none !important; }
@@ -625,6 +626,87 @@ body .weekly-review-focused .objective-detail-facts dd {
   font-weight: 750;
 }
 
+body .objective-focus-grid {
+  display: grid;
+  grid-template-columns: minmax(0,1.15fr) minmax(280px,.85fr);
+  gap: 12px;
+  margin: 0 30px 26px;
+}
+
+body .objective-focus-section {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #dedee2;
+  border-radius: 15px;
+  background: #fff;
+}
+
+body .objective-focus-heading {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 68px;
+  padding: 13px 15px;
+  border-bottom: 1px solid #ececee;
+  background: #fafafa;
+}
+
+body .objective-focus-heading-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: #fff2d8;
+  color: #a66e17;
+}
+
+body .objective-focus-heading-icon.people { background: #e8f2fa; color: #3778a6; }
+body .objective-focus-heading h2 { margin: 0 0 3px; color: #1c1c1e; font-size: 12px; letter-spacing: -.01em; }
+body .objective-focus-heading p { margin: 0; color: #8e8e93; font-size: 8px; line-height: 1.35; }
+body .objective-supporting-list,
+body .objective-contributor-list { display: grid; padding: 6px 12px; }
+
+body .objective-supporting-task {
+  display: grid;
+  grid-template-columns: 28px minmax(0,1fr) 16px;
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  padding: 8px 3px;
+  border: 0;
+  border-bottom: 1px solid #ececee;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+body .objective-supporting-task:last-child { border-bottom: 0; }
+body .objective-supporting-task:hover { padding-inline: 8px; border-radius: 10px; background: #f7f7f8; }
+body .objective-supporting-status { display: grid; place-items: center; width: 27px; height: 27px; border-radius: 9px; background: #e8f2f0; color: #39776f; }
+body .objective-supporting-task > span:nth-child(2) { display: grid; min-width: 0; gap: 4px; }
+body .objective-supporting-task strong { overflow: hidden; color: #2c2c2e; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+body .objective-supporting-task small { color: #8e8e93; font-size: 8px; }
+body .objective-supporting-task > svg { color: #c7c7cc; }
+
+body .objective-contributor {
+  display: grid;
+  grid-template-columns: 32px minmax(0,1fr) 16px;
+  align-items: center;
+  gap: 10px;
+  min-height: 54px;
+  padding: 7px 3px;
+  border-bottom: 1px solid #ececee;
+}
+
+body .objective-contributor:last-child { border-bottom: 0; }
+body .objective-contributor > span { display: grid; min-width: 0; gap: 3px; }
+body .objective-contributor strong { overflow: hidden; color: #2c2c2e; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+body .objective-contributor small { color: #8e8e93; font-size: 8px; }
+body .objective-contributor > svg { color: #4b927b; }
+body .objective-focus-empty { padding: 24px 12px; color: #8e8e93; font-size: 9px; text-align: center; }
+
 body .weekly-review-focused .objective-control-row {
   margin: 0;
   padding: 16px 30px;
@@ -674,6 +756,7 @@ body .weekly-review-focused .objective-resources-empty { margin: 14px; border-co
   body .weekly-review-focused .focused-objective-owner { min-width: 0; }
   body .weekly-review-focused .objective-detail-description { margin: 0 20px 16px; }
   body .weekly-review-focused .objective-detail-facts { grid-template-columns: 1fr; margin: 0 20px 20px; }
+  body .objective-focus-grid { grid-template-columns: 1fr; margin: 0 20px 20px; }
   body .weekly-review-focused .objective-control-row { padding: 15px 20px; }
   body .weekly-review-focused .objective-status-control { align-items: stretch; flex-direction: column; gap: 10px; }
   body .weekly-review-focused .objective-status-control .select { width: 100%; }
@@ -857,6 +940,13 @@ body .weekly-review-list-page .objective-list-chevron { color: #c7c7cc; }
   body .weekly-review-list-page .objective-list-open { align-items: flex-start; flex-direction: column; gap: 8px; }
   body .weekly-review-list-page .objective-list-state { display: flex; justify-items: start; }
   body .weekly-review-list-page .objective-list-edit { display: none; }
+}
+
+/* Keep card edges neutral; status color belongs inside icons and pills only. */
+body .weekly-review-focused .objective-detail-card::after,
+body .weekly-review-page .review-objective-card::before {
+  display: none !important;
+  content: none !important;
 }
 
 /* Focused Weekly Review page: weekly objectives only. */
