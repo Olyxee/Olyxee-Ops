@@ -791,15 +791,6 @@ function InternTaskDetail({task,user,team,onBack,update,refresh,flash}:{task:Tas
     if(!response.ok){window.alert(result.error||"Could not update this Ops account");return}
     window.location.reload();
   };
-  const deleteOpsAccount=async()=>{
-    if(!person?.id||!window.confirm(`Delete ${person.name}'s Ops login account?\n\nThey will no longer be able to sign in. Their employee record, projects, and task history will not be deleted.`))return;
-    setDeletingAccount(true);
-    const response=await fetch(`/api/people/${person.id}/ops-account`,{method:"DELETE"});
-    const result=await response.json();
-    setDeletingAccount(false);
-    if(!response.ok){window.alert(result.error||"Could not delete this Ops account");return}
-    window.location.reload();
-  };
   const deletePerson=async()=>{
     if(!person?.id||!window.confirm(`Delete ${person.name} permanently?\n\nThis removes their People directory record and Ops login. Their historical task and project activity will remain. This cannot be undone.`))return;
     setDeletingPerson(true);
@@ -842,7 +833,7 @@ function InternTaskDetail({task,user,team,onBack,update,refresh,flash}:{task:Tas
          {accessRole==="Manager"&&<label className="form-label person-field-wide">Reports to<select className="select" value={reportsTo} disabled><option value="">{superadmins.length?"Select active Superadmin":"No active Superadmin available"}</option>{superadmins.filter(superadmin=>superadmin.id!==person?.id).map(superadmin=><option key={superadmin.id} value={superadmin.id}>{superadmin.name}</option>)}</select></label>}
        </div>
         {canAccessAccountPanel&&<details className="person-account-disclosure" open><summary>Account access</summary><div className="person-account-content">
-          {canAdministerAccount&&person?.hasOpsAccess&&<><div className="account-management-grid"><label className="form-label">Ops role<select className="select" value={opsRole} onChange={event=>setOpsRole(event.target.value as AccessRole)}>{["Manager","Member"].map(value=><option key={value}>{value}</option>)}</select></label><label className="form-label">Sign-in access<select className="select" value={opsActive?"Active":"Suspended"} onChange={event=>setOpsActive(event.target.value==="Active")}><option>Active</option><option>Suspended</option></select></label></div><div className="account-management-actions"><button className="btn" type="button" disabled={savingAccount||deletingAccount} onClick={saveOpsAccount}>{savingAccount?"Saving…":"Save account access"}</button><button className="btn" type="button" disabled={savingAccount||deletingAccount} onClick={deleteOpsAccount}>{deletingAccount?"Deleting…":"Delete login"}</button></div></>}
+          {canAdministerAccount&&person?.hasOpsAccess&&<><div className="account-management-grid"><label className="form-label">Ops role<select className="select" value={opsRole} onChange={event=>setOpsRole(event.target.value as AccessRole)}>{["Manager","Member"].map(value=><option key={value}>{value}</option>)}</select></label><label className="form-label">Sign-in access<select className="select" value={opsActive?"Active":"Suspended"} onChange={event=>setOpsActive(event.target.value==="Active")}><option>Active</option><option>Suspended</option></select></label></div><div className="account-management-actions"><button className="btn" type="button" disabled={savingAccount||deletingAccount} onClick={saveOpsAccount}>{savingAccount?"Saving…":"Save account access"}</button></div></>}
           <section className="access-provision"><div><b>{person?.hasOpsAccess?"Resend account invitation":"Create Ops access"}</b><p>Create access and send a secure, single-use password setup link to {person?.email}.</p></div><button className="btn primary" type="button" disabled={provisioning} onClick={provision}>{provisioning?"Sending…":person?.hasOpsAccess?"Resend invitation":"Create Ops access"}</button>{credentials&&<div className="access-credentials"><span><small>Login email</small><b>{credentials.email}</b></span><span><small>Invitation</small><b>{credentials.invitationStatus==="sent"?"Email sent":"Needs retry"}</b></span><div><button className="btn" type="button" onClick={()=>navigator.clipboard.writeText(shareMessage)}>Copy note</button><a className="btn" href={emailShare}>Open email</a><a className="btn" href={whatsappShare} target="_blank" rel="noreferrer">Share by WhatsApp</a></div></div>}</section>
           {accessOf(user)==="Superadmin"&&<div className="person-delete-row"><span><b>Delete person</b><small>Removes their directory record and login.</small></span><button className="btn" type="button" disabled={deletingPerson||deletingAccount||savingAccount} onClick={deletePerson}>{deletingPerson?"Deleting…":"Delete"}</button></div>}
        </div></details>}
@@ -859,7 +850,7 @@ function InternTaskDetail({task,user,team,onBack,update,refresh,flash}:{task:Tas
         {person.githubUsername&&<div><dt>GitHub</dt><dd>@{person.githubUsername}</dd></div>}
       </dl>
        {canProvision&&<section className="access-provision person-profile-provision"><div><b>{person.hasOpsAccess?"Resend account invitation":"Create Ops access"}</b><p>Send a secure, single-use password setup link to this person’s recorded email address.</p></div><button className="btn primary" type="button" disabled={provisioning} onClick={provision}>{provisioning?"Sending…":person.hasOpsAccess?"Resend invitation":"Create Ops access"}</button>{credentials&&<div className="access-credentials"><span><small>Login email</small><b>{credentials.email}</b></span><span><small>Invitation</small><b>{credentials.invitationStatus==="sent"?"Email sent":"Needs retry"}</b></span><div><button className="btn" type="button" onClick={()=>navigator.clipboard.writeText(shareMessage)}>Copy note</button><a className="btn" href={emailShare}>Open email</a><a className="btn" href={whatsappShare} target="_blank" rel="noreferrer">Share by WhatsApp</a></div></div>}</section>}
-       {canAdministerAccount&&person.hasOpsAccess&&!canProvision&&<section className="access-provision person-profile-provision"><div><b>Manage Ops login</b><p>Remove this person’s Ops login without deleting their People record or work history.</p></div><button className="btn danger" type="button" disabled={deletingAccount} onClick={deleteOpsAccount}>{deletingAccount?"Deleting…":"Delete Ops account"}</button></section>}
+       {canAdministerAccount&&<section className="access-provision person-profile-provision"><div><b>Delete person</b><p>Permanently remove this person from People and revoke their Ops login. Their historical work records will remain.</p></div><button className="btn danger" type="button" disabled={deletingPerson} onClick={deletePerson}>{deletingPerson?"Deleting person…":"Delete person"}</button></section>}
        <section className="person-progress" aria-label={`${person.name} task progress`}>
          <div className="person-progress-head"><span><small>Task progress</small><b>{taskProgress}% complete</b></span><strong>{completedPersonTasks}/{personTasks.length}</strong></div>
          <div className="person-progress-track"><span style={{width:`${taskProgress}%`}}/></div>
@@ -897,7 +888,7 @@ function InternTaskDetail({task,user,team,onBack,update,refresh,flash}:{task:Tas
           <label className="form-label">Ops role<select className="select" value={opsRole} onChange={event=>setOpsRole(event.target.value as AccessRole)}>{["Admin","Manager","Member"].map(value=><option key={value}>{value}</option>)}</select></label>
           <label className="form-label">Sign-in access<select className="select" value={opsActive?"Active":"Suspended"} onChange={event=>setOpsActive(event.target.value==="Active")}><option>Active</option><option>Suspended</option></select></label>
         </div>
-        <div className="account-management-actions"><button className="btn primary" type="button" disabled={savingAccount||deletingAccount} onClick={saveOpsAccount}>{savingAccount?"Saving…":"Save account access"}</button><button className="btn danger" type="button" disabled={savingAccount||deletingAccount} onClick={deleteOpsAccount}>{deletingAccount?"Deleting…":"Delete Ops account"}</button></div>
+        <div className="account-management-actions"><button className="btn primary" type="button" disabled={savingAccount||deletingAccount} onClick={saveOpsAccount}>{savingAccount?"Saving…":"Save account access"}</button></div>
       </section>}
        {editMode&&canProvision&&!person?.hasOpsAccess&&<section className="access-provision">
          <div><b>Ops login access</b><p>The login will use <b>{person.email}</b>. A secure password setup link will be emailed and will expire after 24 hours.</p></div>
@@ -910,7 +901,7 @@ function InternTaskDetail({task,user,team,onBack,update,refresh,flash}:{task:Tas
          {credentials&&<div className="access-credentials"><span><small>Login email</small><b>{credentials.email}</b></span><span><small>Invitation</small><b>{credentials.invitationStatus==="sent"?"Email sent":"Needs retry"}</b></span><div><button className="btn" type="button" onClick={()=>navigator.clipboard.writeText(shareMessage)}>Copy note</button><a className="btn" href={emailShare}>Open email</a><a className="btn" href={whatsappShare} target="_blank" rel="noreferrer">Share by WhatsApp</a></div></div>}
       </section>}
        {editMode&&canAdministerAccount&&<section className="person-delete-section">
-        <div><b>Delete person</b><p>Remove this person from the directory and revoke their Ops login. Historical work records are retained.</p></div>
+         <div><b>Delete person permanently</b><p>Remove this person from the People database and revoke their Ops login. Historical work records are retained.</p></div>
         <button className="btn danger" type="button" disabled={deletingPerson||deletingAccount||savingAccount} onClick={deletePerson}>{deletingPerson?"Deleting person…":"Delete person"}</button>
       </section>}
        </div>}

@@ -810,8 +810,7 @@ app.delete("/api/people/:id", requireAuth, requireAccount, async (request, respo
 
     const deleted = kind === "intern"
       ? await peoplePool.query(`
-          UPDATE public.interns
-          SET archived_at = now(), updated_at = now()
+          DELETE FROM public.interns
           WHERE id = $1 AND archived_at IS NULL
           RETURNING id
         `, [id])
