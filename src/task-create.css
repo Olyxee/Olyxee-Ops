@@ -1,0 +1,26 @@
+.task-create-modal{width:min(720px,100%);max-height:min(760px,calc(100dvh - 32px));overflow:hidden}
+.task-create-modal .modal-body{overflow:auto}
+.task-create-title{display:flex;align-items:center;gap:11px}
+.task-create-title>span:last-child{display:grid;gap:2px}
+.task-create-title b{color:#234943;font-size:14px}
+.task-create-title small{color:#7b8d87;font-size:10px;font-weight:500}
+.task-create-title-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:#e7f1ed;color:#477c6d}
+.task-create-progress{display:flex;align-items:center;margin:-3px 0 22px;padding:0 3px}
+.task-create-progress>div{display:flex;align-items:center;gap:8px;color:#8a9893;font-size:11px;white-space:nowrap}
+.task-create-progress>div>span{display:grid;place-items:center;width:24px;height:24px;border:1px solid #d9e2de;border-radius:50%;background:#fff;font-size:10px}
+.task-create-progress>div.is-active{color:#315f53}
+.task-create-progress>div.is-active>span{border-color:#659a8a;background:#e6f1ed;color:#315f53}
+.task-create-progress>div.is-complete{color:#638078}
+.task-create-progress>div.is-complete>span{border-color:#709889;background:#709889;color:#fff}
+.task-create-progress>i{height:1px;flex:1;min-width:30px;margin:0 12px;background:#dfe6e3}
+.task-create-form{grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.task-create-wide{grid-column:1/-1}
+.task-create-optional{color:#98a49f;font-size:9px;font-weight:500}
+.task-create-assignment-intro{display:grid;gap:4px;padding:12px 14px;border:1px solid #dfe9e5;border-radius:10px;background:#f6faf8;color:#31574d}
+.task-create-assignment-intro b{font-size:12px}.task-create-assignment-intro span{color:#71847d;font-size:10px}
+.task-create-modal .task-department-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));max-height:220px}
+.task-create-modal .task-department-options>label:nth-child(odd){border-right:1px solid #edf1ef}
+.task-create-modal .task-assignee-picker>.task-picker-results{max-height:210px}
+.task-picker-empty{padding:18px;color:#83918c;text-align:center}
+.task-create-modal .modal-foot .btn.primary{display:inline-flex;align-items:center;gap:6px}
+@media(max-width:640px){.task-create-modal{max-height:calc(100dvh - 20px)}.task-create-form{grid-template-columns:1fr}.task-create-wide{grid-column:1}.task-create-modal .task-department-options{grid-template-columns:1fr}.task-create-modal .task-department-options>label:nth-child(odd){border-right:0}.task-create-progress>div b{display:none}}
