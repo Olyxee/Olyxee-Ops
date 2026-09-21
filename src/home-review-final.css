@@ -1003,6 +1003,24 @@ body .department-trend-point.up { stroke: #347fb4; }
 body .department-trend-point.down { stroke: #c85a54; }
 body .department-trend-point:last-of-type { fill: #fff; stroke-width: 3.5; }
 
+body .manager-health-card:has(.manager-health-state.at-risk) .manager-health-line {
+  stroke: #c85a54 !important;
+}
+
+body .manager-health-card:has(.manager-health-state.at-risk) .manager-health-chart circle {
+  fill: #fff !important;
+  stroke: #c85a54 !important;
+}
+
+body .manager-health-card:has(.manager-health-state.on-track) .manager-health-line {
+  stroke: #347fb4 !important;
+}
+
+body .manager-health-card:has(.manager-health-state.on-track) .manager-health-chart circle {
+  fill: #fff !important;
+  stroke: #347fb4 !important;
+}
+
 body .department-trend-chart .manager-detail-hours {
   grid-template-columns: repeat(8,minmax(0,1fr));
   margin-top: 2px;
@@ -1256,4 +1274,25 @@ body .weekly-review-page .review-objective-card .review-status-select {
   body .weekly-review-page .review-objective-summary {
     grid-template-columns: repeat(2,minmax(0,1fr));
   }
+}
+
+/* Weekly Review Home: no decorative strips on the card or objective edges. */
+html body .workspace-review-home::before,
+html body .workspace-review-home::after,
+html body .workspace-review-home .review-objective-row::before,
+html body .workspace-review-home .review-objective-row::after,
+html body .workspace-review-home .review-objective-open::before,
+html body .workspace-review-home .review-objective-open::after {
+  display: none !important;
+  width: 0 !important;
+  content: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html body .workspace-review-home,
+html body .workspace-review-home .review-objective-row,
+html body .workspace-review-home .review-objective-open {
+  border-left-color: #e3e7e9 !important;
+  border-left-width: 1px !important;
 }
