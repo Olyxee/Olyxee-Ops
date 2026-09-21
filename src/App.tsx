@@ -37,28 +37,30 @@ const departmentHealthCurveFor=(tasks:Task[],now:number,maxPoints?:number):Depar
   const hour=60*60*1000;
   const current=new Date(now);
   const dayStart=new Date(current.getFullYear(),current.getMonth(),current.getDate()).getTime();
-  const elapsedHours=current.getHours()+1;
-  const pointCount=Math.max(1,Math.min(elapsedHours,maxPoints||elapsedHours));
-  const firstHour=elapsedHours-pointCount;
+  const daysSinceMonday=(current.getDay()+6)%7;
+  const weekStart=dayStart-daysSinceMonday*24*hour;
+  const elapsedHours=Math.max(1,Math.floor((now-weekStart)/hour)+1);
   const time=(value?:string)=>value?new Date(value.length===10?`${value}T12:00:00`:value).getTime():NaN;
   const createdAt=(task:Task)=>time(task.createdDate||task.startDate);
   let score=78;
-  return Array.from({length:pointCount},(_,index)=>{
-    const start=dayStart+(firstHour+index)*hour;
+  const points=Array.from({length:elapsedHours},(_,index)=>{
+    const start=weekStart+index*hour;
     const cutoff=Math.min(start+hour-1,now);
     const added=tasks.filter(task=>{const value=createdAt(task);return Number.isFinite(value)&&value>=start&&value<=cutoff}).length;
     const completed=tasks.filter(task=>{const value=time(task.completedAt);return Number.isFinite(value)&&value>=start&&value<=cutoff}).length;
     const submitted=tasks.filter(task=>{const value=time(task.submittedAt);return Number.isFinite(value)&&value>=start&&value<=cutoff}).length;
+    const updated=tasks.reduce((count,task)=>count+(task.updates||[]).filter(update=>{const value=time(update.createdAt);return Number.isFinite(value)&&value>=start&&value<=cutoff}).length,0);
     const blocked=tasks.filter(task=>task.status==="Blocked"&&createdAt(task)<=cutoff).length;
     const overdue=tasks.filter(task=>time(task.due)<cutoff&&!["Completed","Cancelled"].includes(task.status)).length;
-    const positive=added*7+submitted*5+completed*9;
+    const positive=added*7+submitted*5+completed*9+updated*3;
     const negative=(positive?0:4)+Math.min(2,blocked)+Math.min(2,overdue);
     const change=positive-negative;
     score=Math.max(10,Math.min(96,score+change));
-    const direction=change>0?"up":change<0?"down":"steady";
-    const event=completed?`${completed} ${completed===1?"task":"tasks"} completed`:added?`${added} ${added===1?"task":"tasks"} added or assigned`:submitted?`${submitted} sent for review`:blocked?`No new work · ${blocked} blocked`:overdue?`No new work · ${overdue} overdue`:"No task activity this hour";
-    return{label:new Date(start).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),score,event,direction};
+    const direction:DepartmentHealthPoint["direction"]=change>0?"up":change<0?"down":"steady";
+    const event=completed?`${completed} ${completed===1?"task":"tasks"} completed`:added?`${added} ${added===1?"task":"tasks"} added or assigned`:submitted?`${submitted} sent for review`:updated?`${updated} task ${updated===1?"update":"updates"}`:blocked?`No new work · ${blocked} blocked`:overdue?`No new work · ${overdue} overdue`:"No task activity this hour";
+    return{label:new Date(start).toLocaleDateString([],{weekday:"short",hour:"2-digit"}),score,event,direction};
   });
+  return maxPoints?points.slice(-maxPoints):points;
 };
 const dayGreeting=()=>{const hour=new Date().getHours();return hour<12?"Good morning":hour<18?"Good afternoon":"Good evening"};
 function Avatar({person,size=30}:{person?:User;size?:number}){const [failed,setFailed]=useState(false);useEffect(()=>setFailed(false),[person?.avatarUrl]);return person?.avatarUrl&&!failed?<img className="avatar avatar-image" src={person.avatarUrl} alt={`${person.name}'s profile`} style={{width:size,height:size}} onError={()=>setFailed(true)}/>:<div className="avatar avatar-placeholder" style={{width:size,height:size}} aria-label={`${person?.name||"Team member"} profile placeholder`}><UserRound size={Math.max(14,Math.round(size*.48))} strokeWidth={1.7}/></div>}
@@ -469,11 +471,12 @@ function UnifiedWorkspace({user,team,statuses,tasks,allTasks,projectsData,depart
 function DepartmentTrendChart({curve,label}:{curve:DepartmentHealthPoint[];label:string}){
   const x=(index:number)=>28+index*(544/Math.max(1,curve.length-1));
   const y=(score:number)=>168-score*1.35;
+  const labelStep=Math.max(1,Math.ceil(curve.length/8));
   const area=`M ${x(0)} 174 ${curve.map((point,index)=>`L ${x(index)} ${y(point.score)}`).join(" ")} L ${x(curve.length-1)} 174 Z`;
   const latest=curve[curve.length-1];
   return <div className="department-trend-chart">
     <div className="department-trend-plot"><div className="manager-health-grid"><i/><i/><i/></div><svg viewBox="0 0 600 190" preserveAspectRatio="xMidYMid meet" role="img" aria-label={`${label}, currently ${latest?.score||0} out of 100`}><path className="manager-health-area" d={area}/>{curve.slice(1).map((point,index)=>{const previous=curve[index];return <line key={`${point.label}-${index}`} className={`department-trend-segment ${point.direction}`} x1={x(index)} y1={y(previous.score)} x2={x(index+1)} y2={y(point.score)}/>})}{curve.map((point,index)=><circle key={point.label} className={`department-trend-point ${point.direction}`} cx={x(index)} cy={y(point.score)} r={index===curve.length-1?5:3}><title>{point.label}: {point.score}/100 · {point.event}</title></circle>)}</svg></div>
-    <div className="manager-detail-hours" style={{gridTemplateColumns:`repeat(${curve.length},minmax(0,1fr))`}}>{curve.map((point,index)=><span key={point.label} className={index%2&&index!==curve.length-1?"hide-chart-label":""}>{point.label}</span>)}</div>
+    <div className="manager-detail-hours" style={{gridTemplateColumns:`repeat(${curve.length},minmax(0,1fr))`}}>{curve.map((point,index)=><span key={`${point.label}-${index}`} className={index%labelStep&&index!==curve.length-1?"hide-chart-label":""}>{point.label}</span>)}</div>
     <div className="department-trend-footer"><div className="department-trend-legend"><span><i className="up"/>Task activity / recovery</span><span><i className="down"/>No activity / decline</span><span><i className="steady"/>No score change</span></div><span className="department-trend-latest">{latest?.event}</span></div>
   </div>;
 }
@@ -483,7 +486,7 @@ function DepartmentHealthPanel({departmentName,tasks}:{departmentName:string;tas
   const score=curve[curve.length-1]?.score||50;
   const state=score>=68?"On track":score>=44?"Needs attention":"At risk";
   return <section className="panel admin-department-health" aria-labelledby="admin-department-health-title">
-    <div className="admin-department-health-head"><div><span className="panel-kicker">Today by hour</span><h2 id="admin-department-health-title">Delivery health</h2><p>Each elapsed hour moves from real task creation, assignment, review, completion, blocker, and overdue signals for {departmentName}.</p></div><div className="admin-department-health-score"><strong>{score}</strong><span>/ 100</span><small className={`manager-detail-state ${state.toLowerCase().replace(/\s+/g,"-")}`}>{state}</small></div></div>
+    <div className="admin-department-health-head"><div><span className="panel-kicker">This week by hour</span><h2 id="admin-department-health-title">Delivery health</h2><p>Starting Monday at 00:00, every hour moves from real task creation, assignment, updates, review, completion, blocker, and overdue signals for {departmentName}.</p></div><div className="admin-department-health-score"><strong>{score}</strong><span>/ 100</span><small className={`manager-detail-state ${state.toLowerCase().replace(/\s+/g,"-")}`}>{state}</small></div></div>
     <DepartmentTrendChart curve={curve} label={`${departmentName} delivery health`}/>
   </section>;
 }
@@ -501,7 +504,7 @@ function ManagerDepartmentDetail({user,department,tasks,objectives,team,onBack,o
   return <div className="manager-department-detail">
     <button type="button" className="manager-detail-back" onClick={onBack} aria-label="Back to Manager Home" title="Back to Manager Home"><ArrowLeft size={18}/></button>
     <header className="manager-detail-header"><div><span className="panel-kicker">Department health</span><h1>{department[0]}</h1><p>Led by {lead?.name||department[1]}</p></div><span className={`manager-detail-state ${state.toLowerCase().replace(/\s+/g,"-")}`}>{state}</span></header>
-    <section className="panel manager-detail-chart" aria-labelledby="manager-health-detail-title"><div className="manager-detail-chart-head"><div><span className="panel-kicker">Today by hour</span><h2 id="manager-health-detail-title">Delivery health trend</h2><p>Every elapsed hour reflects task creation, assignment, review, completion, blocker, and overdue activity.</p></div><strong>{score}<small>/ 100</small></strong></div><DepartmentTrendChart curve={curve} label={`${department[0]} delivery health`}/></section>
+    <section className="panel manager-detail-chart" aria-labelledby="manager-health-detail-title"><div className="manager-detail-chart-head"><div><span className="panel-kicker">This week by hour</span><h2 id="manager-health-detail-title">Delivery health trend</h2><p>Starting Monday at 00:00, every elapsed hour reflects task creation, assignment, updates, review, completion, blocker, and overdue activity.</p></div><strong>{score}<small>/ 100</small></strong></div><DepartmentTrendChart curve={curve} label={`${department[0]} delivery health`}/></section>
     <div className="manager-detail-metrics"><div><span>Direct reports</span><strong>{directReports.length}</strong></div><div><span>Active work</span><strong>{active.length}</strong></div><div><span>Awaiting review</span><strong>{review}</strong></div><div><span>Blocked / overdue</span><strong className={blockedOrOverdue?"metric-alert":""}>{blockedOrOverdue}</strong></div></div>
     <div className="manager-detail-columns"><section className="panel"><div className="panel-head"><span><span className="panel-kicker">This week</span><span className="panel-title">Current objectives</span></span><span className="mono">{objectives.length}</span></div><div className="list">{objectives.map(objective=><div className="row" key={objective.id}><div className="row-main"><div className="row-title">{objective.title}</div><div className="row-meta">{objective.priority} priority · Due {objective.dueDate}</div></div><Status s={objective.status}/></div>)}{!objectives.length&&<div className="empty">No weekly objectives assigned.</div>}</div></section><section className="panel"><div className="panel-head"><span><span className="panel-kicker">{attention.length?"Needs attention":"In progress"}</span><span className="panel-title">Work to review</span></span><span className="mono">{shown.length}</span></div><div className="list">{shown.map(task=><button className="row manager-detail-task" key={task.id} onClick={()=>onOpen(task.id)}><div className="row-main"><div className="row-title">{task.title}</div><div className="row-meta">{task.project} · Due {task.due}</div></div><Status s={task.status}/><ChevronRight size={14}/></button>)}{!shown.length&&<div className="empty">No active tasks need attention.</div>}</div></section></div>
   </div>;

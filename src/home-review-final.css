@@ -1296,3 +1296,304 @@ html body .workspace-review-home .review-objective-open {
   border-left-color: #e3e7e9 !important;
   border-left-width: 1px !important;
 }
+
+/* Final responsive system: loaded last so desktop overrides cannot cause mobile overflow. */
+@media (max-width:760px) {
+  html,
+  body,
+  #root,
+  body .app,
+  body .main {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  body .workspace-topbar {
+    display: grid !important;
+    grid-template-columns: minmax(0,1fr) auto;
+    grid-template-rows: auto auto;
+    gap: 9px 10px;
+    height: auto !important;
+    min-height: 70px;
+    padding: 10px 12px !important;
+  }
+
+  body .workspace-topbar > *,
+  body .workspace-brand,
+  body .workspace-wordmark,
+  body .workspace-card,
+  body .workspace-card-head,
+  body .workspace-card-head > div,
+  body .workspace-section,
+  body .page-head,
+  body .panel {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  body .workspace-brand { justify-self: start; overflow: hidden; }
+  body .workspace-brand img { width: 31px; height: 31px; }
+  body .workspace-wordmark { overflow: hidden; font-size: 15px !important; }
+  body .workspace-topbar .top-actions { justify-self: end; }
+  body .global-search {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  body .search-results {
+    right: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  body .content,
+  body .workspace-content {
+    width: 100%;
+    padding: 14px 12px 32px !important;
+  }
+
+  body .workspace-section { padding-inline: 0 !important; }
+  body .workspace-board,
+  body .workspace-board-member,
+  body .workspace-board-manager,
+  body .workspace-grid,
+  body .cols,
+  body .detail-grid,
+  body .project-detail-grid,
+  body .manager-detail-columns,
+  body .department-insights,
+  body .settings-layout {
+    grid-template-columns: minmax(0,1fr) !important;
+  }
+
+  body .workspace-card-head,
+  body .panel-head,
+  body .page-head,
+  body .project-detail-head,
+  body .objective-resources-head,
+  body .manager-detail-header,
+  body .manager-detail-chart-head,
+  body .admin-department-health-head {
+    align-items: flex-start !important;
+    flex-wrap: wrap;
+    gap: 10px !important;
+  }
+
+  body .workspace-head-actions,
+  body .top-actions,
+  body .inline,
+  body .filters {
+    flex-wrap: wrap;
+  }
+
+  body .filters > *,
+  body .filters .search {
+    flex: 1 1 180px;
+    min-width: 0;
+    width: auto !important;
+  }
+
+  body .title { font-size: clamp(25px,8vw,36px) !important; }
+  body .subtitle,
+  body .sub { max-width: 100%; overflow-wrap: anywhere; }
+
+  body .table-wrap {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto !important;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body .table { min-width: 680px; }
+  body .input,
+  body .select,
+  body .textarea,
+  body input,
+  body select,
+  body textarea { max-width: 100%; box-sizing: border-box; }
+
+  body .modal-back { align-items: flex-end; padding: 8px !important; }
+  body .modal {
+    width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 16px) !important;
+    max-height: calc(100dvh - 16px) !important;
+    margin: 0 !important;
+    border-radius: 18px 18px 12px 12px !important;
+  }
+
+  body .modal-body { overflow-x: hidden; overflow-y: auto; }
+  body .modal-foot { flex-wrap: wrap; }
+  body .modal-foot .btn { min-width: 0; }
+
+  body .weekly-review-list-page { width: 100%; padding: 14px !important; }
+  body .weekly-review-focused { width: 100%; }
+  body .weekly-review-focused .focused-objective-heading,
+  body .weekly-review-focused .objective-resources-head { align-items: stretch; flex-direction: column; }
+  body .weekly-review-focused .focused-objective-owner { width: 100%; min-width: 0; }
+  body .weekly-review-focused .objective-detail-description { margin-inline: 18px; }
+  body .weekly-review-focused .objective-detail-facts,
+  body .objective-focus-grid { margin-inline: 18px; }
+
+  body .department-trend-chart { width: 100%; max-width: 100%; overflow: hidden; }
+  body .department-trend-plot { width: 100%; min-height: 145px !important; max-height: none; }
+  body .department-trend-plot svg { overflow: hidden; }
+  body .department-trend-footer { align-items: flex-start; flex-direction: column; }
+
+  body .department-detail,
+  body .manager-department-detail,
+  body .project-detail,
+  body .task-detail { width: 100%; min-width: 0; }
+
+  body .department-overview,
+  body .manager-detail-metrics,
+  body .project-overview {
+    grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+  }
+
+  body .settings-dialog .settings-sidebar {
+    display: grid !important;
+    grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+    gap: 6px;
+    overflow: visible !important;
+  }
+
+  body .settings-dialog .settings-sidebar button {
+    min-width: 0 !important;
+    max-width: 100%;
+  }
+
+  body .settings-dialog .settings-panel { min-width: 0; }
+}
+
+@media (max-width:480px) {
+  body .workspace-topbar { padding: 8px !important; gap: 7px; }
+  body .workspace-wordmark-name { font-size: 15px !important; }
+  body .workspace-wordmark-ops { font-size: 11px !important; }
+  body .workspace-topbar .profile-copy,
+  body .workspace-topbar .profile-trigger > span { display: none !important; }
+
+  body .content,
+  body .workspace-content { padding: 11px 8px 28px !important; }
+  body .workspace-card,
+  body .panel { border-radius: 14px !important; }
+  body .workspace-card-head { padding-inline: 12px !important; }
+  body .workspace-head-actions { width: 100%; justify-content: flex-start !important; }
+  body .workspace-head-actions button { min-width: 0; white-space: normal; }
+
+  body .workspace-review-home .review-home-head > div:first-child { width: 100%; min-width: 0; }
+  body .workspace-review-home .review-home-title { min-width: 0; }
+  body .workspace-review-home .review-home-title small { white-space: normal; }
+  body .workspace-review-home .review-objective-row {
+    grid-template-columns: minmax(0,1fr) !important;
+  }
+  body .workspace-review-home .review-objective-open {
+    grid-template-columns: 28px minmax(0,1fr) !important;
+    gap: 8px !important;
+    min-height: 74px;
+    padding: 10px !important;
+  }
+  body .workspace-review-home .review-objective-marker { width: 28px !important; height: 28px !important; }
+  body .workspace-review-home .review-objective-copy {
+    grid-template-columns: minmax(0,1fr) !important;
+    grid-template-areas: "title" "details" !important;
+    min-width: 0;
+  }
+  body .workspace-review-home .review-objective-copy > b {
+    min-width: 0;
+    font-size: 12px !important;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  body .workspace-review-home .review-objective-owner,
+  body .workspace-review-home .review-objective-meta,
+  body .workspace-review-home .review-objective-edit,
+  body .workspace-review-home .review-objective-people { display: none !important; }
+
+  body .weekly-review-list-page .objective-list-row {
+    grid-template-columns: 40px minmax(0,1fr) 14px !important;
+    gap: 9px;
+    padding: 10px !important;
+  }
+  body .weekly-review-list-page .objective-list-open {
+    min-width: 0;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  body .weekly-review-list-page .objective-list-state { justify-items: start; }
+  body .weekly-review-list-page .objective-list-edit { display: none !important; }
+
+  body .weekly-review-focused .focused-review-nav { flex-wrap: wrap; }
+  body .weekly-review-focused .focused-objective-heading { padding: 21px 16px 17px; }
+  body .weekly-review-focused .focused-objective-title { align-items: flex-start; }
+  body .weekly-review-focused .focused-objective-title h1 {
+    font-size: clamp(23px,8vw,31px);
+    overflow-wrap: anywhere;
+  }
+  body .weekly-review-focused .objective-detail-description,
+  body .weekly-review-focused .objective-detail-facts,
+  body .objective-focus-grid { margin-inline: 14px; }
+  body .weekly-review-focused .objective-detail-facts,
+  body .objective-focus-grid { grid-template-columns: minmax(0,1fr) !important; }
+  body .objective-focus-heading { align-items: flex-start; }
+  body .objective-supporting-task { grid-template-columns: 28px minmax(0,1fr) 14px; }
+
+  body .department-overview,
+  body .manager-detail-metrics,
+  body .project-overview,
+  body .stats { grid-template-columns: minmax(0,1fr) !important; }
+  body .admin-department-health,
+  body .manager-detail-chart { padding: 16px 12px !important; }
+  body .admin-department-health-score { justify-items: start; }
+  body .department-trend-plot { min-height: 122px !important; }
+  body .department-trend-chart .manager-detail-hours .hide-chart-label { display: none; }
+  body .department-trend-legend { gap: 8px 11px; }
+
+  body .task-create-modal { width: calc(100vw - 8px) !important; max-width: calc(100vw - 8px) !important; }
+  body .task-create-form { grid-template-columns: minmax(0,1fr) !important; }
+  body .task-create-wide { grid-column: auto !important; }
+  body .task-create-form .task-department-options > label {
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  body .settings-dialog { width: calc(100vw - 8px) !important; max-width: calc(100vw - 8px) !important; }
+  body .settings-dialog .settings-sidebar button {
+    min-height: 40px !important;
+    padding: 7px !important;
+  }
+  body .settings-dialog .settings-tab-copy small,
+  body .settings-dialog .settings-tab-chevron { display: none; }
+  body .settings-dialog .settings-panel { padding: 14px 10px 20px !important; }
+
+  body .person-add-fields,
+  body .person-edit-form .person-add-fields,
+  body .account-management-grid,
+  body .project-assignee-grid { grid-template-columns: minmax(0,1fr) !important; }
+  body .person-delete-row { align-items: stretch; flex-direction: column; }
+
+  body .project-detail-head .inline,
+  body .task-detail .inline { width: 100%; }
+  body .project-detail-head .btn,
+  body .task-detail .btn { max-width: 100%; }
+
+  body .login { padding: 12px !important; }
+  body .login-card { width: 100% !important; max-width: 100% !important; padding: 28px 20px !important; }
+}
+
+@media (max-width:360px) {
+  body .workspace-topbar .workspace-wordmark-ops { display: none; }
+  body .workspace-topbar .top-actions { gap: 3px; }
+  body .workspace-head-actions button { padding-inline: 8px; font-size: 9px; }
+  body .workspace-review-home .review-home-objective-list { padding-inline: 7px !important; }
+  body .weekly-review-list-page { padding: 9px !important; }
+  body .weekly-review-focused .focused-objective-icon { width: 42px; height: 42px; }
+  body .modal { width: calc(100vw - 6px) !important; max-width: calc(100vw - 6px) !important; }
+}
