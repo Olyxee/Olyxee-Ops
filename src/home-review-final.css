@@ -949,6 +949,11 @@ body .weekly-review-page .review-objective-card::before {
   content: none !important;
 }
 
+body .workspace-review-home .review-objective-open::before {
+  display: none !important;
+  content: none !important;
+}
+
 /* Real department health trend shared by Manager and Superadmin. */
 body .department-trend-chart {
   width: min(100%,860px);
