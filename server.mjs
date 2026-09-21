@@ -557,11 +557,9 @@ app.post("/api/people", requireAuth, requireAccount, async (request, response) =
         SELECT id, email, display_name, department
         FROM public.workspace_accounts
         WHERE lower(email) = lower($1)
-          AND active = true
-          AND (manage_interns = true OR manage_projects = true)
         LIMIT 1
       `, [request.appAccount.email]);
-      if (!manager.rowCount) return response.status(403).json({ error: "Your active department manager record was not found." });
+      if (!manager.rowCount) return response.status(403).json({ error: "Your Manager profile could not be matched to the People directory." });
       internDepartment = validateDepartment(manager.rows[0].department);
       if (!internDepartment) return response.status(400).json({ error: "Your Manager account must be assigned to an official department before adding an Intern." });
       departmentManager = manager.rows[0];
@@ -905,14 +903,15 @@ app.post("/api/people/:id/ops-access", requireAuth, requireAccount, async (reque
         recipient: String(person.email).trim().toLowerCase(),
         recipientUserId: accountResult.rows[0].id,
         relatedInternshipId: kind === "intern" ? request.params.id : null,
-        subject: "Your Olyxee Ops account is ready",
-        intro: `Hello ${firstName}, your Olyxee Ops account is ready. This secure setup link expires in 24 hours.`,
+        subject: "Create your Olyxee Ops password",
+        intro: `Hello ${firstName}, your Olyxee Ops account is ready. Use the secure button below to create your password. For your security, passwords are never sent by email. This single-use link expires in 24 hours.`,
         details: [
           { label: "Role", value: accountResult.rows[0].role },
           { label: "Department", value: person.department },
           { label: "Login email", value: person.email },
+          { label: "Password", value: "Create securely using the button below" },
         ],
-        ctaLabel: "Set up your account",
+        ctaLabel: "Create your password",
         ctaUrl: setupUrl,
         deduplicationKey: `account-invite:${accountResult.rows[0].id}:${tokenResult.rows[0].id}`,
       }));
@@ -927,7 +926,7 @@ app.post("/api/people/:id/ops-access", requireAuth, requireAccount, async (reque
         role: accountResult.rows[0].role,
         invitationStatus: delivered ? "sent" : "failed",
         message: delivered
-          ? "The secure account setup email was sent."
+          ? "The secure password creation email was sent."
           : "The setup link was created, but the invitation email could not be delivered. Retry it from the email notification log.",
         ...(delivered ? {} : { error: "The account invitation email could not be delivered." }),
       });
