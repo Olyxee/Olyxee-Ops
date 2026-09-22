@@ -2001,7 +2001,7 @@
 
 .intern-task-scan {
   display: grid;
-  grid-template-columns: 1.1fr 1fr .85fr 1.35fr;
+  grid-template-columns: 1fr .85fr 1.35fr;
   gap: 1px;
   margin: 16px 0 18px;
   overflow: hidden;
@@ -2091,10 +2091,6 @@
   align-self: start;
 }
 
-.task-detail-work-page .intern-work-section:nth-child(4) {
-  grid-column: 1 / -1;
-}
-
 .task-detail-work-page .intern-section-heading {
   padding-bottom: 11px;
   border-bottom: 1px solid #edf0f1;
@@ -2171,8 +2167,7 @@
   }
 
   .task-detail-work-page .intern-checklist-section,
-  .task-detail-work-page .intern-submit-section,
-  .task-detail-work-page .intern-work-section:nth-child(4) {
+  .task-detail-work-page .intern-submit-section {
     grid-column: 1;
   }
 }
