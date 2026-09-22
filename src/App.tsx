@@ -473,9 +473,6 @@ function ProjectDetail({user,project,tasks,objectives,team,onBack,onOpen,onProje
   const [saving,setSaving]=useState(false);
   const projectTasks=tasks.filter(task=>task.project===project.name);
   const weeklyProjectTasks=projectTasks.filter(task=>task.weeklyCommitment);
-  const done=projectTasks.filter(task=>task.status==="Completed").length;
-  const open=projectTasks.filter(task=>!["Completed","Cancelled"].includes(task.status)).length;
-  const completion=projectTasks.length?Math.round(done/projectTasks.length*100):0;
   const manager=isManager(user);
   const canManageProject=isAdmin(user)||manager;
   const assignable=(manager?team.filter(person=>employmentOf(person)==="Intern"&&person.reportsTo===user.id&&person.active!==false):team.filter(isCurrentTeamMember)).sort((a,b)=>a.name.localeCompare(b.name));
@@ -515,13 +512,6 @@ function ProjectDetail({user,project,tasks,objectives,team,onBack,onOpen,onProje
       <div className="inline">{canManageProject&&<button className="btn" onClick={()=>setEditing(value=>!value)}><Settings size={14}/> {manager?"Manage interns":"Edit project"}</button>}{project.githubUrl&&<a className="btn github-button" href={project.githubUrl} target="_blank" rel="noreferrer"><Github size={15}/> Open GitHub</a>}</div>
     </header>
     {editing&&<section className="panel detail-section project-edit-panel"><div className="panel-head"><div><b>{manager?"Project interns":"Project settings"}</b><div className="row-meta">{manager?"Add or remove interns who report to you.":`Update the project logo, repository access${accessOf(user)==="Superadmin"?", and assigned people":""}.`}</div></div><button className="btn primary" disabled={saving||processingLogo||(!manager&&!/^https?:\/\/(www\.)?github\.com\/.+/i.test(githubUrl))} onClick={saveProject}>{saving?"Saving…":"Save changes"}</button></div>{!manager&&<><label className="form-label">Project logo<div className="inline">{logoUrl?<img className="project-logo-preview" src={logoUrl} alt="Project logo preview"/>:<ProjectLogo project={{...project,logoUrl:undefined}} size={54}/>}<label className="btn">{processingLogo?"Processing…":"Choose logo"}<input type="file" hidden accept="image/*" disabled={processingLogo} onChange={event=>{void readProjectLogo(event.target.files?.[0]);event.currentTarget.value=""}}/></label>{logoUrl&&<button type="button" className="btn" disabled={processingLogo} onClick={()=>setLogoUrl("")}>Remove logo</button>}</div></label><label className="form-label">GitHub repository URL<input className="input" value={githubUrl} onChange={event=>setGithubUrl(event.target.value)} placeholder="https://github.com/olyxee/repository"/></label></>}{(accessOf(user)==="Superadmin"||manager)&&<div className="form-label project-assignee-picker">{manager?"Your interns":"Assigned people"}<div className="project-assignee-grid">{assignable.map(person=><label key={person.id}><input type="checkbox" checked={assigneeIds.includes(person.id)} onChange={event=>setAssigneeIds(current=>event.target.checked?[...current,person.id]:current.filter(id=>id!==person.id))}/><Avatar person={person} size={28}/><span><b>{person.name}</b><small>{person.position||person.department}</small></span></label>)}{manager&&!assignable.length&&<div className="row-meta">No active interns report to you.</div>}</div></div>}</section>}
-    <section className="project-overview project-overview-clear" aria-label="Project summary">
-      <div><span className="stat-label">Status</span><Status s={project.status}/></div>
-      <div><span className="stat-label">Overall progress</span><strong>{completion}%</strong><div className="project-progress"><span style={{width:`${completion}%`}}/></div></div>
-      <div><span className="stat-label">This week</span><strong>{weeklyProjectTasks.length}</strong><small>project tasks</small></div>
-      <div><span className="stat-label">Departments</span><strong>{projectDepartments.length}</strong><small>involved</small></div>
-      <div><span className="stat-label">Open work</span><strong>{open}</strong><small>tasks</small></div>
-    </section>
     <div className="project-insight-grid">
       <section className="panel project-weekly-objectives">
         <div className="panel-head"><span><span className="panel-kicker">Monday–Sunday</span><span className="panel-title">Weekly objectives</span></span><span className="mono">{weeklyObjectives.length} goals</span></div>

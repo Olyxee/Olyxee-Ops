@@ -58,9 +58,6 @@ body .login-card{max-height:calc(100dvh - 40px);overflow:auto}
 .project-detail-hero .subtitle{max-width:760px;line-height:1.55}
 .project-department-tags{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
 .project-department-tags span{display:inline-flex;align-items:center;gap:5px;padding:6px 8px;border:1px solid #dce6e2;border-radius:8px;background:#fff;color:#52655d;font-size:10px;font-weight:650}
-.project-overview-clear{grid-template-columns:repeat(5,minmax(0,1fr));margin:0}
-.project-overview-clear>div{min-width:0}
-.project-overview-clear small{color:#7e8884;font-size:9px}
 .project-insight-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
 .project-insight-grid>.panel{min-width:0;overflow:hidden}
 .project-contribution-list{display:grid}
@@ -101,7 +98,6 @@ body .login-card{max-height:calc(100dvh - 40px);overflow:auto}
   body .app.workspace-shell .workspace-review-home .review-home-objectives{border-right:0;border-bottom:1px solid #ececef}
   body .app.workspace-shell .settings-dialog{max-width:calc(100vw - 28px)!important}
   body .app.workspace-shell .manager-detail-columns{grid-template-columns:1fr}
-  body .app.workspace-shell .project-overview-clear{grid-template-columns:repeat(3,minmax(0,1fr))}
   body .app.workspace-shell .project-insight-grid{grid-template-columns:1fr}
 }
 
@@ -126,6 +122,5 @@ body .login-card{max-height:calc(100dvh - 40px);overflow:auto}
   body .login-card{max-height:calc(100dvh - 24px);padding:26px 20px 22px}
   body .app.workspace-shell .project-detail-hero{padding:17px 15px}
   body .app.workspace-shell .project-detail-hero .project-heading{align-items:flex-start}
-  body .app.workspace-shell .project-overview-clear{grid-template-columns:repeat(2,minmax(0,1fr))}
   body .app.workspace-shell .project-insight-grid{grid-template-columns:1fr}
 }
