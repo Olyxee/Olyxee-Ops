@@ -82,7 +82,7 @@ const departmentHealthCurveFor=(tasks:Task[],now:number,maxHours?:number):Depart
      ];
      return activityTimes.some(value=>Number.isFinite(value)&&value>=windowStart&&value<=now);
    });
-  let score=hasRecentWork?58:52;
+   let score=tasks.length?(hasRecentWork?58:52):0;
   const startPoint:DepartmentHealthPoint={label:"",score,event:"Hourly window starting point",direction:"steady"};
   const hourlyPoints=Array.from({length:hours},(_,index)=>{
      const start=windowStart+index*hour;
@@ -106,7 +106,7 @@ const departmentHealthCurveFor=(tasks:Task[],now:number,maxHours?:number):Depart
      const positive=added*8+submitted*6+completed*10+updated*4+feedback*4+otherActivity*3;
      const negative=blocked*8+changesRequested*6+reopened*3+overdue*5;
     const change=positive-negative;
-    score=Math.max(10,Math.min(96,score+change));
+     score=tasks.length?Math.max(10,Math.min(96,score+change)):0;
     const direction:DepartmentHealthPoint["direction"]=change>0?"up":change<0?"down":"steady";
       const event=completed?`${completed} ${completed===1?"task":"tasks"} completed`:submitted?`${submitted} sent for review`:added?`${added} ${added===1?"task":"tasks"} created`:feedback?`${feedback} ${feedback===1?"feedback update":"feedback updates"}`:updated?`${updated} task ${updated===1?"update":"updates"}`:otherActivity?`${otherActivity} delivery ${otherActivity===1?"activity":"activities"}`:blocked?`${blocked} ${blocked===1?"task":"tasks"} blocked`:changesRequested?`${changesRequested} sent back for changes`:reopened?`${reopened} checklist ${reopened===1?"item":"items"} reopened`:overdue?`${overdue} ${overdue===1?"task became":"tasks became"} overdue`:"No recorded department activity";
      return{label:formatHour(start),score,event,direction};
@@ -461,8 +461,8 @@ function DepartmentTrendChart({curve,label}:{curve:DepartmentHealthPoint[];label
 }
 function DepartmentHealthPanel({departmentName,tasks}:{departmentName:string;tasks:Task[]}){
   const curve=departmentHealthCurveFor(tasks,Date.now());
-  const score=curve[curve.length-1]?.score||50;
-  const state=score>=68?"On track":score>=44?"Needs attention":"At risk";
+  const score=curve[curve.length-1]?.score??0;
+  const state=!tasks.length?"No activity":score>=68?"On track":score>=44?"Needs attention":"At risk";
   return <section className="panel admin-department-health" aria-labelledby="admin-department-health-title">
     <div className="admin-department-health-head"><div><span className="panel-kicker">Week to date · hourly activity</span><h2 id="admin-department-health-title">Delivery health</h2><p>Each point represents one elapsed hour since Monday. Blue rises come from recorded task creation, updates, feedback, submissions, completions, and delivery activity. Red drops show blockers, overdue work, or work sent back for changes.</p></div><div className="admin-department-health-score"><strong>{score}</strong><span>/ 100</span><small className={`manager-detail-state ${state.toLowerCase().replace(/\s+/g,"-")}`}>{state}</small></div></div>
     <DepartmentTrendChart curve={curve} label={`${departmentName} delivery health`}/>
@@ -477,8 +477,8 @@ function ManagerDepartmentDetail({user,department,tasks,objectives,team,onBack,o
   const attention=[...tasks.filter(task=>["Blocked","Submitted for Review"].includes(task.status)),...active.filter(task=>task.due<currentDate()&&!["Blocked","Submitted for Review"].includes(task.status))].filter((task,index,list)=>list.findIndex(item=>item.id===task.id)===index).slice(0,6);
   const shown=attention.length?attention:active.slice(0,6);
   const lead=team.find(person=>person.name===department[1])||team.find(person=>isManager(person)&&person.department===department[0]);
-  const score=curve[curve.length-1]?.score||50;
-  const state=score>=68?"On track":score>=44?"Needs attention":"At risk";
+  const score=curve[curve.length-1]?.score??0;
+  const state=!tasks.length?"No activity":score>=68?"On track":score>=44?"Needs attention":"At risk";
   return <div className="manager-department-detail">
     <button type="button" className="manager-detail-back" onClick={onBack} aria-label="Back to Manager Home" title="Back to Manager Home"><ArrowLeft size={18}/></button>
     <header className="manager-detail-header"><div><span className="panel-kicker">Department health</span><h1>{department[0]}</h1><p>Led by {lead?.name||department[1]}</p></div><span className={`manager-detail-state ${state.toLowerCase().replace(/\s+/g,"-")}`}>{state}</span></header>
