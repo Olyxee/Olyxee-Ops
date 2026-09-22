@@ -346,10 +346,12 @@ body .department-detail .department-contribution { display: none !important; }
 
 body .admin-department-health {
   margin: 18px 0 14px;
-  padding: 22px 24px 18px;
+  padding: 0;
   overflow: hidden;
-  border-radius: 18px !important;
-  box-shadow: 0 8px 26px rgba(31,39,47,.065) !important;
+  border: 0;
+  border-radius: 0 !important;
+  background: transparent;
+  box-shadow: none !important;
 }
 
 body .admin-department-health-head {
