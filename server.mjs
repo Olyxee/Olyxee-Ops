@@ -393,10 +393,20 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
     ]);
     const opsAccounts = new Map(opsAccountResult.rows.map((account) => [String(account.email).toLowerCase(), account]));
 
+    const assignableManagers = accountResult.rows.filter((account) => (
+      account.active && (account.manage_interns || account.manage_projects)
+    ));
     const managerIds = new Map();
-    for (const account of accountResult.rows) {
-      managerIds.set(String(account.email || "").toLowerCase(), `account-${account.id}`);
-      managerIds.set(String(account.display_name || "").toLowerCase(), `account-${account.id}`);
+    const managersByAccountId = new Map();
+    const managersByDepartment = new Map();
+    for (const account of assignableManagers) {
+      const personId = `account-${account.id}`;
+      managerIds.set(String(account.email || "").trim().toLowerCase(), personId);
+      managerIds.set(String(account.display_name || "").trim().toLowerCase(), personId);
+      managersByAccountId.set(String(account.id), personId);
+      if (account.department && !managersByDepartment.has(account.department)) {
+        managersByDepartment.set(account.department, personId);
+      }
     }
 
     const managers = accountResult.rows.map((account) => {
@@ -433,6 +443,12 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
       const supervisorNameKey = String(intern.supervisor_name || "").trim().toLowerCase();
       const opsAccount = opsAccounts.get(String(intern.email || "").toLowerCase());
       const opsProfile = opsAccount?.profile_data || {};
+      const resolvedDepartment = resolveDepartment(intern);
+      const reportsTo = managersByAccountId.get(String(intern.supervisor_account_id || ""))
+        || managerIds.get(supervisorKey)
+        || managerIds.get(supervisorNameKey)
+        || managersByDepartment.get(resolvedDepartment.department);
+      const resolvedSupervisor = accountResult.rows.find((account) => `account-${account.id}` === reportsTo);
       return {
         id: `intern-${intern.id}`,
         name: opsProfile.displayName || intern.full_name,
@@ -440,9 +456,9 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
         employmentType: "Intern",
         accessRole: opsAccount?.role || "Member",
         accountStatus: opsAccount ? (opsAccount.active ? "Active" : "Suspended") : "Pending",
-        department: resolveDepartment(intern).department,
+        department: resolvedDepartment.department,
         position: intern.position || "Intern",
-        reportsTo: intern.supervisor_account_id ? `account-${intern.supervisor_account_id}` : managerIds.get(supervisorKey) || managerIds.get(supervisorNameKey),
+        reportsTo,
         role: "Intern",
         avatarUrl: opsProfile.avatarUrl,
         contactDetails: opsProfile.contactDetails,
@@ -455,8 +471,8 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
         lastSeenAt: opsProfile.lastSeenAt,
         source: "Supabase",
         employmentStatus: intern.employment_status || "Unknown",
-        supervisorName: intern.supervisor_name || "",
-        departmentReviewRequired: resolveDepartment(intern).reviewRequired,
+        supervisorName: resolvedSupervisor?.display_name || intern.supervisor_name || "",
+        departmentReviewRequired: resolvedDepartment.reviewRequired,
       };
     });
 
