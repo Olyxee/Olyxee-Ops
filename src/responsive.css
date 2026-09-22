@@ -70,6 +70,18 @@ body .login-card{max-height:calc(100dvh - 40px);overflow:auto}
 .project-contribution-list article small{color:#7d8984;font-size:9px}
 .project-contribution-track{height:6px;overflow:hidden;border-radius:999px;background:#e9eeec}
 .project-contribution-track span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5a9183,#347fb4)}
+.objective-modal{width:min(680px,calc(100vw - 28px))}
+.objective-project-picker{grid-column:1/-1;margin:0;padding:0;border:0}
+.objective-project-picker>legend{padding:0;color:#3d4448;font-size:11px;font-weight:700}
+.objective-project-picker>small{display:block;margin:4px 0 9px;color:#7c858a;font-size:10px}
+.objective-project-picker>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.objective-project-picker button{display:grid;grid-template-columns:38px minmax(0,1fr) 16px;align-items:center;gap:10px;min-width:0;padding:10px;border:1px solid #dfe4e5;border-radius:11px;background:#fff;color:#2f383c;text-align:left}
+.objective-project-picker button:hover{border-color:#aebfc0;background:#f8faf9}
+.objective-project-picker button.selected{border-color:#5a9183;background:#eef6f3;box-shadow:inset 0 0 0 1px rgba(90,145,131,.2)}
+.objective-project-picker button>span{display:grid;gap:2px;min-width:0}
+.objective-project-picker button b{overflow:hidden;font-size:11px;text-overflow:ellipsis;white-space:nowrap}
+.objective-project-picker button small{color:#7b8589;font-size:9px}
+.objective-project-picker button>svg{color:#4e8275}
 
 @media (max-width:1440px) and (min-width:961px){
   body .app.workspace-shell .workspace-topbar{grid-template-columns:minmax(170px,.8fr) minmax(240px,1.2fr) minmax(180px,.8fr)}
@@ -99,6 +111,7 @@ body .login-card{max-height:calc(100dvh - 40px);overflow:auto}
   body .app.workspace-shell .settings-dialog{max-width:calc(100vw - 28px)!important}
   body .app.workspace-shell .manager-detail-columns{grid-template-columns:1fr}
   body .app.workspace-shell .project-insight-grid{grid-template-columns:1fr}
+  body .objective-project-picker>div{grid-template-columns:1fr}
 }
 
 @media (max-width:700px){
