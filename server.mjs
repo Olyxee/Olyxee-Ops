@@ -1406,6 +1406,30 @@ async function notifyTaskAssignee(client, task, identity, title, body) {
 }
 
 const dateOnly = (value) => value instanceof Date ? value.toISOString().slice(0, 10) : String(value || "").slice(0, 10);
+const johannesburgDate = (value = new Date()) => new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Africa/Johannesburg",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+}).format(value);
+const currentWeekBounds = () => {
+  const today = johannesburgDate();
+  const current = new Date(`${today}T12:00:00Z`);
+  const daysSinceMonday = (current.getUTCDay() + 6) % 7;
+  const monday = new Date(current);
+  monday.setUTCDate(current.getUTCDate() - daysSinceMonday);
+  const sunday = new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate() + 6);
+  return {
+    start: monday.toISOString().slice(0, 10),
+    end: sunday.toISOString().slice(0, 10),
+  };
+};
+const isCurrentWeekTask = (row) => {
+  const taskDate = dateOnly(row.start_date || row.created_at);
+  const { start, end } = currentWeekBounds();
+  return Boolean(taskDate && taskDate >= start && taskDate <= end);
+};
 const mapTask = (row) => ({
   id: row.id,
   code: `OLX-${String(row.task_number).padStart(4, "0")}`,
@@ -1428,6 +1452,7 @@ const mapTask = (row) => ({
   createdDate: row.created_at,
   submittedAt: row.submitted_at,
   completedAt: row.completed_at,
+  weeklyCommitment: isCurrentWeekTask(row),
   blockerReason: row.blocker_reason,
   checklist: row.checklist || [],
   updates: row.updates || [],
