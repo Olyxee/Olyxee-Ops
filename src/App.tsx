@@ -53,6 +53,7 @@ const lastActivityLabel=(value?:string|number)=>{
 const objectivesForUser=(objectives:WeeklyObjective[],user:User,team:User[])=>{
   if(accessOf(user)==="Superadmin")return objectives;
   return objectives.filter(objective=>{
+     if(objective.status==="Complete")return false;
     if(objective.managerId===user.id)return true;
     const owner=team.find(person=>person.id===objective.managerId);
     return Boolean(user.department&&owner?.department===user.department);
@@ -264,7 +265,7 @@ function InternNav({active,onSelect}:{active:View;onSelect:(view:View)=>void}){
 }
 function Header({eyebrow,title,subtitle,action}:{eyebrow:string;title:string;subtitle?:string;action?:React.ReactNode}){return <div className="page-head"><div><div className="eyebrow">{eyebrow}</div><h1 className="title">{title}</h1>{subtitle&&<p className="subtitle">{subtitle}</p>}</div>{action}</div>}
 function Status({s}:{s:string}){let c=["Completed","Approved","Complete"].includes(s)?"green":["Blocked","Rejected","At risk","Changes Requested"].includes(s)?"red":["Submitted for Review","Pending","In progress"].includes(s)?"amber":"gray";return <span className={`badge ${c}`}>{s}</span>}
-function ObjectiveStatusIcon({status,size=18}:{status:ObjectiveStatus;size?:number}){return status==="Complete"?<Check size={size}/>:status==="At risk"?<AlertTriangle size={size}/>:status==="In progress"?<Clock3 size={size}/>:status==="Not started"?<ClipboardList size={size}/>:<FileCheck2 size={size}/>}
+function ObjectiveStatusIcon({status,size=18}:{status:ObjectiveStatus;size?:number}){return status==="Complete"?<Check size={size}/>:status==="At risk"||status==="Blocked"?<AlertTriangle size={size}/>:status==="In progress"?<Clock3 size={size}/>:status==="Not started"?<ClipboardList size={size}/>:<FileCheck2 size={size}/>}
 function StatusPill({status}:{status?:StaffStatus}){const value=status?.availability||"Offline";return <span className={`availability ${value.toLowerCase()}`}><i/>{value}</span>}
 function WorkHoursPill({status}:{status?:StaffStatus}){
   const start=status?.start||"09:00";
@@ -1071,6 +1072,15 @@ function Review({objectives,objectiveId,team,tasks,user,onBack,onOpenTask,onObje
     const supportingWork=(weeklyWork.length?weeklyWork:departmentWork).sort((a,b)=>new Date(a.due).getTime()-new Date(b.due).getTime()).slice(0,4);
      const canEdit=accessOf(user)==="Superadmin"||focused.managerId===user.id;
      const canUpload=accessOf(user)==="Superadmin"||focused.managerId===user.id;
+     const updateManagerStatus=(status:ObjectiveStatus)=>{
+       if(status==="Blocked"){
+         const blockerMessage=window.prompt("What is blocking this weekly objective? This message will be sent to your reporting manager.")?.trim();
+         if(!blockerMessage)return;
+         setObjectives(items=>items.map(item=>item.id===focused.id?{...item,status,blockerMessage:blockerMessage.slice(0,1000),blockedAt:new Date().toISOString(),completedAt:undefined}:item));
+         return;
+       }
+       setObjectives(items=>items.map(item=>item.id===focused.id?{...item,status,blockerMessage:undefined,blockedAt:undefined,completedAt:status==="Complete"?new Date().toISOString():undefined}:item));
+     };
     const uploadResource=async(file?:File)=>{
       if(!file||!canUpload)return;
       setUploading(true);setUploadError("");
@@ -1092,7 +1102,7 @@ function Review({objectives,objectiveId,team,tasks,user,onBack,onOpenTask,onObje
           <section className="objective-focus-section" aria-labelledby="objective-supporting-work"><div className="objective-focus-heading"><span className="objective-focus-heading-icon"><ListTodo size={17}/></span><span><h2 id="objective-supporting-work">Supporting work</h2><p>Current weekly tasks in {objectiveDepartment||"this objective’s department"}.</p></span></div><div className="objective-supporting-list">{supportingWork.map(task=><button type="button" key={task.id} className="objective-supporting-task" onClick={()=>onOpenTask(task.id)}><span className="objective-supporting-status"><Check size={13}/></span><span><strong>{task.title}</strong><small>{task.status} · Due {task.due}</small></span><ChevronRight size={15}/></button>)}{!supportingWork.length&&<div className="objective-focus-empty">No department tasks are available yet.</div>}</div></section>
           <section className="objective-focus-section" aria-labelledby="objective-contributors"><div className="objective-focus-heading"><span className="objective-focus-heading-icon people"><Users size={17}/></span><span><h2 id="objective-contributors">People who can contribute</h2><p>Active members of {objectiveDepartment||"the responsible team"}.</p></span></div><div className="objective-contributor-list">{contributors.slice(0,6).map(person=><div className="objective-contributor" key={person.id}><Avatar person={person} size={32}/><span><strong>{person.name}</strong><small>{person.id===focused.managerId?"Objective owner":person.position||person.role}</small></span>{person.id===focused.managerId&&<Check size={14}/>}</div>)}{!contributors.length&&<div className="objective-focus-empty">No active contributors are assigned to this department.</div>}</div></section>
         </div>
-        {isManager(user)&&focused.managerId===user.id&&<div className="objective-control-row"><label className="objective-status-control"><span><span className="panel-kicker">Update progress</span><small>Keep the team’s weekly review current.</small></span><select className="select" aria-label={`Status for ${focused.title}`} value={focused.status} onChange={event=>setObjectives(items=>items.map(item=>item.id===focused.id?{...item,status:event.target.value as ObjectiveStatus}:item))}>{["Not started","In progress","At risk","Complete"].map(status=><option key={status}>{status}</option>)}</select></label></div>}
+         {isManager(user)&&focused.managerId===user.id&&<div className="objective-control-row"><div className="objective-status-control"><span><span className="panel-kicker">Update progress</span><small>Completed objectives leave your active list but remain available to the Superadmin.</small></span><span className="objective-status-actions"><button type="button" className="btn" disabled={focused.status==="In progress"} onClick={()=>updateManagerStatus("In progress")}><Clock3 size={14}/> Started</button><button type="button" className="btn" disabled={focused.status==="Blocked"} onClick={()=>updateManagerStatus("Blocked")}><AlertTriangle size={14}/> Blocker</button><button type="button" className="btn primary" onClick={()=>updateManagerStatus("Complete")}><Check size={14}/> Completed</button></span></div>{focused.status==="Blocked"&&focused.blockerMessage&&<div className="objective-blocker-message"><strong>Current blocker</strong><span>{focused.blockerMessage}</span></div>}</div>}
       </section>
       <section className="panel objective-resources-card" aria-labelledby="objective-resources-title">
         <div className="objective-resources-head"><div><span className="panel-kicker">Supporting material</span><h2 id="objective-resources-title">Resources</h2><p>Files attached to this objective for the team’s reference.</p></div>{canUpload&&<label className="btn primary objective-upload">{uploading?"Uploading…":"Upload file"}<Upload size={14}/><input hidden type="file" accept="image/*,.pdf,.txt,.md,.doc,.docx" disabled={uploading} onChange={event=>{void uploadResource(event.target.files?.[0]);event.currentTarget.value=""}}/></label>}</div>
@@ -1140,7 +1150,7 @@ function ObjectiveModal({objective,managers,projects,onClose,onSave}:{objective?
       <fieldset className="objective-project-picker"><legend>Related projects</legend><small>Select every project this objective supports.</small><div>{projects.map(project=>{const selected=projectIds.includes(project.id);return <button type="button" className={selected?"selected":""} aria-pressed={selected} key={project.id} onClick={()=>setProjectIds(current=>selected?current.filter(id=>id!==project.id):[...current,project.id])}><ProjectLogo project={project} size={38}/><span><b>{project.name}</b><small>{selected?"Selected":"Select project"}</small></span>{selected&&<Check size={15}/>}</button>})}{!projects.length&&<div className="empty">No active projects are available.</div>}</div></fieldset>
       <label className="form-label">Assigned manager<select className="select" value={managerId} onChange={event=>setManagerId(event.target.value)}><option value="">Select a manager</option>{managers.map(manager=><option key={manager.id} value={manager.id}>{manager.name} · {manager.department}</option>)}</select></label>
       <label className="form-label">Priority<select className="select" value={priority} onChange={event=>setPriority(event.target.value as WeeklyObjective["priority"])}>{["Critical","High","Medium","Low"].map(value=><option key={value}>{value}</option>)}</select></label>
-      {objective&&<label className="form-label">Status<select className="select" value={status} onChange={event=>setStatus(event.target.value as ObjectiveStatus)}>{["Not started","In progress","At risk","Complete"].map(value=><option key={value}>{value}</option>)}</select></label>}
+      {objective&&<label className="form-label">Status<select className="select" value={status} onChange={event=>setStatus(event.target.value as ObjectiveStatus)}>{["Not started","In progress","Blocked","At risk","Complete"].map(value=><option key={value}>{value}</option>)}</select></label>}
       <label className="form-label">Due date<input className="input" type="date" value={dueDate} onChange={event=>setDueDate(event.target.value)}/></label>
     </div>
   </Modal>

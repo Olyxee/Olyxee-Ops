@@ -745,6 +745,9 @@ body .weekly-review-focused .objective-status-control {
 body .weekly-review-focused .objective-status-control > span { display: grid; gap: 3px; }
 body .weekly-review-focused .objective-status-control small { color: #8e8e93; font-size: 9px; font-weight: 500; }
 body .weekly-review-focused .objective-status-control .select { width: 190px; min-height: 38px; border-radius: 10px; background: #fff; }
+body .weekly-review-focused .objective-status-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+body .weekly-review-focused .objective-status-actions .btn { display: inline-flex; align-items: center; gap: 6px; }
+body .weekly-review-focused .objective-blocker-message { display: grid; gap: 4px; margin-top: 12px; padding: 12px 14px; border: 1px solid #ead7d2; border-radius: 10px; background: #fff7f5; color: #70483f; font-size: 10px; line-height: 1.45; }
 
 body .weekly-review-focused .objective-resources-card {
   margin: 0;
@@ -778,6 +781,8 @@ body .weekly-review-focused .objective-resources-empty { margin: 14px; border-co
   body .weekly-review-focused .objective-control-row { padding: 15px 20px; }
   body .weekly-review-focused .objective-status-control { align-items: stretch; flex-direction: column; gap: 10px; }
   body .weekly-review-focused .objective-status-control .select { width: 100%; }
+  body .weekly-review-focused .objective-status-actions { justify-content: stretch; }
+  body .weekly-review-focused .objective-status-actions .btn { flex: 1; justify-content: center; }
   body .weekly-review-focused .objective-resources-head { align-items: flex-start; }
 }
 

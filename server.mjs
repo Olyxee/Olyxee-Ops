@@ -16,6 +16,10 @@ import {
 import { handleResendWebhook } from "./server/services/notifications/resend-webhook.mjs";
 import { reminderDays, taskReminderKey, utcDate, weeklySummary } from "./server/services/notifications/schedule-logic.mjs";
 import {
+  buildObjectiveBlockerNotices,
+  canonicalNoticeUserId,
+} from "./server/services/notifications/objective-notifications.mjs";
+import {
   OFFICIAL_DEPARTMENTS,
   UNASSIGNED_DEPARTMENT,
   isOfficialDepartment,
@@ -2347,6 +2351,11 @@ app.put("/api/state/:key", requireAuth, requireAccount, async (request, response
   } else if (appRole === "Member") {
     return response.status(403).json({ error: "Members can update only their own work status." });
   }
+  let previousObjectives = [];
+  if (request.params.key === "objectives") {
+    const current = await appPool.query("SELECT state_value FROM workspace_state WHERE state_key = 'objectives'");
+    previousObjectives = Array.isArray(current.rows[0]?.state_value) ? current.rows[0].state_value : [];
+  }
   let stateValue = request.body.value;
   if (request.params.key === "projects") {
     const current = await appPool.query("SELECT state_value FROM workspace_state WHERE state_key = 'projects'");
@@ -2371,6 +2380,65 @@ app.put("/api/state/:key", requireAuth, requireAccount, async (request, response
     ON CONFLICT (state_key) DO UPDATE
     SET state_value = EXCLUDED.state_value, updated_by = EXCLUDED.updated_by, updated_at = now()
   `, [request.params.key, JSON.stringify(stateValue), request.appAccount.id]);
+  if (request.params.key === "objectives" && request.appAccount.app_role === "Manager" && Array.isArray(stateValue)) {
+    const previousById = new Map(previousObjectives.map((objective) => [objective.id, objective]));
+    const newlyBlocked = stateValue.filter((objective) =>
+      objective.managerId
+      && objective.status === "Blocked"
+      && String(objective.blockerMessage || "").trim()
+      && previousById.get(objective.id)?.status !== "Blocked"
+    );
+    if (newlyBlocked.length) {
+      const recipient = await appPool.query(`
+        SELECT COALESCE(
+          current_account.reports_to_account_id,
+          (SELECT id FROM public.workspace_accounts WHERE app_role = 'Superadmin' AND active = true ORDER BY id LIMIT 1)
+        ) AS id,
+        recipient_account.email
+        FROM public.workspace_accounts current_account
+        LEFT JOIN public.workspace_accounts recipient_account
+          ON recipient_account.id = COALESCE(
+            current_account.reports_to_account_id,
+            (SELECT id FROM public.workspace_accounts WHERE app_role = 'Superadmin' AND active = true ORDER BY id LIMIT 1)
+          )
+        WHERE current_account.id = $1
+      `, [request.appAccount.id]);
+      const recipientAccount = recipient.rows[0];
+      const recipientPerson = recipientAccount?.email
+        ? await resolveExternalPerson(recipientAccount.email)
+        : null;
+      const recipientUserId = canonicalNoticeUserId(recipientAccount, recipientPerson);
+      if (recipientUserId) {
+        const client = await appPool.connect();
+        try {
+          await client.query("BEGIN");
+          await client.query("SELECT pg_advisory_xact_lock(hashtext('workspace_state:notices'))");
+          const current = await client.query("SELECT state_value FROM workspace_state WHERE state_key = 'notices' FOR UPDATE");
+          const notices = Array.isArray(current.rows[0]?.state_value) ? current.rows[0].state_value : [];
+          const time = new Date().toISOString();
+          notices.unshift(...buildObjectiveBlockerNotices({
+            objectives: newlyBlocked,
+            recipientUserId,
+            actorName: request.appAccount.display_name || request.appAccount.email,
+            time,
+            randomId: () => crypto.randomUUID(),
+          }));
+          await client.query(`
+            INSERT INTO workspace_state (state_key, state_value, updated_by)
+            VALUES ('notices', $1::jsonb, $2)
+            ON CONFLICT (state_key) DO UPDATE
+            SET state_value = EXCLUDED.state_value, updated_by = EXCLUDED.updated_by, updated_at = now()
+          `, [JSON.stringify(notices), request.appAccount.id]);
+          await client.query("COMMIT");
+        } catch (error) {
+          await client.query("ROLLBACK");
+          throw error;
+        } finally {
+          client.release();
+        }
+      }
+    }
+  }
   return response.json({ ok: true });
 });
 
