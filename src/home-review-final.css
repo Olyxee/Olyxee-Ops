@@ -373,7 +373,8 @@ body .admin-department-health-plot svg { position: relative; width: 100%; height
 body .department-detail .department-overview { grid-template-columns: repeat(3,minmax(0,1fr)); }
 body .department-detail .department-overview > div:nth-child(1),
 body .department-detail .department-overview > div:nth-child(3) { display: none; }
-body .department-detail .department-insights-clean { display: grid; grid-template-columns: 1fr; gap: 14px; }
+body .department-detail .department-insights-clean { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+body .department-roster-hours { color: #218c5a; font-size: 12px; font-weight: 700; white-space: nowrap; }
 
 @media (max-width:700px) {
   body .weekly-review-list-hero { align-items: stretch; flex-direction: column; }
@@ -389,6 +390,7 @@ body .department-detail .department-insights-clean { display: grid; grid-templat
   body .admin-department-health { padding: 18px 16px 15px; }
   body .admin-department-health-plot { height: 170px; }
   body .department-detail .department-overview { grid-template-columns: 1fr; }
+  body .department-detail .department-insights-clean { grid-template-columns: 1fr; }
 }
 
 /* Create task: compact iOS form with optional detail disclosures. */
@@ -1002,24 +1004,6 @@ body .department-trend-point {
 body .department-trend-point.up { stroke: #347fb4; }
 body .department-trend-point.down { stroke: #c85a54; }
 body .department-trend-point:last-of-type { fill: #fff; stroke-width: 3.5; }
-
-body .manager-health-card:has(.manager-health-state.at-risk) .manager-health-line {
-  stroke: #c85a54 !important;
-}
-
-body .manager-health-card:has(.manager-health-state.at-risk) .manager-health-chart circle {
-  fill: #fff !important;
-  stroke: #c85a54 !important;
-}
-
-body .manager-health-card:has(.manager-health-state.on-track) .manager-health-line {
-  stroke: #347fb4 !important;
-}
-
-body .manager-health-card:has(.manager-health-state.on-track) .manager-health-chart circle {
-  fill: #fff !important;
-  stroke: #347fb4 !important;
-}
 
 body .department-trend-chart .manager-detail-hours {
   grid-template-columns: repeat(8,minmax(0,1fr));

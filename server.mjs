@@ -485,9 +485,11 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
     const role = request.appAccount.app_role;
     const ownEmail = String(request.appAccount.email).toLowerCase();
     const current = people.find((person) => String(person.email).toLowerCase() === ownEmail);
-    const visiblePeople = ["Superadmin", "Admin", "Manager"].includes(role)
+    const visiblePeople = ["Superadmin", "Admin"].includes(role)
       ? people
-      : people.filter((person) => person.id === current?.id);
+      : role === "Manager"
+        ? people.filter((person) => person.department === current?.department)
+        : people.filter((person) => person.id === current?.id);
     return response.json({ connected: true, source: "Supabase", people: visiblePeople });
   } catch (error) {
     console.error("People query failed:", error instanceof Error ? error.message : "Unknown error");
