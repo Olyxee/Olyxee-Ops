@@ -2345,8 +2345,20 @@ app.put("/api/state/:key", requireAuth, requireAccount, async (request, response
     const invalidNewObjective = request.body.value.some((objective) =>
       !currentById.has(objective.id) && objective.managerId !== managerId
     );
-    if (changedOtherManagerObjective || invalidNewObjective) {
+    const invalidReassignment = request.body.value.some((objective) =>
+      currentById.get(objective.id)?.managerId === managerId && objective.managerId !== managerId
+    );
+    if (changedOtherManagerObjective || invalidNewObjective || invalidReassignment) {
       return response.status(403).json({ error: "Managers can create and update only their own weekly objectives." });
+    }
+    const invalidBlockedTransition = request.body.value.some((objective) =>
+      objective.managerId === managerId
+      && objective.status === "Blocked"
+      && currentById.get(objective.id)?.status !== "Blocked"
+      && !String(objective.blockerMessage || "").trim()
+    );
+    if (invalidBlockedTransition) {
+      return response.status(400).json({ error: "Describe the blocker before marking a weekly objective as blocked." });
     }
   } else if (appRole === "Member") {
     return response.status(403).json({ error: "Members can update only their own work status." });
@@ -2357,6 +2369,23 @@ app.put("/api/state/:key", requireAuth, requireAccount, async (request, response
     previousObjectives = Array.isArray(current.rows[0]?.state_value) ? current.rows[0].state_value : [];
   }
   let stateValue = request.body.value;
+  if (request.params.key === "objectives" && request.appAccount.app_role === "Manager" && Array.isArray(stateValue)) {
+    const previousById = new Map(previousObjectives.map((objective) => [objective.id, objective]));
+    const now = new Date().toISOString();
+    stateValue = stateValue.map((objective) => {
+      const previous = previousById.get(objective.id);
+      if (objective.status === "Complete" && previous?.status !== "Complete") {
+        return { ...objective, blockerMessage: undefined, blockedAt: undefined, completedAt: objective.completedAt || now };
+      }
+      if (objective.status === "Blocked" && previous?.status !== "Blocked") {
+        return { ...objective, blockerMessage: String(objective.blockerMessage).trim().slice(0, 1000), blockedAt: objective.blockedAt || now, completedAt: undefined };
+      }
+      if (!["Blocked", "Complete"].includes(objective.status)) {
+        return { ...objective, blockerMessage: undefined, blockedAt: undefined, completedAt: undefined };
+      }
+      return objective;
+    });
+  }
   if (request.params.key === "projects") {
     const current = await appPool.query("SELECT state_value FROM workspace_state WHERE state_key = 'projects'");
     const existingProjects = Array.isArray(current.rows[0]?.state_value) ? current.rows[0].state_value : [];
