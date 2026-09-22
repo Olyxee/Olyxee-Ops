@@ -1,5 +1,19 @@
-.task-create-modal{width:min(720px,100%);max-height:min(760px,calc(100dvh - 32px));overflow:hidden}
-.task-create-modal .modal-body{overflow:auto}
+.task-create-modal{display:flex;flex-direction:column;width:min(720px,calc(100vw - 48px));max-height:min(790px,calc(100dvh - 32px));overflow:hidden;border:1px solid rgba(214,218,220,.92);border-radius:22px;box-shadow:0 30px 90px rgba(28,35,39,.22),0 4px 16px rgba(28,35,39,.08);animation:task-create-in .32s cubic-bezier(.22,.8,.24,1) both;transform-origin:50% 42%;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif}
+.modal-back:has(.task-create-modal){padding:24px;background:rgba(30,37,41,.28)!important;backdrop-filter:blur(18px) saturate(112%)!important;-webkit-backdrop-filter:blur(18px) saturate(112%)!important;animation:task-create-backdrop-in .22s ease-out both}
+.task-create-modal .modal-head{min-height:74px;padding:15px 20px;border-bottom:1px solid #e8eaeb;background:rgba(250,250,251,.96)}
+.task-create-modal .modal-head>b{font-weight:600}
+.task-create-modal .modal-body{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:20px;scrollbar-width:thin;scrollbar-color:#c9ced0 transparent}
+.task-create-modal .modal-foot{min-height:70px;padding:12px 20px;background:#fafafb;border-top:1px solid #e8eaeb}
+.task-create-modal .modal-foot .btn{min-height:40px;border-radius:11px;font-weight:600}
+.task-create-modal .modal-foot .btn.primary{box-shadow:0 2px 5px rgba(50,84,76,.16)}
+.task-create-modal .close{width:36px;height:36px;border-radius:11px;color:#697276}
+.task-create-modal .close:hover{background:#eceeef;color:#293237}
+.task-create-modal .form-label{gap:7px;color:#566166;font-size:11px;font-weight:650}
+.task-create-modal .input,.task-create-modal .select,.task-create-modal .textarea{width:100%;min-height:44px;border:1px solid #d6dbdd;border-radius:12px;background:#f8f9fa;padding:11px 13px;color:#20282c;font-family:inherit;font-size:13px;font-weight:500;line-height:1.35;transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}
+.task-create-modal .textarea{min-height:72px;resize:vertical}
+.task-create-modal .input::placeholder,.task-create-modal .textarea::placeholder{color:#9aa2a6}
+.task-create-modal .input:focus,.task-create-modal .select:focus,.task-create-modal .textarea:focus{border-color:#6f9d90;background:#fff;box-shadow:0 0 0 4px rgba(88,143,128,.13)}
+.task-create-modal .input[aria-invalid="true"]{border-color:#c96b63;box-shadow:0 0 0 4px rgba(201,107,99,.11)}
 .task-create-title{display:flex;align-items:center;gap:11px}
 .task-create-title>span:last-child{display:grid;gap:2px}
 .task-create-title b{color:#234943;font-size:14px}
@@ -13,7 +27,7 @@
 .task-create-progress>div.is-complete{color:#638078}
 .task-create-progress>div.is-complete>span{border-color:#709889;background:#709889;color:#fff}
 .task-create-progress>i{height:1px;flex:1;min-width:30px;margin:0 12px;background:#dfe6e3}
-.task-create-form{grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.task-create-form{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;animation:task-create-content-in .22s ease-out both}
 .task-create-wide{grid-column:1/-1}
 .task-create-optional{color:#98a49f;font-size:9px;font-weight:500}
 .task-create-assignment-intro{display:grid;gap:4px;padding:12px 14px;border:1px solid #dfe9e5;border-radius:10px;background:#f6faf8;color:#31574d}
@@ -21,6 +35,29 @@
 .task-create-modal .task-department-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));max-height:220px}
 .task-create-modal .task-department-options>label:nth-child(odd){border-right:1px solid #edf1ef}
 .task-create-modal .task-assignee-picker>.task-picker-results{max-height:210px}
+.task-create-modal .task-picker-results{overflow:auto;border:1px solid #e0e4e5;border-radius:14px;background:#f8f9fa}
+.task-create-modal .task-picker-results>label{min-height:52px;padding:10px 12px;background:#fff;transition:background .15s ease}
+.task-create-modal .task-picker-results>label:hover{background:#f3f7f5}
+.task-create-modal .task-picker-results input{width:18px;height:18px;accent-color:#578f80}
 .task-picker-empty{padding:18px;color:#83918c;text-align:center}
 .task-create-modal .modal-foot .btn.primary{display:inline-flex;align-items:center;gap:6px}
-@media(max-width:640px){.task-create-modal{max-height:calc(100dvh - 20px)}.task-create-form{grid-template-columns:1fr}.task-create-wide{grid-column:1}.task-create-modal .task-department-options{grid-template-columns:1fr}.task-create-modal .task-department-options>label:nth-child(odd){border-right:0}.task-create-progress>div b{display:none}}
+@keyframes task-create-in{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes task-create-backdrop-in{from{opacity:0}to{opacity:1}}
+@keyframes task-create-content-in{from{opacity:0;transform:translateX(7px)}to{opacity:1;transform:translateX(0)}}
+@media(max-width:640px){
+  .modal-back:has(.task-create-modal){align-items:flex-end;padding:0!important}
+  .task-create-modal{width:100%;max-width:none;max-height:calc(100dvh - 8px);border-radius:22px 22px 0 0;animation-name:task-create-sheet-in}
+  .task-create-modal .modal-head{min-height:68px;padding:12px 16px}
+  .task-create-modal .modal-body{padding:16px;max-height:calc(100dvh - 148px);padding-bottom:max(18px,env(safe-area-inset-bottom))}
+  .task-create-modal .modal-foot{padding:10px 16px max(10px,env(safe-area-inset-bottom));gap:8px}
+  .task-create-modal .modal-foot .btn{flex:1;justify-content:center;min-height:44px}
+  .task-create-form{grid-template-columns:1fr}
+  .task-create-wide{grid-column:1}
+  .task-create-modal .task-department-options{grid-template-columns:1fr}
+  .task-create-modal .task-department-options>label:nth-child(odd){border-right:0}
+  .task-create-progress>div b{display:none}
+}
+@keyframes task-create-sheet-in{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){
+  .modal-back:has(.task-create-modal),.task-create-modal,.task-create-form{animation:none}
+}

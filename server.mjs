@@ -211,6 +211,15 @@ app.post("/api/auth/login", async (request, response) => {
       return response.status(401).json({ error: "Invalid email or password." });
     }
     loginAttempts.delete(attemptKey);
+    const loginTime = new Date().toISOString();
+    await appPool.query(`
+      UPDATE public.ops_users
+      SET profile_data = jsonb_set(
+        jsonb_set(coalesce(profile_data, '{}'::jsonb), '{lastLoginAt}', to_jsonb($2::text), true),
+        '{lastSeenAt}', to_jsonb($2::text), true
+      )
+      WHERE id = $1
+    `, [account.id, loginTime]);
     await new Promise((resolve, reject) => request.session.regenerate((error) => error ? reject(error) : resolve()));
     request.session.userId = account.id;
     await new Promise((resolve, reject) => request.session.save((error) => error ? reject(error) : resolve()));
@@ -262,13 +271,11 @@ app.get("/api/presence", requireAuth, requireAccount, async (request, response) 
     return response.status(403).json({ error: "Only managers and administrators can view team presence." });
   }
   const cutoff = Date.now() - 90_000;
-  for (const [userId, lastSeen] of onlinePresence) {
-    if (lastSeen < cutoff) onlinePresence.delete(userId);
-  }
   return response.json({
     onlineUserIds: [...onlinePresence.entries()]
       .filter(([, lastSeen]) => lastSeen >= cutoff)
       .map(([userId]) => userId),
+    lastSeenByUser: Object.fromEntries(onlinePresence),
   });
 });
 
@@ -414,6 +421,8 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
         hasOpsAccess: Boolean(opsAccount),
         opsRole: opsAccount?.role,
         opsActive: opsAccount?.active,
+        lastLoginAt: opsProfile.lastLoginAt,
+        lastSeenAt: opsProfile.lastSeenAt,
         source: "Supabase",
       };
     });
@@ -442,6 +451,8 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
         hasOpsAccess: Boolean(opsAccount),
         opsRole: opsAccount?.role,
         opsActive: opsAccount?.active,
+        lastLoginAt: opsProfile.lastLoginAt,
+        lastSeenAt: opsProfile.lastSeenAt,
         source: "Supabase",
         employmentStatus: intern.employment_status || "Unknown",
         supervisorName: intern.supervisor_name || "",
