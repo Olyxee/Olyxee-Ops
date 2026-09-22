@@ -477,6 +477,7 @@ app.post("/api/people", requireAuth, requireAccount, async (request, response) =
 
   const name = String(request.body.name || "").trim().slice(0, 160);
   const email = String(request.body.email || "").trim().toLowerCase().slice(0, 254);
+  const position = String(request.body.position || "").trim().slice(0, 120);
   const department = validateDepartment(request.body.department);
   const employmentType = String(request.body.employmentType || "");
   const accessRole = String(request.body.accessRole || "");
@@ -490,6 +491,9 @@ app.post("/api/people", requireAuth, requireAccount, async (request, response) =
   }
   if (employmentType === "Intern" && !department) {
     return response.status(400).json({ error: "Choose an official department or Unassigned." });
+  }
+  if (employmentType === "Intern" && !position) {
+    return response.status(400).json({ error: "Add the Intern's role or job title." });
   }
   if (appRole === "Manager" && employmentType !== "Intern") {
     return response.status(403).json({ error: "Managers can only add interns in their own team." });
@@ -586,13 +590,14 @@ app.post("/api/people", requireAuth, requireAccount, async (request, response) =
 
     const result = await peoplePool.query(`
       INSERT INTO public.interns
-        (intern_number, full_name, email, department, employment_status, supervisor_name, supervisor_email, supervisor_account_id)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        (intern_number, full_name, email, position, department, employment_status, supervisor_name, supervisor_email, supervisor_account_id)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING id
     `, [
       `OPS-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
       name,
       email,
+      position,
       internDepartment,
       accountStatus === "Active" ? "Active" : "Inactive",
       supervisorName,
@@ -619,6 +624,7 @@ app.patch("/api/people/:id", requireAuth, requireAccount, async (request, respon
   const id = Number(rawId);
   const name = String(request.body.name || "").trim().slice(0, 160);
   const email = String(request.body.email || "").trim().toLowerCase().slice(0, 254);
+  const position = String(request.body.position || "").trim().slice(0, 120);
   const department = validateDepartment(request.body.department);
   const accessRole = String(request.body.accessRole || "");
   const accountStatus = String(request.body.accountStatus || "");
@@ -626,6 +632,9 @@ app.patch("/api/people/:id", requireAuth, requireAccount, async (request, respon
   if (!name || !email) return response.status(400).json({ error: "Name and email are required." });
   if (kind === "intern" && !department) {
     return response.status(400).json({ error: "Choose an official department or Unassigned." });
+  }
+  if (kind === "intern" && !position) {
+    return response.status(400).json({ error: "Add the Intern's role or job title." });
   }
 
   try {
@@ -733,15 +742,16 @@ app.patch("/api/people/:id", requireAuth, requireAccount, async (request, respon
       UPDATE public.interns
       SET full_name = $1,
           email = $2,
-          department = $3,
-          employment_status = $4,
-          supervisor_name = $5,
-          supervisor_email = $6,
-          supervisor_account_id = $7,
+          position = $3,
+          department = $4,
+          employment_status = $5,
+          supervisor_name = $6,
+          supervisor_email = $7,
+          supervisor_account_id = $8,
           updated_at = now()
-      WHERE id = $8 AND archived_at IS NULL
+      WHERE id = $9 AND archived_at IS NULL
       RETURNING id
-    `, [name, email, department, accountStatus === "Active" ? "Active" : "Inactive", supervisorName, supervisorEmail, supervisorAccountId, id]);
+    `, [name, email, position, department, accountStatus === "Active" ? "Active" : "Inactive", supervisorName, supervisorEmail, supervisorAccountId, id]);
     if (!result.rowCount) return response.status(404).json({ error: "Intern record not found." });
     return response.json({ ok: true });
   } catch (error) {
