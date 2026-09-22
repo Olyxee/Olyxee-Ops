@@ -114,13 +114,21 @@
   .workspace-board-member .workspace-stack-summary {
     display: grid;
     grid-area: welcome;
+    grid-template-columns: minmax(0, 1fr);
     gap: 18px;
     align-content: start;
   }
 
-  .workspace-board-member .workspace-welcome {
+  .workspace-board-member .workspace-stack-summary > .workspace-welcome {
+    grid-area: auto !important;
+    grid-row: 1;
     height: auto !important;
     min-height: 350px !important;
+  }
+
+  .workspace-board-member .workspace-stack-summary > .workspace-intern-activity {
+    grid-area: auto !important;
+    grid-row: 2;
   }
 
   .workspace-board-member .workspace-tasks {
@@ -136,7 +144,11 @@
 
 .workspace-intern-activity {
   min-width: 0;
-  padding: 2px 4px 0;
+  padding: 18px 20px 16px;
+  border: 1px solid #dce3e5;
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 3px 12px rgba(38, 56, 47, .04);
 }
 
 .workspace-intern-activity-head {
@@ -192,11 +204,19 @@
 @media (max-width: 700px) {
   .workspace-board-member .workspace-stack-summary {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 14px;
   }
 
-  .workspace-board-member .workspace-welcome {
+  .workspace-board-member .workspace-stack-summary > .workspace-welcome {
+    grid-area: auto !important;
+    grid-row: 1;
     min-height: 0 !important;
+  }
+
+  .workspace-board-member .workspace-stack-summary > .workspace-intern-activity {
+    grid-area: auto !important;
+    grid-row: 2;
   }
 }
 
