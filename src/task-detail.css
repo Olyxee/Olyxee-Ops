@@ -1950,3 +1950,260 @@
     padding: 17px;
   }
 }
+
+/* Intern task detail v2 — an operational brief, not a scroll of disconnected cards. */
+.task-detail-work-page {
+  max-width: 980px;
+  color: #252a2e;
+}
+
+.task-detail-work-page .task-workspace-head {
+  align-items: flex-end;
+  gap: 28px;
+  padding: 0 0 20px;
+  border-bottom: 1px solid #d9dde0;
+}
+
+.task-detail-work-page .task-title-block {
+  min-width: 0;
+}
+
+.task-detail-work-page .task-workspace-head .eyebrow {
+  color: #7a8389;
+  font: 600 10px/1.3 "DM Mono", monospace;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.task-detail-work-page .task-workspace-head .title {
+  max-width: 760px;
+  margin: 9px 0 13px;
+  color: #202529;
+  font-family: "Space Grotesk", "DM Sans", sans-serif;
+  font-size: clamp(28px, 4.6vw, 46px);
+  font-weight: 650;
+  letter-spacing: -.055em;
+  line-height: 1.02;
+}
+
+.task-detail-work-page .task-work-meta {
+  gap: 11px;
+  color: #69737a;
+}
+
+.task-detail-work-page .task-work-meta > span {
+  border-left-color: #d7dcdf;
+}
+
+.task-detail-work-page .task-github-link {
+  flex: 0 0 auto;
+}
+
+.intern-task-scan {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr .85fr 1.35fr;
+  gap: 1px;
+  margin: 16px 0 18px;
+  overflow: hidden;
+  border: 1px solid #d8dde0;
+  border-radius: 12px;
+  background: #d8dde0;
+}
+
+.intern-task-scan > div {
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 82px;
+  padding: 13px 15px;
+  background: #fff;
+}
+
+.intern-task-scan small {
+  color: #858e94;
+  font: 600 9px/1.2 "DM Mono", monospace;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.intern-task-scan strong {
+  overflow: hidden;
+  color: #252b2f;
+  font-family: "Space Grotesk", "DM Sans", sans-serif;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -.025em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.intern-task-scan strong em {
+  color: #8b9499;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 500;
+}
+
+.intern-task-scan span {
+  overflow: hidden;
+  color: #8b9499;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-detail-work-page .intern-primary-actions {
+  justify-content: flex-end;
+  min-height: 38px;
+  margin: 0 0 14px;
+}
+
+.task-detail-work-page .intern-primary-actions .btn {
+  min-height: 37px;
+}
+
+.task-detail-work-page .intern-work-sections {
+  grid-template-columns: minmax(0, .88fr) minmax(0, 1.12fr);
+  gap: 14px;
+  margin-top: 0;
+}
+
+.task-detail-work-page .intern-work-section {
+  min-width: 0;
+  padding: 19px;
+  border-color: #d9dfe2;
+  border-radius: 12px;
+  box-shadow: 0 5px 16px rgba(36, 45, 51, .045);
+}
+
+.task-detail-work-page .intern-work-section:nth-child(1) {
+  grid-column: 1 / -1;
+  background: #fbfcfc;
+}
+
+.task-detail-work-page .intern-checklist-section {
+  grid-column: 1;
+}
+
+.task-detail-work-page .intern-submit-section {
+  grid-column: 2;
+  align-self: start;
+}
+
+.task-detail-work-page .intern-work-section:nth-child(4) {
+  grid-column: 1 / -1;
+}
+
+.task-detail-work-page .intern-section-heading {
+  padding-bottom: 11px;
+  border-bottom: 1px solid #edf0f1;
+}
+
+.task-detail-work-page .intern-section-heading > svg {
+  color: #5c7775;
+}
+
+.task-detail-work-page .intern-section-heading h2 {
+  color: #252b2f;
+}
+
+.task-detail-work-page .intern-section-heading p {
+  color: #7a858b;
+}
+
+.task-detail-work-page .intern-brief {
+  max-width: 780px;
+  margin-top: 13px;
+  color: #48545b;
+  font-size: 13px;
+  line-height: 1.68;
+}
+
+.task-detail-work-page .intern-progress-count {
+  display: grid;
+  gap: 7px;
+  margin: 0 0 10px;
+  color: #707b81;
+  font: 600 10px/1.2 "DM Mono", monospace;
+}
+
+.task-detail-work-page .intern-progress-count > div {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #e8ecee;
+}
+
+.task-detail-work-page .intern-progress-count i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #668681;
+  transition: width .25s ease;
+}
+
+.task-detail-work-page .intern-feedback-banner,
+.task-detail-work-page .intern-help-indicator,
+.task-detail-work-page .intern-approved-banner {
+  margin: 14px 0;
+}
+
+@media (max-width: 760px) {
+  .task-detail-work-page .task-workspace-head {
+    align-items: stretch;
+  }
+
+  .task-detail-work-page .task-github-link {
+    align-self: flex-start;
+  }
+
+  .intern-task-scan {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .intern-task-scan > div {
+    min-height: 76px;
+  }
+
+  .task-detail-work-page .intern-work-sections {
+    grid-template-columns: 1fr;
+  }
+
+  .task-detail-work-page .intern-checklist-section,
+  .task-detail-work-page .intern-submit-section,
+  .task-detail-work-page .intern-work-section:nth-child(4) {
+    grid-column: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .task-detail-work-page .task-workspace-head .title {
+    font-size: 31px;
+  }
+
+  .task-detail-work-page .task-work-meta {
+    gap: 7px;
+  }
+
+  .intern-task-scan {
+    grid-template-columns: 1fr 1fr;
+    margin-top: 13px;
+  }
+
+  .intern-task-scan > div {
+    padding: 11px 12px;
+  }
+
+  .intern-task-scan strong {
+    font-size: 13px;
+  }
+
+  .task-detail-work-page .intern-primary-actions {
+    justify-content: stretch;
+  }
+
+  .task-detail-work-page .intern-primary-actions .btn {
+    flex: 1;
+  }
+}

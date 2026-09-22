@@ -720,9 +720,15 @@ function InternTaskDetail({task,user,team,onBack,update,refresh,flash}:{task:Tas
   };
   return <div className="task-detail task-detail-intern task-detail-work-page">
     <BackButton onClick={onBack} label="Back to tasks"/>
-    <header className="task-workspace-head">
-       <div><div className="eyebrow">{task.code||task.id} · {task.project} · {taskDepartmentLabel(task)}</div><h1 className="title">{task.title}</h1><div className="task-work-meta"><Status s={task.status}/><span>{task.priority} priority</span><span>Due {task.due}</span></div></div>{task.githubUrl&&<a className="btn task-github-link" href={task.githubUrl} target="_blank" rel="noreferrer"><Github size={15}/> Open GitHub</a>}
-    </header>
+     <header className="task-workspace-head">
+        <div className="task-title-block"><div className="eyebrow">{task.code||task.id} · {task.project} · {taskDepartmentLabel(task)}</div><h1 className="title">{task.title}</h1><div className="task-work-meta"><Status s={task.status}/><span>{task.priority} priority</span><span>Due {task.due}</span></div></div>{task.githubUrl&&<a className="btn task-github-link" href={task.githubUrl} target="_blank" rel="noreferrer"><Github size={15}/> Open GitHub</a>}
+     </header>
+     <section className="intern-task-scan" aria-label="Task at a glance">
+       <div><small>Manager</small><strong>{owner}</strong><span>Task owner</span></div>
+       <div><small>Due date</small><strong>{task.due}</strong><span>{task.priority} priority</span></div>
+       <div><small>Checklist</small><strong>{(task.checklist||[]).filter(item=>item.completed).length}<em> / {(task.checklist||[]).length}</em></strong><span>Items complete</span></div>
+       <div><small>Next action</small><strong>{task.status==="Not Started"?"Start work":task.status==="Changes Requested"?"Address feedback":task.status==="Blocked"?"Resume work":task.status==="In Progress"?"Submit when ready":task.status==="Submitted for Review"?"Awaiting review":task.status==="Cancelled"?"No further action":"Complete"}</strong><span>Current workflow step</span></div>
+     </section>
      {task.deliverables&&<section className="intern-work-section task-deliverables-summary"><div className="intern-section-heading"><FileCheck2 size={17}/><div><h2>Deliverables</h2><p>Expected outcome for this task.</p></div></div><p className="intern-brief">{task.deliverables}</p></section>}{task.status==="Changes Requested"&&feedback&&<section className="intern-feedback-banner"><strong>Changes requested by {feedback.authorName}</strong><p>{feedback.message}</p></section>}
     {task.status==="Completed"&&<div className="intern-approved-banner"><Check size={16}/> Work approved</div>}
     {helpRequested&&<div className="intern-help-indicator"><CircleHelp size={15}/> Help requested · your Manager has been notified.</div>}
