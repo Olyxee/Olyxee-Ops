@@ -197,9 +197,9 @@ function WorkspaceApp(){
   const intern=employmentOf(active)==="Intern";
    const allowed:View[]=intern?["Home","My Tasks","Projects","Feedback"]:isManager(active)?["Overview","Tasks","Projects","People","Blockers","Weekly Review","Departments","Notifications","Settings"]:["Overview","Tasks","Projects","People","Departments","Blockers","Weekly Review","Notifications","Settings"];
   const visibleView=allowed.includes(view)?view:(intern?"Home":"Overview");
-     const visibleTasks=accessOf(active)==="Superadmin"
-      ? tasks.filter(task=>taskAssignees(task).some(id=>team.some(person=>person.id===id&&isManager(person))))
-      : employmentOf(active)==="Intern"?tasks.filter(task=>taskAssignees(task).includes(active.id)):tasks;
+      const visibleTasks=employmentOf(active)==="Intern"
+       ? tasks.filter(task=>taskAssignees(task).includes(active.id))
+       : tasks;
   const searchResults=useMemo(()=>{
     const query=searchQuery.trim().toLowerCase(); if(!query)return [];
     const words=query.split(/\s+/); const matches=(text:string)=>words.every(word=>text.toLowerCase().includes(word));
