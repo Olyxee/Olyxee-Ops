@@ -44,7 +44,8 @@ const departmentHealthCurveFor=(tasks:Task[],now:number,maxPoints?:number):Depar
   const createdAt=(task:Task)=>time(task.createdDate||task.startDate);
   const hasWeeklyWork=tasks.length>0;
   let score=hasWeeklyWork?58:52;
-  const points=Array.from({length:7},(_,index)=>{
+  const weekStartPoint:DepartmentHealthPoint={label:"",score,event:"Week starting point",direction:"steady"};
+  const dailyPoints=Array.from({length:7},(_,index)=>{
     const start=weekStart+index*24*hour;
     const future=start>now;
     const cutoff=future?start:Math.min(start+24*hour-1,now);
@@ -57,23 +58,26 @@ const departmentHealthCurveFor=(tasks:Task[],now:number,maxPoints?:number):Depar
     const completed=tasks.filter(task=>{const value=time(task.completedAt);return Number.isFinite(value)&&value>=start&&value<=cutoff}).length;
     const submitted=tasks.filter(task=>{const value=time(task.submittedAt);return Number.isFinite(value)&&value>=start&&value<=cutoff}).length;
     const updated=tasks.reduce((count,task)=>count+(task.updates||[]).filter(update=>{const value=time(update.createdAt);return Number.isFinite(value)&&value>=start&&value<=cutoff}).length,0);
-     const activityInHour=tasks.flatMap(task=>(task.activityLog||[]).filter(activity=>{const value=time(activity.createdAt);return Number.isFinite(value)&&value>=start&&value<=cutoff}));
-     const blocked=activityInHour.filter(activity=>activity.action==="Status changed to Blocked").length;
-     const changesRequested=activityInHour.filter(activity=>activity.action==="Status changed to Changes Requested").length;
-     const reopened=activityInHour.filter(activity=>activity.action==="Checklist item reopened").length;
+     const activityInDay=tasks.flatMap(task=>(task.activityLog||[]).filter(activity=>{const value=time(activity.createdAt);return Number.isFinite(value)&&value>=start&&value<=cutoff}));
+     const blocked=activityInDay.filter(activity=>activity.action==="Status changed to Blocked").length;
+     const changesRequested=activityInDay.filter(activity=>activity.action==="Status changed to Changes Requested").length;
+     const reopened=activityInDay.filter(activity=>activity.action==="Checklist item reopened").length;
+     const otherActivity=activityInDay.filter(activity=>!["Task created","Status changed to Blocked","Status changed to Changes Requested","Checklist item reopened"].includes(activity.action)).length;
      const overdue=tasks.filter(task=>{
        if(["Completed","Cancelled"].includes(task.status))return false;
        const dueAt=new Date(`${task.due}T00:00:00`).getTime()+24*hour;
        return dueAt>=start&&dueAt<=cutoff;
      }).length;
-    const positive=added*7+submitted*5+completed*9+updated*3;
-     const negative=blocked*7+changesRequested*5+reopened*2+overdue*4;
+     const positive=added*7+submitted*5+completed*9+updated*3+otherActivity*2;
+      const inactivity=positive===0&&blocked===0&&changesRequested===0&&reopened===0&&overdue===0?4:0;
+      const negative=blocked*7+changesRequested*5+reopened*2+overdue*4+inactivity;
     const change=positive-negative;
     score=Math.max(10,Math.min(96,score+change));
     const direction:DepartmentHealthPoint["direction"]=change>0?"up":change<0?"down":"steady";
-     const event=completed?`${completed} ${completed===1?"task":"tasks"} completed`:submitted?`${submitted} sent for review`:added?`${added} ${added===1?"task":"tasks"} added or assigned`:updated?`${updated} task ${updated===1?"update":"updates"}`:blocked?`${blocked} ${blocked===1?"task":"tasks"} blocked`:changesRequested?`${changesRequested} sent back for changes`:reopened?`${reopened} checklist ${reopened===1?"item":"items"} reopened`:overdue?`${overdue} ${overdue===1?"task became":"tasks became"} overdue`:"No task activity this day";
+      const event=completed?`${completed} ${completed===1?"task":"tasks"} completed`:submitted?`${submitted} sent for review`:added?`${added} ${added===1?"task":"tasks"} created`:updated?`${updated} task ${updated===1?"update":"updates"}`:otherActivity?`${otherActivity} delivery ${otherActivity===1?"activity":"activities"}`:blocked?`${blocked} ${blocked===1?"task":"tasks"} blocked`:changesRequested?`${changesRequested} sent back for changes`:reopened?`${reopened} checklist ${reopened===1?"item":"items"} reopened`:overdue?`${overdue} ${overdue===1?"task became":"tasks became"} overdue`:"No department activity";
      return{label:new Date(start).toLocaleDateString([],{weekday:"short"}),score,event,direction};
   });
+   const points=[weekStartPoint,...dailyPoints];
   return maxPoints?points.slice(-maxPoints):points;
 };
 const dayGreeting=()=>{const hour=new Date().getHours();return hour<12?"Good morning":hour<18?"Good afternoon":"Good evening"};
@@ -244,7 +248,7 @@ function UnifiedWorkspace({user,team,statuses,tasks,allTasks,projectsData,depart
   const departmentHead=isManager(user)&&user.department&&user.department!==UNASSIGNED_DEPARTMENT;
    const departmentTasks=allTasks.filter(task=>taskDepartments(task).includes(user.department)&&task.status!=="Cancelled");
    const weeklyDepartmentTasks=departmentTasks.filter(task=>task.weeklyCommitment);
-   const departmentGoalTasks=weeklyDepartmentTasks.length?weeklyDepartmentTasks:departmentTasks;
+    const departmentGoalTasks=weeklyDepartmentTasks;
    const departmentBlocked=departmentGoalTasks.filter(task=>task.status==="Blocked").length;
    const departmentOpen=departmentGoalTasks.filter(task=>task.status!=="Completed").length;
     const departmentReview=departmentGoalTasks.filter(task=>task.status==="Submitted for Review");
