@@ -269,13 +269,7 @@ function StatusPill({status}:{status?:StaffStatus}){const value=status?.availabi
 function WorkHoursPill({status}:{status?:StaffStatus}){
   const start=status?.start||"09:00";
   const end=status?.end||"17:30";
-  const toMinutes=(value:string)=>{const [hours,minutes]=value.split(":").map(Number);return hours*60+minutes};
-  const now=new Date();
-  const currentMinutes=now.getHours()*60+now.getMinutes();
-  const startMinutes=toMinutes(start);
-  const endMinutes=toMinutes(end);
-  const workingNow=startMinutes<=endMinutes?currentMinutes>=startMinutes&&currentMinutes<=endMinutes:currentMinutes>=startMinutes||currentMinutes<=endMinutes;
-  return <span className={`availability work-hours ${workingNow?"available":"scheduled"}`} title={workingNow?"Inside working hours":"Outside working hours"}><i/>{start}–{end}</span>;
+  return <span className="home-working-hours">{start}–{end}</span>;
 }
 function RosterHours({status}:{status?:StaffStatus}){return <span className="department-roster-hours">{status?.start||"09:00"}–{status?.end||"17:30"}</span>}
 function NotificationPopover({notices,open,onToggle}:{notices:Notice[];open:boolean;onToggle:()=>void}){const unread=notices.filter(item=>!item.read).length;return <div className="notification-wrap"><button className="notification-trigger" title={unread?`${unread} unread notifications`:"Notifications"} aria-label={unread?`${unread} unread notifications`:"Notifications"} aria-expanded={open} aria-haspopup="dialog" onClick={onToggle}><Bell size={19}/>{unread>0&&<span className="notification-count">{unread>99?"99+":unread}</span>}</button>{open&&<div className="notification-popover" role="dialog" aria-label="Notifications"><div className="notification-head"><div><b>Notifications</b><span>{notices.length} updates</span></div><button className="close" onClick={onToggle}><X size={16}/></button></div><div className="notification-list">{notices.slice(0,5).map(item=><div className="notification-item" key={item.id}><div className={`notification-mark ${item.read?"read":""}`}/><div><b>{item.title}</b><p>{item.body}</p><span>{item.time}</span></div></div>)}{!notices.length&&<div className="empty"><strong>All clear</strong>No notifications need your attention.</div>}</div></div>}</div>}
@@ -303,7 +297,7 @@ function UnifiedWorkspace({user,team,statuses,tasks,allTasks,projectsData,depart
    const departmentBlocked=departmentGoalTasks.filter(task=>task.status==="Blocked").length;
    const departmentOpen=departmentGoalTasks.filter(task=>task.status!=="Completed").length;
     const departmentReview=departmentGoalTasks.filter(task=>task.status==="Submitted for Review");
-     const departmentHealthCurve=useMemo(()=>departmentHealthCurveFor(departmentTasks,healthNow,8),[departmentTasks,healthNow]);
+      const departmentHealthCurve=useMemo(()=>departmentHealthCurveFor(departmentTasks,healthNow),[departmentTasks,healthNow]);
     const departmentHealth=departmentHealthCurve[departmentHealthCurve.length-1]?.score||50;
     const departmentHealthState=departmentHealth>=68?"On track":departmentHealth>=44?"Needs attention":"At risk";
     const departmentAction=departmentReview[0]?`Review “${departmentReview[0].title}” and leave feedback now.`:departmentGoalTasks.find(task=>task.status==="Blocked")?`Resolve the blocker on “${departmentGoalTasks.find(task=>task.status==="Blocked")?.title}”.`:departmentOpen===0?`Create the next priority task for ${user.department}.`:`Review active work or create a focused task to lift ${user.department} delivery.`;
@@ -410,7 +404,7 @@ function UnifiedWorkspace({user,team,statuses,tasks,allTasks,projectsData,depart
      if(view==="People"){
           const canSeeEveryone=isAdmin(user);
           const directorySource=(isAdmin(user)||isManager(user)?(p.databasePeople||[]):(p.team||users)).filter(isCurrentTeamMember);
-         const directory=directorySource.filter(person=>isAdmin(user)||isManager(user)?person.department===user.department:person.reportsTo===user.id);
+          const directory=directorySource.filter(person=>isAdmin(user)||(isManager(user)?person.department===user.department:person.reportsTo===user.id));
        const employees=directory.filter(person=>employmentOf(person)==="Employee"); const interns=directory.filter(person=>employmentOf(person)==="Intern");
        const people=directory.filter(person=>peopleFilter==="All"||employmentOf(person)===peopleFilter);
          return <><Header eyebrow="Team directory" title="People" subtitle="Employment details and live workspace presence." action={p.can("person")&&<button className="btn primary" onClick={()=>p.onModal("person")}><UserPlus size={14}/> Add {isManager(user)?"staff member":"person"}</button>}/>
