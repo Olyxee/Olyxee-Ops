@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Archive, ArrowLeft, Bell, BriefcaseBusiness, Building2, Check, ChevronRight, CircleHelp, ClipboardList, Clock3, FileCheck2, FileText, GitPullRequest, Image, LayoutDashboard, ListTodo, LogOut, Menu, MessageSquare, Pencil, Plus, Search, Settings, Upload, UserPlus, UserRound, Users, X } from "lucide-react";
+import { AlertTriangle, Archive, ArrowDownRight, ArrowLeft, ArrowUpRight, Bell, BriefcaseBusiness, Building2, Check, ChevronRight, CircleHelp, ClipboardList, Clock3, FileCheck2, FileText, GitPullRequest, Image, LayoutDashboard, ListTodo, LogOut, Menu, MessageSquare, Pencil, Plus, Search, Settings, Trash2, Upload, UserPlus, UserRound, Users, X } from "lucide-react";
 import { Audit, departments, seedProjects, seedTasks, seedAudit, seedNotices, seedWeeklyObjectives, seedStaffStatuses, Project, ProjectResource, Task, User, users, Notice, AccessRole, EmploymentType, AccountStatus, WeeklyObjective, WeeklyObjectiveResource, ObjectiveStatus, StaffStatus, Availability } from "./data";
 import { OFFICIAL_DEPARTMENTS, UNASSIGNED_DEPARTMENT } from "../shared/departments.mjs";
 import "./person-modal.css";
@@ -24,6 +24,39 @@ const currentDate=()=>new Date().toISOString().slice(0,10);
 const taskDepartments=(task:Task)=>task.departmentIds?.length?task.departmentIds:(task.department?[task.department]:[]);
 const taskAssignees=(task:Task)=>task.assigneeIds?.length?task.assigneeIds:(task.assignee?[task.assignee]:[]);
 const taskDepartmentLabel=(task:Task)=>{const names=taskDepartments(task);return names.length>2?`${names.slice(0,2).join(" · ")} · +${names.length-2}`:names.join(" · ")||"Unassigned"};
+type DepartmentMarketRow={department:[string,string,string];currentCompleted:number;currentDue:number;currentRate:number|null;previousRate:number|null;change:number|null};
+const localDateKey=(date:Date)=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+const departmentWeeklyPerformance=(departments:[string,string,string][],tasks:Task[],now:number):DepartmentMarketRow[]=>{
+  const today=new Date(now);
+  const weekStart=new Date(today.getFullYear(),today.getMonth(),today.getDate()-((today.getDay()+6)%7));
+  const previousWeekStart=new Date(weekStart.getFullYear(),weekStart.getMonth(),weekStart.getDate()-7);
+  const previousCutoff=new Date(now-7*24*60*60*1000);
+  const currentStartKey=localDateKey(weekStart);
+  const currentEndKey=localDateKey(today);
+  const previousStartKey=localDateKey(previousWeekStart);
+  const previousEndKey=localDateKey(previousCutoff);
+  const rateFor=(department:string,startKey:string,endKey:string,cutoff:number)=>{
+    const dueTasks=tasks.filter(task=>task.status!=="Cancelled"&&taskDepartments(task).includes(department)&&task.due>=startKey&&task.due<=endKey);
+    const completed=dueTasks.filter(task=>{
+      const completedAt=task.completedAt?new Date(task.completedAt).getTime():NaN;
+      return task.status==="Completed"&&Number.isFinite(completedAt)&&completedAt<=cutoff;
+    }).length;
+    return{due:dueTasks.length,completed,rate:dueTasks.length?Math.round(completed/dueTasks.length*100):null};
+  };
+  return departments.map(department=>{
+    const current=rateFor(department[0],currentStartKey,currentEndKey,now);
+    const previous=rateFor(department[0],previousStartKey,previousEndKey,now-7*24*60*60*1000);
+    return{department,currentCompleted:current.completed,currentDue:current.due,currentRate:current.rate,previousRate:previous.rate,change:current.rate===null||previous.rate===null?null:current.rate-previous.rate};
+  }).sort((a,b)=>{
+    if(a.change===null&&b.change!==null)return 1;
+    if(a.change!==null&&b.change===null)return -1;
+    if(a.change!==null&&b.change!==null&&a.change!==b.change)return b.change-a.change;
+    if(a.currentRate!==null&&b.currentRate!==null&&a.currentRate!==b.currentRate)return b.currentRate-a.currentRate;
+    if(a.currentRate===null&&b.currentRate!==null)return 1;
+    if(a.currentRate!==null&&b.currentRate===null)return -1;
+    return a.department[0].localeCompare(b.department[0]);
+  });
+};
 const objectivePriorityRank:Record<WeeklyObjective["priority"],number>={Critical:0,High:1,Medium:2,Low:3};
 const activityTimestamp=(value?:string|number)=>{
   const timestamp=typeof value==="number"?value:new Date(value||"").getTime();
@@ -294,6 +327,7 @@ function UnifiedWorkspace({user,team,statuses,tasks,allTasks,projectsData,depart
     }).sort((a,b)=>objectivePriorityRank[a.priority]-objectivePriorityRank[b.priority]||a.dueDate.localeCompare(b.dueDate));
   const objectivePeople=(objective:WeeklyObjective)=>team.filter((person,index,people)=>[objective.managerId,objective.createdBy].includes(person.id)&&people.findIndex(candidate=>candidate.id===person.id)===index);
   const visibleDepartments=departmentsData.filter(department=>isAdmin(user)||department[0]===user.department);
+   const departmentMarketRows=useMemo(()=>departmentWeeklyPerformance(visibleDepartments,allTasks,healthNow),[visibleDepartments,allTasks,healthNow]);
    const managerFeedback=tasks.flatMap(task=>(task.updates||[]).filter(update=>["Manager","Admin","Superadmin"].includes(update.authorRole)||["Review feedback","Changes Requested"].includes(update.type)).map(update=>({task,update}))).sort((a,b)=>new Date(b.update.createdAt).getTime()-new Date(a.update.createdAt).getTime());
   const departmentHead=isManager(user)&&user.department&&user.department!==UNASSIGNED_DEPARTMENT;
    const departmentTasks=allTasks.filter(task=>taskDepartments(task).includes(user.department)&&task.status!=="Cancelled");
@@ -322,7 +356,7 @@ function UnifiedWorkspace({user,team,statuses,tasks,allTasks,projectsData,depart
      </div>
      {accessOf(user)!=="Member"&&<div className="workspace-stack workspace-stack-operations">
     <section id="workspace-people" className="workspace-card workspace-people workspace-managers"><div className="workspace-card-head"><div><span className="workspace-icon violet"><Users size={17}/></span><b>{isManager(user)?"Department people":"Managers"}</b></div><span className="workspace-head-actions">{can("person")&&<button onClick={()=>onModal("person")}><UserPlus size={14}/> Add</button>}<button onClick={()=>onView("People")}>View all <ChevronRight size={13}/></button></span></div><div className="workspace-people-columns" aria-hidden="true"><span>{isManager(user)?"Team member":"Manager"}</span><span>{isManager(user)?"Role":"Department"}</span><span>Working hours</span></div><div className="workspace-list">{homePeople.map(person=>{const status=statuses.find(item=>item.userId===person.id);return <button key={person.id} onClick={()=>onManage(person)}><span className="workspace-person-row"><Avatar person={person} size={36}/><span><b>{person.name}</b><small>{person.position||(isManager(user)?employmentOf(person):"Manager")}</small></span></span><span className="workspace-person-detail"><small>{isManager(user)?"Role":"Department"}</small><b>{isManager(user)?(person.position||employmentOf(person)):person.department}</b></span><WorkHoursPill status={status}/></button>})}{homePeople.length===0&&<div className="workspace-empty">{isManager(user)?"No department members available.":"No managers available."}</div>}</div></section>
-    <section id="workspace-departments" className="workspace-card workspace-departments"><div className="workspace-card-head"><div><span className="workspace-icon teal"><Building2 size={17}/></span><b>{isManager(user)?"Department health":"Departments"}</b></div><span className="workspace-head-actions">{isAdmin(user)&&<button onClick={()=>onModal("department")}><Plus size={14}/> New</button>}<button onClick={()=>isManager(user)?onDepartment(user.department):onView("Departments")}>{isManager(user)?"View department":"Open"} <ChevronRight size={13}/></button></span></div>{isManager(user)?<div className="manager-health-card"><button type="button" className="manager-health-open" onClick={()=>onDepartment(user.department)}><span><b>{user.department}</b><small className={`manager-health-state ${departmentHealthState.toLowerCase().replace(/\s+/g,"-")}`}>{departmentHealthState}</small></span><ChevronRight size={15}/></button><CompactDepartmentHealthChart curve={departmentHealthCurve} label={`${user.department} hourly delivery health: ${departmentHealthState}`}/><button type="button" className="manager-health-action" onClick={()=>departmentReview[0]?onOpen(departmentReview[0].id):onModal("task")}><AlertTriangle size={16}/><span><small>Recommended next action</small><b>{departmentAction}</b></span><ChevronRight size={15}/></button></div>:<div className="workspace-department-grid">{visibleDepartments.slice(0,4).map(department=>{const departmentTasks=allTasks.filter(task=>task.department===department[0]);const done=departmentTasks.filter(task=>task.status==="Completed").length;return <button type="button" key={department[0]} onClick={()=>onDepartment(department[0])}><span className="workspace-department-icon"><Building2 size={18}/></span><span className="workspace-department-copy"><b>{department[0]}</b><small>{department[1]}</small></span><strong>{done}/{departmentTasks.length}</strong><ChevronRight size={14}/></button>})}</div>}</section>
+     <section id="workspace-departments" className="workspace-card workspace-departments"><div className="workspace-card-head"><div><span className="workspace-icon teal"><Building2 size={17}/></span><span><b>{isManager(user)?"Department health":"Departments"}</b>{!isManager(user)&&<small className="workspace-department-period">Task completion · this week vs same days last week</small>}</span></div><span className="workspace-head-actions">{isAdmin(user)&&<button onClick={()=>onModal("department")}><Plus size={14}/> New</button>}<button onClick={()=>isManager(user)?onDepartment(user.department):onView("Departments")}>{isManager(user)?"View department":"Open"} <ChevronRight size={13}/></button></span></div>{isManager(user)?<div className="manager-health-card"><button type="button" className="manager-health-open" onClick={()=>onDepartment(user.department)}><span><b>{user.department}</b><small className={`manager-health-state ${departmentHealthState.toLowerCase().replace(/\s+/g,"-")}`}>{departmentHealthState}</small></span><ChevronRight size={15}/></button><CompactDepartmentHealthChart curve={departmentHealthCurve} label={`${user.department} hourly delivery health: ${departmentHealthState}`}/><button type="button" className="manager-health-action" onClick={()=>departmentReview[0]?onOpen(departmentReview[0].id):onModal("task")}><AlertTriangle size={16}/><span><small>Recommended next action</small><b>{departmentAction}</b></span><ChevronRight size={15}/></button></div>:<div className="workspace-department-market-list">{departmentMarketRows.map((row,index)=>{const direction=row.change===null?"unknown":row.change>0?"up":row.change<0?"down":"steady";const movement=row.change===null?"No comparison":row.change>0?`Up ${row.change} points`:row.change<0?`Down ${Math.abs(row.change)} points`:"No change";const labelRate=row.currentRate===null?"no completion rate":`${row.currentRate}% completion rate`;const Arrow=row.change===null?null:row.change>0?ArrowUpRight:row.change<0?ArrowDownRight:null;return <button type="button" className="workspace-department-market-row" key={row.department[0]} onClick={()=>onDepartment(row.department[0])} aria-label={`${row.department[0]}, rank ${index+1}, ${labelRate}, ${movement}`}><span className="department-market-rank">{String(index+1).padStart(2,"0")}</span><span className="department-market-copy"><b>{row.department[0]}</b><small>{row.department[1]==="Unassigned"?row.department[2]:`Lead ${row.department[1]}`}</small></span><span className="department-market-rate"><b>{row.currentRate===null?"—":`${row.currentRate}%`}</b><small>{row.currentDue?`${row.currentCompleted}/${row.currentDue} due`: "No tasks due"}</small></span><span className={`department-market-change ${direction}`}>{Arrow?<Arrow size={17}/>:<span aria-hidden="true">—</span>}<b>{row.change===null?"—":`${row.change>0?"+":""}${row.change} pp`}</b><small>{row.change===null?"No comparison":"vs last week"}</small></span><ChevronRight className="department-market-chevron" size={14}/></button>})}{!departmentMarketRows.length&&<div className="workspace-empty">No departments to rank.</div>}</div>}</section>
     </div>}
       {accessOf(user)!=="Member"&&<section id="workspace-review" className="workspace-card workspace-review workspace-review-home">
        <div className="workspace-card-head review-home-head"><div><span className="workspace-icon review-home-icon"><FileCheck2 size={17}/></span><span className="review-home-title"><b>Weekly review</b><small>{scopedObjectives.length} {scopedObjectives.length===1?"objective":"objectives"}{user.department&&user.department!==UNASSIGNED_DEPARTMENT?` for ${user.department}`:""}</small></span></div><span className="workspace-head-actions">{scopedObjectives.length>2&&<button onClick={()=>onView("Weekly Review")}>View all <ChevronRight size={13}/></button>}{(isAdmin(user)||isManager(user))&&<button onClick={()=>onModal("objective")}><Plus size={14}/> Add objective</button>}</span></div>
@@ -454,7 +488,7 @@ function UnifiedWorkspace({user,team,statuses,tasks,allTasks,projectsData,depart
        })}</div></>;
    }
   if(view==="Blockers")return <><Header eyebrow="Needs a decision" title="Blockers" subtitle="Surface constraints early. Resolve or replan with context."/><div className="panel table-wrap"><table className="table"><thead><tr><th>Task</th><th>Blocker</th><th>Owner</th><th>Action</th></tr></thead><tbody>{tasks.filter(t=>t.status==="Blocked").map(t=><tr key={t.id}><td><b>{t.title}</b><br/><span className="muted">{t.id}</span></td><td>{t.blocker?.reason}</td><td>{users.find(u=>u.id===t.assignee)?.name}</td><td><button className="btn" onClick={()=>p.onOpen(t.id)}>Open task</button></td></tr>)}</tbody></table></div></>;
-  if(view==="Weekly Review")return <Review objectives={p.objectives} objectiveId={p.objectiveId} team={p.team||users} tasks={p.tasks} user={user} onBack={()=>p.onView(employmentOf(user)==="Intern"?"Home":"Overview")} onOpenTask={p.onOpen} onObjective={p.onObjective} onEditObjective={p.onEditObjective} setObjectives={p.setObjectives}/>;
+ if(view==="Weekly Review")return <Review objectives={p.objectives} objectiveId={p.objectiveId} team={p.team||users} tasks={p.tasks} user={user} onBack={()=>p.onView(employmentOf(user)==="Intern"?"Home":"Overview")} onShowList={()=>p.onView("Weekly Review")} onOpenTask={p.onOpen} onObjective={p.onObjective} onEditObjective={p.onEditObjective} setObjectives={p.setObjectives} flash={p.flash}/>;
  if(view==="Notifications")return <><Header eyebrow="Updates" title="Notifications" subtitle="The decisions and changes that need your attention."/><div className="panel"><div className="list">{(p.notices||[]).map(n=><div className="row" key={n.id}><div className="inline"><div className="avatar" style={{background:n.title.includes("blocked")?"#f4e4e1":"#e6efe9"}}>O</div><div><div className="row-title">{n.title}</div><div className="row-meta">{n.body} · {n.time}</div></div></div><ChevronRight size={15}/></div>)}{!(p.notices||[]).length&&<div className="empty">No notifications.</div>}</div></div></>;
   if(view==="Integrations")return <><Header eyebrow="Data connections" title="Integrations" subtitle="Live services connected to Olyxee Ops."/><div className="panel"><div className="list">{[["Ops database","Accounts, sessions, projects, tasks, and workspace data"],["People database","Employees, interns, departments, and reporting lines"]].map(connection=><div className="row" key={connection[0]}><div className="inline"><div className="avatar">{connection[0][0]}</div><div><div className="row-title">{connection[0]}</div><div className="row-meta">{connection[1]}</div></div></div><span className="badge green">Connected</span></div>)}</div></div></>;
  if(view==="Audit Log")return <><Header eyebrow="Traceability" title="Audit Log" subtitle="Every important change has an actor and a timestamp."/><div className="panel table-wrap"><table className="table"><thead><tr><th>Event</th><th>Actor</th><th>When</th></tr></thead><tbody>{audit.map(event=><tr key={event.id}><td>{event.action}</td><td>{event.actor}</td><td className="mono">{event.time}</td></tr>)}</tbody></table>{!audit.length&&<div className="empty">No audit events recorded.</div>}</div></>;
@@ -1061,12 +1095,13 @@ function Modal({title,onClose,children,footer,className=""}:{title:React.ReactNo
      </div>
   </Modal>
 }
-function Review({objectives,objectiveId,team,tasks,user,onBack,onOpenTask,onObjective,onEditObjective,setObjectives}:{objectives:WeeklyObjective[];objectiveId?:string|null;team:User[];tasks:Task[];user:User;onBack:()=>void;onOpenTask:(id:string)=>void;onObjective:(id:string)=>void;onEditObjective:(objective:WeeklyObjective)=>void;setObjectives:React.Dispatch<React.SetStateAction<WeeklyObjective[]>>}){
+function Review({objectives,objectiveId,team,tasks,user,onBack,onShowList,onOpenTask,onObjective,onEditObjective,setObjectives,flash}:{objectives:WeeklyObjective[];objectiveId?:string|null;team:User[];tasks:Task[];user:User;onBack:()=>void;onShowList:()=>void;onOpenTask:(id:string)=>void;onObjective:(id:string)=>void;onEditObjective:(objective:WeeklyObjective)=>void;setObjectives:React.Dispatch<React.SetStateAction<WeeklyObjective[]>>;flash:(message:string)=>void}){
    const visibleObjectives=objectivesForUser(objectives,user,team);
   const owner=(objective:WeeklyObjective)=>team.find(person=>person.id===objective.managerId);
   const focused=objectiveId?visibleObjectives.find(objective=>objective.id===objectiveId):undefined;
   const [uploading,setUploading]=useState(false);
   const [uploadError,setUploadError]=useState("");
+  const [removing,setRemoving]=useState(false);
   if(focused){
     const responsible=owner(focused);
     const objectiveDepartment=responsible?.department;
@@ -1096,8 +1131,24 @@ function Review({objectives,objectiveId,team,tasks,user,onBack,onOpenTask,onObje
       }catch(error){setUploadError(error instanceof Error?error.message:"Could not upload this resource.");}
       finally{setUploading(false);}
     };
+     const removeObjective=async()=>{
+       if(accessOf(user)!=="Superadmin"||removing)return;
+       const confirmed=window.confirm(`Remove “${focused.title}” from Weekly Review? This removes only the objective. Its linked projects, tasks, and all task progress will remain unchanged.`);
+       if(!confirmed)return;
+       setRemoving(true);
+       try{
+         const remaining=objectives.filter(objective=>objective.id!==focused.id);
+         const response=await fetch("/api/state/objectives",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({value:remaining})});
+         const result=await response.json().catch(()=>({}));
+         if(!response.ok)throw new Error(result.error||"Could not remove this weekly objective.");
+         setObjectives(remaining);
+         onShowList();
+         flash("Weekly objective removed. Its linked tasks and progress are unchanged.");
+       }catch(error){flash(error instanceof Error?error.message:"Could not remove this weekly objective.");}
+       finally{setRemoving(false);}
+     };
     return <div className="weekly-review-page weekly-review-focused">
-       <div className="focused-review-nav"><BackButton className="workspace-back" onClick={onBack} label="Back to Home"/><span>Objective detail</span>{canEdit&&<button className="btn" onClick={()=>onEditObjective(focused)}><Pencil size={14}/> Edit</button>}</div>
+        <div className="focused-review-nav"><BackButton className="workspace-back" onClick={onBack} label="Back to Home"/><span>Objective detail</span><div className="focused-review-actions">{canEdit&&<button type="button" className="btn" onClick={()=>onEditObjective(focused)}><Pencil size={14}/> Edit</button>}{accessOf(user)==="Superadmin"&&<button type="button" className="btn danger objective-remove-button" disabled={removing} onClick={()=>void removeObjective()}><Trash2 size={14}/>{removing?"Removing…":"Remove objective"}</button>}</div></div>
       <section className={`panel objective-detail-card status-${focused.status.toLowerCase().replace(/\s+/g,"-")}`}>
         <div className="focused-objective-heading"><div className="focused-objective-title"><span className={`focused-objective-icon status-${focused.status.toLowerCase().replace(/\s+/g,"-")}`} aria-hidden="true"><ObjectiveStatusIcon status={focused.status} size={22}/></span><div><span className="eyebrow">Weekly objective</span><h1>{focused.title}</h1><div className="focused-objective-chips"><Status s={focused.status}/><span className={`review-priority priority-${focused.priority.toLowerCase()}`}>{focused.priority} priority</span></div></div></div><div className="focused-objective-owner">{responsible?<Avatar person={responsible} size={34}/>:<span className="objective-owner-fallback"><UserRound size={16}/></span>}<span><small>Responsible manager</small><strong>{responsible?.name||"Unassigned"}</strong></span></div></div>
         <div className="objective-detail-description"><span className="panel-kicker">Outcome that matters most</span><p>{focused.description||"No outcome has been described yet."}</p></div>
