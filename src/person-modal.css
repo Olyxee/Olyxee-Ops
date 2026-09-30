@@ -87,3 +87,8 @@
 /* Minimal fallback section control: labels only, neutral tones, iOS-like motion. */
 .person-modal-switcher{gap:3px!important;padding:3px!important;border:1px solid #d1d1d6!important;border-radius:9px!important;background:#e9e9eb!important;box-shadow:none!important}.person-modal-switcher button{justify-content:center!important;min-height:36px!important;padding:7px 10px!important;border:0!important;border-radius:7px!important;background:transparent!important;color:#636366!important;text-align:center!important;transition:background-color .18s ease,color .18s ease,box-shadow .18s ease,transform .12s ease!important}.person-modal-switcher button:hover{background:rgba(255,255,255,.55)!important;color:#1d1d1f!important;transform:none!important}.person-modal-switcher button:active{transform:scale(.98)!important}.person-modal-switcher button.active{background:#fff!important;color:#1d1d1f!important;box-shadow:0 1px 3px rgba(0,0,0,.12)!important}.person-modal-switcher button>span{display:block!important}.person-modal-switcher b{font-size:11px!important;font-weight:600!important}.person-modal-switcher small,.person-modal-tab-index{display:none!important}
 @media(prefers-reduced-motion:reduce){.person-modal-switcher button{transition:none!important}}
+
+/* Keep activity and account access separate from employment status. */
+.person-profile-identity .people-presence{font-size:12px}
+.person-profile-details dt{color:#676c69;font-size:10px;letter-spacing:.02em;text-transform:none}
+.person-profile-details dd{color:#252a28;font-size:13px;font-weight:600;line-height:1.4}

@@ -32,6 +32,7 @@ import {
 
 const app = express();
 const onlinePresence = new Map();
+const persistedPresence = new Map();
 const port = Number(process.env.PORT || 5000);
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -266,7 +267,20 @@ app.get("/api/me", requireAuth, requireAccount, async (request, response) => {
 app.post("/api/presence/heartbeat", requireAuth, requireAccount, async (request, response) => {
   const person = await resolveExternalPerson(request.appAccount.email);
   if (!person?.external_id) return response.status(403).json({ error: "Your staff profile could not be resolved." });
-  onlinePresence.set(person.external_id, Date.now());
+  const now = Date.now();
+  if (now - (persistedPresence.get(person.external_id) || 0) >= 5 * 60_000) {
+    try {
+      await appPool.query(
+        `UPDATE public.ops_users SET profile_data = jsonb_set(coalesce(profile_data, '{}'::jsonb), '{lastSeenAt}', to_jsonb($2::text), true) WHERE id = $1`,
+        [request.appAccount.id, new Date(now).toISOString()],
+      );
+      persistedPresence.set(person.external_id, now);
+    } catch (error) {
+      console.error("Could not save last active time:", error);
+      return response.status(503).json({ error: "Presence is temporarily unavailable." });
+    }
+  }
+  onlinePresence.set(person.external_id, now);
   return response.json({ online: true });
 });
 

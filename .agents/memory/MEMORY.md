@@ -8,3 +8,5 @@
 - [Department home trend](department-home-trend.md) — compare completed tasks this week with the same elapsed period last week, not tasks due in those windows.
 - [Department delivery baseline](department-delivery-baseline.md) — show a red zero chart for no recorded progress; green rises require real delivery activity.
 - [Department icon identity](department-icon-identity.md) — objectives use their responsible manager's department symbol; keep status in separate text and badges.
+- [Project detail visual direction](project-detail-visual-direction.md) — favor the real project work over generic narrative summaries and stacked dashboard cards.
+- [People activity labels](people-activity-labels.md) — distinguish recent Ops activity from employment and sign-in access; avoid a generic “Status” label.

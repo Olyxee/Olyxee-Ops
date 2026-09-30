@@ -25,31 +25,35 @@ body .app.workspace-shell .workspace-profile-copy h1{font-size:clamp(22px,2.2vw,
 body .app.workspace-shell .workspace-profile-copy p{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 body .app.workspace-shell .table-wrap{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}
 body .app.workspace-shell .table{min-width:760px}
-body .app.workspace-shell .people-table{min-width:980px}
-body .app.workspace-shell .people-edit-icon{display:inline-grid;place-items:center;width:34px;height:34px;min-height:34px;padding:0;border-radius:10px}
-.people-presence{display:inline-flex;align-items:center;gap:7px;color:#747e83;font-size:10px;font-weight:650;white-space:nowrap}
+body .app.workspace-shell .people-table{min-width:700px}
+body .app.workspace-shell .people-table th:first-child{width:31%}
+body .app.workspace-shell .people-table th:nth-child(2){width:16%}
+body .app.workspace-shell .people-table th:nth-child(3){width:27%}
+body .app.workspace-shell .people-table th:nth-child(4){width:20%}
+body .app.workspace-shell .people-table th:last-child{width:6%}
+body .app.workspace-shell .people-table td{vertical-align:middle}
+body .app.workspace-shell .people-edit-icon{display:inline-grid;place-items:center;width:34px;height:34px;min-height:34px;padding:0;border:0;border-radius:9px;background:transparent;color:#5c6360}
+body .app.workspace-shell .people-edit-icon:hover,
+body .app.workspace-shell .people-edit-icon:focus-visible{background:#f0f1f0;outline:2px solid #68736e;outline-offset:1px}
+.people-presence{display:inline-flex;align-items:center;gap:7px;color:#4b524f;font-size:12px;font-weight:500;white-space:nowrap}
 .people-presence i{width:7px;height:7px;border-radius:50%;background:#aeb5b8;box-shadow:0 0 0 3px #f0f2f3}
 .people-presence.online{color:#39745f}
 .people-presence.online i{background:#4f9a79;box-shadow:0 0 0 3px #e4f1eb}
-.people-segments{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:4px;border:1px solid #e2e6e7;border-radius:18px;background:#f3f4f5;box-shadow:inset 0 1px 2px rgba(32,42,46,.04)}
-.people-segments button{position:relative;min-width:0;min-height:76px;justify-content:flex-start;gap:11px;padding:12px 14px;border:1px solid transparent;border-radius:14px;background:transparent;color:#657075;box-shadow:none;cursor:pointer;transition:background .16s ease,border-color .16s ease,box-shadow .16s ease,transform .12s ease}
-.people-segments button:hover{border-color:rgba(202,209,211,.9);background:rgba(255,255,255,.6)}
-.people-segments button:active{transform:scale(.985)}
-.people-segments button:focus-visible{outline:2px solid #659a8a;outline-offset:2px}
-.people-segments button.active{border-color:#d7dcdd;background:#fff;color:#244c42;box-shadow:0 1px 3px rgba(29,39,43,.08),0 5px 16px rgba(29,39,43,.05)}
-.people-segment-icon{display:grid;flex:0 0 auto;place-items:center;width:36px;height:36px;border-radius:11px;background:#e5e8e9;color:#667176;transition:background .16s ease,color .16s ease}
-.people-segments button.active .people-segment-icon{background:#e4f0eb;color:#447766}
-.people-segment-copy{display:grid;min-width:0;gap:2px;text-align:left}
-.people-segment-copy b{color:#2e373b;font-size:12px;font-weight:650}
-.people-segment-copy small{overflow:hidden;color:#899196;font-size:9px;font-weight:500;text-overflow:ellipsis;white-space:nowrap}
-.people-segments strong{margin-left:auto;color:#2d373b;font-size:23px;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.04em}
-.people-segments button.active strong{color:#376a5c}
+.people-access-note{display:block;margin-top:5px;color:#9a5a4f;font-size:10px}
+.people-segments{display:inline-flex;grid-template-columns:none;gap:3px;width:max-content;max-width:100%;margin-bottom:12px;padding:3px;border:1px solid #dce0dd;border-radius:10px;background:#f1f3f2;box-shadow:none}
+.people-segments button{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:7px 13px;border:0;border-radius:7px;background:transparent;color:#5d6662;font-size:12px;font-weight:600;white-space:nowrap;box-shadow:none;cursor:pointer;transition:background-color .18s ease,color .18s ease,box-shadow .18s ease}
+.people-segments button:hover{background:#e7ebe8;color:#252c29}
+.people-segments button:focus-visible{outline:2px solid #46715c;outline-offset:1px}
+.people-segments button.active{border:0;background:#fff;color:#202b26;box-shadow:0 1px 3px rgba(24,37,29,.12)}
+.people-segments strong{margin:0;color:#79837e;font-size:11px;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:0}
+.people-segments button.active strong{color:#3d6b53}
+@media(prefers-reduced-motion:reduce){.people-segments button{transition:none}}
 body .app.workspace-shell .filters{align-items:center;margin-bottom:12px}
 body .app.workspace-shell .page-head{min-width:0;margin-bottom:16px}
 body .app.workspace-shell .page-head>*{min-width:0}
 @media(max-width:640px){
-  .people-segments{grid-template-columns:1fr}
-  .people-segments button{min-height:62px}
+  .people-segments{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%}
+  .people-segments button{min-width:0;gap:5px;padding:7px 6px;font-size:11px}
 }
 body .app.workspace-shell .page-head .title{font-size:clamp(24px,2.5vw,34px)}
 body .app.workspace-shell .project-grid{gap:12px}
