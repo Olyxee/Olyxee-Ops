@@ -195,3 +195,64 @@ body .login-card{max-height:calc(100dvh - 40px);overflow:auto}
   body .weekly-review-focused .objective-resources-head{padding:21px 20px 17px}
   body .weekly-review-focused .objective-resource-list{padding:7px 14px 14px}
 }
+
+/* Project detail: primary work first, supporting information second */
+body .project-detail-simplified { max-width: 1180px; gap: 16px; }
+body .project-detail-simplified .project-detail-hero {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 16px 28px;
+  align-items: start;
+  margin: 0;
+  padding: 24px;
+  background: #fff;
+  border: 1px solid #e5e7e7;
+  border-radius: 14px;
+}
+body .project-detail-simplified .project-heading { min-width: 0; gap: 16px; }
+body .project-detail-simplified .project-heading > div:last-child { min-width: 0; }
+body .project-detail-simplified .project-heading .title { margin: 8px 0 4px; }
+body .project-detail-simplified .project-heading .subtitle { margin: 0; color: #5d6665; }
+body .project-detail-simplified .project-detail-departments { margin: 8px 0 0; color: #7c8583; font-size: 11px; }
+body .project-detail-simplified .project-detail-hero > .inline { justify-content: flex-end; flex-wrap: wrap; }
+body .project-detail-simplified .project-detail-summary {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 26px;
+  padding-top: 16px;
+  border-top: 1px solid #ebeded;
+  color: #67706e;
+  font-size: 12px;
+}
+body .project-detail-simplified .project-detail-summary strong { margin-right: 4px; color: #242d2b; font-size: 16px; font-variant-numeric: tabular-nums; }
+body .project-detail-simplified .project-detail-grid { grid-template-columns: minmax(0,1fr) 275px; gap: 16px; align-items: start; }
+body .project-detail-simplified .project-delivery-panel,
+body .project-detail-simplified .project-side .panel { border: 1px solid #e5e7e7; border-radius: 14px; background: #fff; box-shadow: none; }
+body .project-detail-simplified .project-delivery-panel .panel-head { min-height: 56px; }
+body .project-detail-simplified .project-task-row { min-height: 64px; }
+body .project-detail-simplified .project-task-row .row-main { min-width: 0; }
+body .project-detail-simplified .project-side { gap: 12px; }
+body .project-detail-simplified .project-side-heading { justify-content: space-between; }
+body .project-detail-simplified .project-side h3 { margin: 0; font-size: 13px; color: #282f2e; }
+body .project-detail-simplified .project-side-heading small { color: #737d79; font-size: 11px; }
+body .project-detail-simplified .project-side .panel-head { min-height: 0; padding: 0 0 12px; }
+body .project-detail-simplified .project-side .row-meta { line-height: 1.45; }
+body .project-secondary-objectives { border: 1px solid #e5e7e7; border-radius: 14px; background: #fff; }
+body .project-secondary-objectives > summary { display: flex; align-items: center; gap: 10px; padding: 15px 20px; cursor: pointer; color: #303936; font-size: 13px; font-weight: 650; list-style: none; }
+body .project-secondary-objectives > summary::-webkit-details-marker { display: none; }
+body .project-secondary-objectives > summary::after { content: "⌄"; margin-left: auto; color: #737d79; font-size: 18px; line-height: 1; }
+body .project-secondary-objectives[open] > summary::after { transform: rotate(180deg); }
+body .project-secondary-objectives > summary span { color: #737d79; font-size: 11px; }
+body .project-secondary-objectives .list { border-top: 1px solid #eceeed; }
+@media (max-width: 800px) {
+  body .project-detail-simplified .project-detail-grid { grid-template-columns: minmax(0,1fr); }
+  body .project-detail-simplified .project-detail-hero { grid-template-columns: minmax(0,1fr); }
+  body .project-detail-simplified .project-detail-hero > .inline { justify-content: flex-start; }
+}
+@media (max-width: 600px) {
+  body .project-detail-simplified .project-detail-hero { padding: 18px 16px; }
+  body .project-detail-simplified .project-heading { gap: 12px; }
+  body .project-detail-simplified .project-detail-summary { gap: 8px 18px; }
+  body .project-detail-simplified .project-task-row { flex-wrap: wrap; }
+}
