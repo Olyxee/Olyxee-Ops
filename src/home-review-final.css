@@ -1602,3 +1602,76 @@ html body .workspace-review-home .review-objective-open {
   body .weekly-review-focused .focused-objective-icon { width: 42px; height: 42px; }
   body .modal { width: calc(100vw - 6px) !important; max-width: calc(100vw - 6px) !important; }
 }
+
+/* Department week-over-week ranking */
+body .workspace-department-period { display: block; margin-top: 3px; color: #797e84; font-size: 9px; font-weight: 500; }
+body .workspace-department-market-list { padding: 4px 15px 10px; }
+body .workspace-department-market-row {
+  display: grid;
+  grid-template-columns: 27px minmax(0, 1fr) 65px 87px 14px;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 62px;
+  padding: 8px 2px;
+  border: 0;
+  border-bottom: 1px solid rgba(60,60,67,.1);
+  background: transparent;
+  color: #26282b;
+  text-align: left;
+}
+body .workspace-department-market-row:last-child { border-bottom: 0; }
+body .workspace-department-market-row:hover,
+body .workspace-department-market-row:focus-visible { background: rgba(255,255,255,.6); }
+body .department-market-rank { color: #8e9298; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
+body .department-market-copy,
+body .department-market-rate,
+body .department-market-change { display: grid; min-width: 0; gap: 4px; }
+body .department-market-copy b { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+body .department-market-copy small { overflow: hidden; color: #858a90; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+body .department-market-rate { justify-items: end; }
+body .department-market-rate b { font-size: 13px; font-variant-numeric: tabular-nums; }
+body .department-market-rate small,
+body .department-market-change small { color: #858a90; font-size: 8px; white-space: nowrap; }
+body .department-market-change { grid-template-columns: 16px minmax(0,1fr); align-items: center; color: #72777d; }
+body .department-market-change svg,
+body .department-market-change > span { grid-row: 1 / 3; }
+body .department-market-change b { font-size: 10px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+body .department-market-change.up { color: #28785c; }
+body .department-market-change.down { color: #bc4a43; }
+body .department-market-chevron { color: #a6a9ad; }
+
+/* Objective actions and linked projects */
+body .weekly-review-focused .focused-review-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+body .weekly-review-focused .objective-remove-button { border-color: #e5bcb9; color: #a63833; }
+body .weekly-review-focused .objective-remove-button:hover { background: #fff0ef; border-color: #d68c87; }
+body .weekly-review-focused .objective-remove-button:disabled { opacity: .55; cursor: wait; }
+body .weekly-review-focused .objective-linked-projects { margin: 0 30px 16px; padding: 16px; border: 1px solid #dedee2; border-radius: 15px; background: #fafafa; }
+body .objective-linked-projects-heading h2 { margin: 4px 0; color: #1c1c1e; font-size: 13px; }
+body .objective-linked-projects-heading p { margin: 0 0 12px; color: #777b80; font-size: 10px; }
+body .objective-linked-project-list { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+body .objective-linked-project {
+  display: flex; align-items: center; gap: 10px; min-width: 0; padding: 9px;
+  border: 1px solid #e1e1e4; border-radius: 11px; background: #fff; color: #28282a; text-align: left;
+}
+body .objective-linked-project:hover,
+body .objective-linked-project:focus-visible { border-color: #a5aab0; background: #f8fafb; }
+body .objective-linked-project > span { display: grid; min-width: 0; flex: 1; gap: 3px; }
+body .objective-linked-project strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+body .objective-linked-project small { color: #858a90; font-size: 9px; }
+body .objective-linked-project > svg { color: #a5a9ae; }
+body .objective-linked-project-empty { grid-column: 1 / -1; margin: 0; color: #858a90; font-size: 11px; }
+
+@media (max-width: 600px) {
+  body .workspace-department-market-list { padding-inline: 10px; }
+  body .workspace-department-market-row { grid-template-columns: 22px minmax(0,1fr) 50px 70px; gap: 6px; }
+  body .department-market-chevron,
+  body .department-market-rate small,
+  body .department-market-change small { display: none; }
+  body .department-market-copy b { font-size: 10px; }
+  body .department-market-change { grid-template-columns: 14px minmax(0,1fr); gap: 2px; }
+  body .department-market-change svg { width: 14px; }
+  body .department-market-change b { font-size: 9px; }
+  body .weekly-review-focused .objective-linked-projects { margin-inline: 14px; }
+  body .objective-linked-project-list { grid-template-columns: minmax(0,1fr); }
+}

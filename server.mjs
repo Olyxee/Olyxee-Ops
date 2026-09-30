@@ -2367,6 +2367,18 @@ app.put("/api/state/:key", requireAuth, requireAccount, async (request, response
   if (request.params.key === "objectives") {
     const current = await appPool.query("SELECT state_value FROM workspace_state WHERE state_key = 'objectives'");
     previousObjectives = Array.isArray(current.rows[0]?.state_value) ? current.rows[0].state_value : [];
+    if (!Array.isArray(request.body.value)) {
+      return response.status(400).json({ error: "Weekly objectives must be provided as a list." });
+    }
+    const incomingIds = new Set(request.body.value.map((objective) => objective.id));
+    if (appRole === "Superadmin" && previousObjectives.some((objective) => !incomingIds.has(objective.id) && objective.status !== "Complete")) {
+      return response.status(403).json({ error: "Only completed weekly objectives can be removed." });
+    }
+    if (appRole !== "Superadmin") {
+      if (previousObjectives.some((objective) => !incomingIds.has(objective.id))) {
+        return response.status(403).json({ error: "Only the Superadmin can remove weekly objectives." });
+      }
+    }
   }
   let stateValue = request.body.value;
   if (request.params.key === "objectives" && request.appAccount.app_role === "Manager" && Array.isArray(stateValue)) {
