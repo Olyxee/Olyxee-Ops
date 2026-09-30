@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Archive, ArrowDownRight, ArrowLeft, ArrowUpRight, Bell, BriefcaseBusiness, Building2, Check, ChevronRight, CircleHelp, ClipboardList, Clock3, Code2, FileCheck2, FileText, FlaskConical, GitPullRequest, Image, LayoutDashboard, ListTodo, LogOut, Megaphone, Menu, MessageSquare, Minus, Pencil, Plus, Search, Settings, ShieldCheck, Trash2, Upload, UserPlus, UserRound, Users, X } from "lucide-react";
+import { AlertTriangle, Archive, ArrowDownRight, ArrowLeft, ArrowUpRight, Bell, BriefcaseBusiness, Building2, Check, ChevronRight, CircleHelp, ClipboardList, Clock3, Code2, FileCheck2, FileText, FlaskConical, GitPullRequest, Image, LayoutDashboard, ListTodo, LogOut, Megaphone, Menu, MessageSquare, Pencil, Plus, Search, Settings, ShieldCheck, Trash2, Upload, UserPlus, UserRound, Users, X } from "lucide-react";
 import { Audit, departments, seedProjects, seedTasks, seedAudit, seedNotices, seedWeeklyObjectives, seedStaffStatuses, Project, ProjectResource, Task, User, users, Notice, AccessRole, EmploymentType, AccountStatus, WeeklyObjective, WeeklyObjectiveResource, ObjectiveStatus, StaffStatus, Availability } from "./data";
 import { OFFICIAL_DEPARTMENTS, UNASSIGNED_DEPARTMENT } from "../shared/departments.mjs";
 import "./person-modal.css";
@@ -48,22 +48,18 @@ const departmentWeeklyPerformance=(departments:[string,string,string][],tasks:Ta
 };
 function DepartmentMarketItem({row,rank,onOpen}:{row:DepartmentMarketRow;rank:number;onOpen:(department:string)=>void}){
    const direction=row.change>0?"up":row.change<0?"down":"steady";
-   const movement=row.change>0?"Improving":row.change<0?"Declining":"No change";
-   const Arrow=row.change>0?ArrowUpRight:row.change<0?ArrowDownRight:Minus;
+   const Arrow=row.change>0?ArrowUpRight:ArrowDownRight;
    const Icon=({
      "Engineering":Code2,
      "Research & Development (R&D)":FlaskConical,
      "Data & Security":ShieldCheck,
      "Sales & Marketing":Megaphone,
    } as Record<string,typeof Code2>)[row.department[0]]||Building2;
-   return <button type="button" className="workspace-department-market-row" onClick={()=>onOpen(row.department[0])} aria-label={`${row.department[0]}, rank ${rank}, ${movement.toLowerCase()} compared with last week`}>
+   return <button type="button" className="workspace-department-market-row" onClick={()=>onOpen(row.department[0])} aria-label={`${row.department[0]}, rank ${rank}${direction==="steady"?"":direction==="up"?", trending up":", trending down"}`}>
     <span className="department-market-rank">{String(rank).padStart(2,"0")}</span>
      <span className="department-market-icon" aria-hidden="true"><Icon size={20} strokeWidth={1.8}/></span>
     <span className="department-market-copy"><b>{row.department[0]}</b><small>{row.department[1]==="Unassigned"?row.department[2]:`Lead ${row.department[1]}`}</small></span>
-    <span className={`department-market-change ${direction}`}>
-       <Arrow size={17} strokeWidth={2} aria-hidden="true"/>
-       <span><b>{movement}</b><small>vs last week</small></span>
-    </span>
+     <span className={`department-market-change ${direction}`} aria-hidden="true">{direction!=="steady"&&<Arrow size={20} strokeWidth={2.2}/>}</span>
     <ChevronRight className="department-market-chevron" size={14}/>
   </button>;
 }
