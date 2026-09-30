@@ -1,8 +1,11 @@
 # Olyxee Ops
 
-Internal operating system demo for the week of 14–18 September 2026.
+Internal operating system.
 
-## Run
-`npm install && npm run dev` (Vite listens on `0.0.0.0:5000`, with all hosts allowed).
+## Run on Replit
 
-Demo accounts are available from the account switcher: Morgan Lee (Super Admin), Alisha Fatima (Engineering Admin), and Noah Williams (Intern). State is persisted in localStorage; use Settings → Reset demo data to restore the seed.
+Install the locked dependencies with `npm ci`, then start the existing **Start application** workflow (`npm run dev`). The Express server listens on `0.0.0.0:5000` and serves the Vite app.
+
+Set `OPS_DATABASE_URL` and `EXTERNAL_DATABASE_URL` to the existing pooled PostgreSQL connection URLs, and set `SESSION_SECRET`, using Replit Secrets. The Ops database stores accounts, sessions, and app data; the external database supplies staff records. Both existing databases and their schemas are required for sign-in and staff data. Check `/api/health` for configuration status.
+
+Email delivery requires the additional settings in `.env.example`. See `replit.md` for the database boundary and setup notes.
