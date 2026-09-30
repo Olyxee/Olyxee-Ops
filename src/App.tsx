@@ -183,17 +183,51 @@ function SetupAccount(){
   const [confirm,setConfirm]=useState("");
   const [message,setMessage]=useState("");
   const [saving,setSaving]=useState(false);
+  const [complete,setComplete]=useState(()=>!token&&window.sessionStorage.getItem("olyxee-account-setup-complete")==="true");
   const submit=async()=>{
+    if(!token||saving||complete)return;
     if(password.length<12){setMessage("Use at least 12 characters.");return}
     if(password!==confirm){setMessage("Passwords do not match.");return}
     setSaving(true);
-    const response=await fetch("/api/auth/setup-account",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token,password})});
-    const result=await response.json();
-    setSaving(false);
-    if(!response.ok){setMessage(result.error||"Could not set up your account.");return}
-    setMessage("Your account is ready. You can now sign in.");
+    setMessage("");
+    try{
+      const response=await fetch("/api/auth/setup-account",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token,password})});
+      const result=await response.json();
+      if(!response.ok)throw new Error(result.error||"Could not set up your account.");
+      setPassword("");
+      setConfirm("");
+      window.sessionStorage.setItem("olyxee-account-setup-complete","true");
+      window.history.replaceState(null,"",window.location.pathname);
+      setComplete(true);
+    }catch(error){
+      setMessage(error instanceof Error?error.message:"Could not set up your account. Please try again.");
+    }finally{
+      setSaving(false);
+    }
   };
-  return <div className="login"><div className="login-orb login-orb-one" aria-hidden="true"/><div className="login-orb login-orb-two" aria-hidden="true"/><form className="login-card" onSubmit={event=>{event.preventDefault();submit()}}><input className="sr-only" type="email" autoComplete="username" tabIndex={-1} aria-hidden="true" readOnly/><div className="login-brand"><img src="/olyxee-logo.png" alt="Olyxee"/><span>Olyxee <em>Ops</em></span></div><div className="login-rule"><span/></div><span className="workspace-access-label">Secure account setup</span><h1>Create your password</h1><p>Choose a password with at least 12 characters. This invitation link can only be used once.</p><div className="form-grid"><label className="form-label">Password<input className="input" type="password" autoComplete="new-password" value={password} onChange={event=>setPassword(event.target.value)} required/></label><label className="form-label">Confirm password<input className="input" type="password" autoComplete="new-password" value={confirm} onChange={event=>setConfirm(event.target.value)} required/></label>{message&&<div className="notice">{message}</div>}<button className="btn primary" type="submit" disabled={saving||!token}>{saving?"Saving…":"Set up account"}</button>{message.startsWith("Your account")&&<a className="btn" href="/">Go to sign in</a>}</div></form></div>;
+  return <div className={`login setup-account-screen ${complete?"setup-complete-screen":""}`}>
+    {complete?<section className="login-card setup-complete-card" aria-live="polite">
+      <div className="login-brand"><img src="/olyxee-logo.png" alt="Olyxee"/><span>Olyxee <em>Ops</em></span></div>
+      <span className="workspace-access-label">Account ready</span>
+      <h1>Welcome to Olyxee Ops</h1>
+      <p>Your password is set. Sign in to open your workspace.</p>
+      <a className="btn primary setup-signin-button" href="/sign-in">Go to sign in</a>
+    </section>:<form className="login-card setup-form-card" onSubmit={event=>{event.preventDefault();void submit()}}>
+      <input className="setup-username" type="email" autoComplete="username" tabIndex={-1} aria-hidden="true" readOnly/>
+      <div className="login-brand"><img src="/olyxee-logo.png" alt="Olyxee"/><span>Olyxee <em>Ops</em></span></div>
+      <div className="login-rule"><span/></div>
+      <span className="workspace-access-label">Secure account setup</span>
+      <h1>Create your password</h1>
+      <p>Choose a password with at least 12 characters. This invitation link can only be used once.</p>
+      <div className="form-grid">
+        <label className="form-label">Password<input className="input" type="password" autoComplete="new-password" value={password} onChange={event=>setPassword(event.target.value)} required/></label>
+        <label className="form-label">Confirm password<input className="input" type="password" autoComplete="new-password" value={confirm} onChange={event=>setConfirm(event.target.value)} required/></label>
+        {message&&<div className="notice" role="alert">{message}</div>}
+        <button className="btn primary" type="submit" disabled={saving||!token}>{saving?"Saving…":"Set up account"}</button>
+        {!token&&<a className="setup-missing-link" href="/sign-in">Return to sign in</a>}
+      </div>
+    </form>}
+  </div>;
 }
 
 function WorkspaceApp(){

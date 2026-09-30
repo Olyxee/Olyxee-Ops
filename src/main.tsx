@@ -11,9 +11,10 @@ import "./objective-detail.css";
 import "./objective-list.css";
 import "./project-task-colors.css";
 import "./project-detail-improved.css";
+import "./setup-account.css";
 
 function Login() {
-  const [email, setEmail] = useState("info@olyxee.com");
+  const [email, setEmail] = useState(window.location.pathname === "/sign-in" ? "" : "info@olyxee.com");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -68,6 +69,7 @@ function Login() {
 
 function Root() {
   const accountSetup=window.location.pathname==="/setup-account";
+  const signIn=window.location.pathname==="/sign-in";
   const [authenticated, setAuthenticated] = useState<boolean|null>(null);
   useEffect(()=>{
     fetch("/api/auth/session")
@@ -79,6 +81,7 @@ function Root() {
       .catch(()=>setAuthenticated(false));
   },[]);
   if(accountSetup)return <App/>;
+  if(signIn)return <Login/>;
   if(authenticated===null)return <div className="login"><div className="login-card"><div className="loading-bar loading-profile-name"/><div className="loading-bar loading-profile-meta"/></div></div>;
   return authenticated?<App/>:<Login/>;
 }

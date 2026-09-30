@@ -1,0 +1,77 @@
+.setup-username {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.login.setup-complete-screen {
+  background: #f6f7f6 !important;
+  background-image: none !important;
+}
+
+.setup-complete-screen .setup-complete-card {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.setup-complete-card {
+  width: min(420px, 100%);
+  padding: 36px;
+}
+
+.setup-complete-card .login-brand {
+  margin-bottom: 42px;
+}
+
+.setup-complete-card .workspace-access-label {
+  margin-bottom: 10px;
+  color: #666d6a;
+}
+
+.setup-complete-card h1 {
+  max-width: 320px;
+  margin-bottom: 12px;
+  color: #202622;
+  font-size: clamp(26px, 4vw, 31px);
+  line-height: 1.15;
+}
+
+.setup-complete-card > p {
+  margin-bottom: 28px;
+  color: #616966;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.setup-complete-card .setup-signin-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 46px;
+  text-decoration: none;
+}
+
+.setup-complete-card .setup-signin-button:focus-visible,
+.setup-missing-link:focus-visible {
+  outline: 2px solid #456c5b;
+  outline-offset: 3px;
+}
+
+.setup-missing-link {
+  display: block;
+  color: #525c56;
+  font-size: 12px;
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  .setup-complete-card { padding: 30px 24px; }
+  .setup-complete-card .login-brand { margin-bottom: 34px; }
+}
