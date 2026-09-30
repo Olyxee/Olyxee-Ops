@@ -2289,6 +2289,18 @@ app.put("/api/state/:key", requireAuth, requireAccount, async (request, response
   if (!["Superadmin", "Admin", "Manager", "Member"].includes(appRole)) {
     return response.status(403).json({ error: "You do not have permission to update workspace state." });
   }
+  if (request.params.key === "departments") {
+    if (appRole !== "Superadmin") return response.status(403).json({ error: "Only Superadmins can manage departments." });
+    const value = request.body.value;
+    if (!Array.isArray(value) || value.length > 100 || value.some((item) =>
+      !Array.isArray(item) || item.length !== 3
+      || typeof item[0] !== "string" || !item[0].trim() || item[0] !== item[0].trim() || item[0].length > 80
+      || typeof item[1] !== "string" || !item[1].trim() || item[1].length > 120
+      || typeof item[2] !== "string" || item[2].length > 240
+    ) || new Set(value.map((item) => item[0].toLowerCase())).size !== value.length) {
+      return response.status(400).json({ error: "Departments must have unique names, a lead, and a description." });
+    }
+  }
   if (["Manager", "Member"].includes(appRole) && request.params.key === "staff-statuses") {
     if (!Array.isArray(request.body.value)) {
       return response.status(400).json({ error: "Staff statuses must be provided as a list." });
