@@ -10,7 +10,7 @@ test("departments with no tasks show a flat zero baseline for all seven days", (
   assert.ok(points.every(point => point.score === 0 && !point.hasProgress));
 });
 
-test("creating a task or leaving a comment does not count as delivery progress", () => {
+test("creating an unassigned task or leaving a comment does not count as delivery progress", () => {
   const points = departmentDailyTrend([{
     createdDate: "2026-09-29T10:00:00",
     due: "2026-10-05",

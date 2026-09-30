@@ -12,6 +12,8 @@ import "./objective-list.css";
 import "./project-task-colors.css";
 import "./project-detail-improved.css";
 import "./setup-account.css";
+import "./intern-task-detail.css";
+import "./feedback-conversation.css";
 
 function Login() {
   const [email, setEmail] = useState(window.location.pathname === "/sign-in" ? "" : "info@olyxee.com");

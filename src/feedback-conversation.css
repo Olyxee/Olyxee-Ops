@@ -1,0 +1,178 @@
+.feedback-conversation {
+  width: 100%;
+  max-width: 800px;
+  color: #303731;
+}
+
+.feedback-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #68726a;
+  font-size: 12px;
+}
+
+.feedback-conversation-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 22px;
+  margin: 24px 0 16px;
+}
+
+.feedback-conversation-label {
+  color: #7d867f;
+  font-size: 11px;
+}
+
+.feedback-conversation-head h1 {
+  margin: 8px 0;
+  font-size: clamp(24px, 3vw, 32px);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.feedback-conversation-head p {
+  margin: 0;
+  color: #737d75;
+  font-size: 12px;
+}
+
+.feedback-response-state,
+.workspace-feedback-state {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 5px 8px;
+  border-radius: 5px;
+  background: #f0f2f0;
+  color: #636e65;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.feedback-response-state.resolved { background: #eaf0ec; color: #466250; }
+.feedback-response-state.in-progress { color: #3d4940; }
+
+.feedback-project-link {
+  margin-bottom: 26px;
+  color: #828a84;
+  font-size: 12px;
+}
+
+.feedback-project-link a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 28px;
+  color: #4c5a50;
+  text-decoration: none;
+}
+
+.feedback-project-link a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+.feedback-thread {
+  display: grid;
+  gap: 22px;
+  margin: 0 0 28px;
+  padding: 0;
+  list-style: none;
+}
+
+.feedback-message { width: min(100%, 680px); }
+.feedback-message.mine { justify-self: end; width: min(90%, 640px); }
+
+.feedback-message-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 10px;
+  color: #8b928d;
+}
+
+.feedback-message-meta strong { color: #454f48; font-size: 12px; font-weight: 600; }
+.feedback-message-meta time { margin-left: auto; }
+.feedback-message.mine .feedback-message-meta { justify-content: flex-end; }
+
+.feedback-message-body {
+  padding: 17px 19px;
+  border-radius: 0 12px 12px 12px;
+  background: #f3f5f3;
+}
+
+.feedback-message.mine .feedback-message-body {
+  border: 1px solid #e2e7e3;
+  border-radius: 12px 0 12px 12px;
+  background: #fff;
+}
+
+.feedback-message-body p {
+  margin: 0;
+  color: #47534a;
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.feedback-message-body a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 12px;
+  color: #536b5b;
+  font-size: 11px;
+}
+
+.feedback-message-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 12px;
+  color: #77817a;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.feedback-message-status.resolved { color: #4b6553; }
+
+.feedback-response-composer {
+  padding-top: 22px;
+  border-top: 1px solid #e3e7e4;
+}
+
+.feedback-response-composer > label {
+  display: flex;
+  gap: 9px;
+  margin-bottom: 9px;
+  color: #566159;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.feedback-response-composer > label span { color: #949b96; font-size: 10px; font-weight: 400; }
+.feedback-response-composer .textarea { width: 100%; min-height: 80px; resize: vertical; }
+.feedback-response-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 14px; }
+.feedback-response-actions .btn { min-height: 40px; }
+.feedback-approval-note { margin: 12px 0 0; color: #8b938d; font-size: 10px; line-height: 1.5; }
+.feedback-save-error { color: #9b5145; font-size: 12px; }
+.feedback-unavailable { margin-top: 24px; font-size: 13px; color: #7c857e; }
+
+.feedback-conversation a:focus-visible,
+.feedback-conversation button:focus-visible {
+  outline: 2px solid #65796b;
+  outline-offset: 3px;
+}
+
+@media (max-width: 540px) {
+  .feedback-conversation-head { flex-direction: column; gap: 12px; }
+  .feedback-message.mine { width: 95%; }
+  .feedback-message-body { padding: 14px; }
+  .feedback-response-actions .btn { flex: 1; }
+}

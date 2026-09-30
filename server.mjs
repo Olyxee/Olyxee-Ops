@@ -29,6 +29,10 @@ import {
   redeemAccountSetupToken,
   upsertAccountForSetup,
 } from "./server/services/accounts/account-setup.mjs";
+import {
+  FeedbackResponseError,
+  persistFeedbackResponse,
+} from "./server/services/tasks/feedback-responses.mjs";
 
 const app = express();
 const onlinePresence = new Map();
@@ -1820,7 +1824,7 @@ app.patch("/api/tasks/:id", requireAuth, requireAccount, async (request, respons
     }
     if (metadataRequested) {
       const previousAssigneeIds = taskAssigneesFromRow(lockedTask);
-      const assignmentEventId = await recordTaskActivity(client, task.id, identity, "Task assignment or metadata changed", { assigneeIds, departmentIds, priority, dueDate, project });
+      const assignmentEventId = await recordTaskActivity(client, task.id, identity, "Task assignment or metadata changed", { assigneeIds, addedAssigneeIds: assigneeIds.filter(id => !previousAssigneeIds.includes(id)), departmentIds, priority, dueDate, project });
       for (const assignedId of assigneeIds.filter((id) => !previousAssigneeIds.includes(id))) {
         const assignmentEmailId = await queueTaskAssigneeEmail(client, { ...lockedTask, assignee_external_id: assignedId }, {
           type: "task.assigned",
@@ -1958,6 +1962,38 @@ app.post("/api/tasks/:id/updates", requireAuth, requireAccount, async (request, 
     await client.query("ROLLBACK");
     console.error("Task comment failed:", error instanceof Error ? error.message : "Unknown error");
     return response.status(503).json({ error: "Could not post this task comment." });
+  } finally {
+    client.release();
+  }
+});
+
+app.post("/api/tasks/:id/feedback/:feedbackId/responses", requireAuth, requireAccount, async (request, response) => {
+  const identity = await getTaskContext(request);
+  const task = await loadTask(request.params.id, identity);
+  if (!task) return response.status(404).json({ error: "Task not found." });
+  if (!canWorkTask(task, identity)) {
+    return response.status(403).json({ error: "Only an assigned task member can respond to feedback." });
+  }
+
+  const client = await appPool.connect();
+  try {
+    const result = await persistFeedbackResponse({
+      client,
+      task,
+      feedbackId: request.params.feedbackId,
+      status: request.body?.status,
+      message: request.body?.message,
+      identity,
+      assigneeIds: taskAssigneesFromRow(task),
+      notifyTaskManagers,
+    });
+    return response.status(201).json(result);
+  } catch (error) {
+    if (error instanceof FeedbackResponseError) {
+      return response.status(error.statusCode).json({ error: error.message });
+    }
+    console.error("Feedback response failed:", error instanceof Error ? error.message : "Unknown error");
+    return response.status(503).json({ error: "Could not record this feedback response." });
   } finally {
     client.release();
   }

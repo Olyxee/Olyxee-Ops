@@ -1,4 +1,6 @@
-// A seven-day delivery trend based on dated task events, not sampled hourly noise.
+import { taskAssignmentTimes } from "./task-assignment-events.mjs";
+
+// A seven-day delivery/activity trend based on dated task events, not sampled noise.
 export function departmentDailyTrend(tasks, now) {
   const today = new Date(now);
   const firstDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6);
@@ -8,6 +10,7 @@ export function departmentDailyTrend(tasks, now) {
     return parsed.getTime();
   };
   const within = (value, start, end) => Number.isFinite(value) && value >= start && value < end && value <= now;
+  const assignmentTimes = tasks.flatMap(taskAssignmentTimes);
   const earlierTasks = tasks.filter(task => timestamp(task.createdDate || task.startDate) < firstDay.getTime() && task.status !== "Cancelled");
   let score = earlierTasks.length
     ? Math.round(earlierTasks.filter(task => timestamp(task.completedAt) < firstDay.getTime()).length / earlierTasks.length * 70)
@@ -26,13 +29,16 @@ export function departmentDailyTrend(tasks, now) {
     let active = 0;
     let known = 0;
     let finished = 0;
+    const assignments = assignmentTimes.filter(value => within(value, start, end)).length;
+    positive += assignments * 2;
 
     for (const task of tasks) {
       const created = timestamp(task.createdDate || task.startDate);
       const completed = timestamp(task.completedAt);
       const submitted = timestamp(task.submittedAt);
       const due = task.due ? timestamp(`${task.due}T23:59:59.999`) : NaN;
-      if (created < cutoff && task.status !== "Cancelled") {
+      // New unstarted tasks should not dilute existing delivery on their assignment day.
+      if (created <= cutoff && (created < start || completed <= cutoff) && task.status !== "Cancelled") {
         known++;
         if (completed < cutoff) finished++;
       }
@@ -67,16 +73,16 @@ export function departmentDailyTrend(tasks, now) {
     const nextScore = Math.round(Math.max(0, Math.min(96,
       (known ? finished / known * 70 : 0)
       + Math.min(30, positive) - Math.min(45, negative)
-      - (!progress && active ? 2 : 0)
+      - (!progress && !assignments && active ? 2 : 0)
     )));
     const change = nextScore - score;
     score = nextScore;
     points.push({
       label: new Date(start).toLocaleDateString(undefined, { weekday: "short" }),
       score,
-      event: progress || setbacks ? `${progress} progress events, ${setbacks} setbacks` : active ? "No progress recorded on active work" : tasks.length ? "No progress recorded today" : "No tasks recorded",
+      event: progress || setbacks || assignments ? `${assignments} task assignments, ${progress} delivery events, ${setbacks} setbacks` : active ? "No progress recorded on active work" : tasks.length ? "No progress recorded today" : "No tasks recorded",
       direction: change > 0 ? "up" : change < 0 ? "down" : "steady",
-      hasProgress: progress > 0,
+      hasProgress: progress > 0 || assignments > 0,
     });
   }
   return points;

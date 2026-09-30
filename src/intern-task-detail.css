@@ -1,0 +1,202 @@
+/* The intern's task is a brief to act on, not a dashboard. */
+body .app .intern-task-simple {
+  width: 100%;
+  max-width: 740px;
+  color: #272c29;
+}
+
+.intern-task-simple .intern-simple-heading {
+  margin: 24px 0 28px;
+}
+
+.intern-task-simple .intern-simple-heading .title {
+  margin: 0 0 14px;
+  font-size: clamp(25px, 3.2vw, 34px);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.intern-simple-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  color: #6b736f;
+  font-size: 12px;
+}
+
+.intern-simple-meta time {
+  margin-left: 8px;
+  color: #343c37;
+  font-weight: 600;
+}
+
+.intern-simple-brief {
+  margin: 0 0 26px;
+}
+
+.intern-simple-brief h2,
+.intern-simple-outcome h3 {
+  margin: 0 0 10px;
+  color: #383f3b;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.intern-simple-brief p {
+  margin: 0;
+  color: #515b55;
+  font-size: 14px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.intern-simple-outcome {
+  margin-top: 20px;
+}
+
+.intern-simple-repo {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 26px;
+  font-size: 12px;
+}
+
+.intern-simple-repo > span:first-child {
+  color: #626b65;
+  font-weight: 600;
+}
+
+.intern-simple-repo a {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  width: fit-content;
+  max-width: 100%;
+  color: #303b34;
+  text-decoration: none;
+}
+
+.intern-simple-repo a span {
+  overflow-wrap: anywhere;
+}
+
+.intern-simple-repo a svg {
+  flex-shrink: 0;
+}
+
+.intern-simple-repo a:hover span {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.intern-repo-missing {
+  color: #7b837e;
+}
+
+body .app .intern-task-simple .intern-primary-actions {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 0 0 28px;
+}
+
+body .app .intern-task-simple .intern-primary-actions .btn {
+  min-height: 44px;
+  padding: 10px 20px;
+  flex: 0 0 auto;
+}
+
+.intern-simple-help {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #59645d;
+  font-size: 12px;
+}
+
+.intern-simple-help:hover {
+  color: #232d27;
+}
+
+.intern-simple-help:disabled {
+  opacity: .5;
+  cursor: default;
+}
+
+body .app .intern-task-simple .intern-work-sections {
+  display: block;
+  margin: 0;
+}
+
+body .app .intern-task-simple .intern-work-section {
+  margin: 0;
+  padding: 22px 0;
+  border: 0;
+  border-top: 1px solid #e1e5e2;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.intern-simple-checklist > summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #3b453e;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.intern-simple-checklist > summary span {
+  margin-left: auto;
+  color: #737d76;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.intern-simple-checklist > summary::after {
+  content: "+";
+  font-size: 18px;
+  font-weight: 400;
+}
+
+.intern-simple-checklist[open] > summary::after {
+  content: "−";
+}
+
+.intern-simple-checklist > summary::-webkit-details-marker {
+  display: none;
+}
+
+body .app .intern-task-simple .intern-task-checklist {
+  margin-top: 18px;
+}
+
+body .app .intern-task-simple .intern-section-heading {
+  margin-bottom: 16px;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+body .app .intern-task-simple .intern-section-heading h2 {
+  font-size: 14px;
+}
+
+.intern-task-simple a:focus-visible,
+.intern-task-simple button:focus-visible,
+.intern-simple-checklist > summary:focus-visible {
+  outline: 2px solid #5c7163;
+  outline-offset: 4px;
+}
+
+@media (max-width: 480px) {
+  .intern-task-simple .intern-simple-heading { margin-top: 20px; }
+  body .app .intern-task-simple .intern-start-button { width: 100%; }
+}

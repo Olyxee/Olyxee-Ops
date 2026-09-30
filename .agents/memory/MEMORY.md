@@ -6,7 +6,8 @@
 - [Completed objective removal](completed-objective-removal.md) — only Superadmins remove completed weekly objectives; linked projects, tasks, and progress remain.
 - [Objective task visibility](objective-task-visibility.md) — hide completed tasks from Admin and Manager objective detail, but retain task progress and history.
 - [Department home trend](department-home-trend.md) — compare completed tasks this week with the same elapsed period last week, not tasks due in those windows.
-- [Department delivery baseline](department-delivery-baseline.md) — show a red zero chart for no recorded progress; green rises require real delivery activity.
+- [Department delivery baseline](department-delivery-baseline.md) — real assignments give a small activity lift; delivery gives larger rises; no activity remains a red zero baseline.
 - [Department icon identity](department-icon-identity.md) — objectives use their responsible manager's department symbol; keep status in separate text and badges.
 - [Project detail visual direction](project-detail-visual-direction.md) — favor the real project work over generic narrative summaries and stacked dashboard cards.
 - [People activity labels](people-activity-labels.md) — distinguish recent Ops activity from employment and sign-in access; avoid a generic “Status” label.
+- [Vite websocket options](vite-websocket-options.md) — Vite 8 uses server.ws for transport; disabling HMR alone does not disable the websocket listener.
