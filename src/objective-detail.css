@@ -38,6 +38,37 @@ body .weekly-review-focused .focused-objective-owner {
 }
 body .weekly-review-focused .focused-objective-owner small { font-size: 11px; }
 body .weekly-review-focused .focused-objective-owner strong { font-size: 13px; }
+body .weekly-review-focused .focused-objective-projects {
+  display: grid;
+  gap: 10px;
+  margin: 0 36px 20px;
+  padding: 14px 0 16px;
+  border-top: 1px solid #eaedec;
+  border-bottom: 1px solid #eaedec;
+}
+body .weekly-review-focused .focused-objective-projects h2 { margin: 0; color: #6d7874; font-size: 10px; }
+body .weekly-review-focused .focused-objective-project-list { display: flex; flex-wrap: wrap; gap: 8px 22px; }
+body .weekly-review-focused .focused-objective-project {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 4px 6px 4px 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #303a36;
+  text-align: left;
+  cursor: pointer;
+}
+body .weekly-review-focused .focused-objective-project:hover { background: #f5f8f6; }
+body .weekly-review-focused .focused-objective-project:focus-visible { outline: 2px solid #5a9583; outline-offset: 2px; }
+body .weekly-review-focused .focused-objective-project > span:not(.project-logo) { display: grid; gap: 3px; min-width: 0; }
+body .weekly-review-focused .focused-objective-project strong { overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+body .weekly-review-focused .focused-objective-project small { color: #7e8984; font-size: 10px; }
+body .weekly-review-focused .focused-objective-project > svg { flex: 0 0 auto; color: #8b9691; }
+body .weekly-review-focused .focused-objective-project-unavailable { align-self: center; color: #79837f; font-size: 11px; }
 body .weekly-review-focused .objective-detail-description {
   margin: 0 36px 14px;
   padding: 0;
@@ -128,6 +159,7 @@ body .weekly-review-focused .objective-linked-project-empty { font-size: 11px; }
 
 @media (max-width: 700px) {
   body .weekly-review-focused .focused-objective-heading { padding: 24px 20px 20px; }
+  body .weekly-review-focused .focused-objective-projects { margin: 0 20px 18px; }
   body .weekly-review-focused .objective-detail-description { margin: 0 20px 14px; }
   body .weekly-review-focused .objective-detail-facts { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin: 0 20px 20px; }
   body .weekly-review-focused .objective-control-row { padding: 16px 20px; }
@@ -137,6 +169,7 @@ body .weekly-review-focused .objective-linked-project-empty { font-size: 11px; }
 }
 @media (max-width: 440px) {
   body .weekly-review-focused .focused-review-nav > span { display: none; }
+  body .weekly-review-focused .focused-objective-projects { margin-inline: 16px; }
   body .weekly-review-focused .objective-detail-facts { grid-template-columns: 1fr; }
   body .weekly-review-focused .objective-detail-description { margin-inline: 16px; }
   body .weekly-review-focused .objective-progress-summary { padding-inline: 16px; }

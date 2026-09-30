@@ -7,3 +7,4 @@
 - [Objective task visibility](objective-task-visibility.md) — hide completed tasks from Admin and Manager objective detail, but retain task progress and history.
 - [Department home trend](department-home-trend.md) — compare completed tasks this week with the same elapsed period last week, not tasks due in those windows.
 - [Department delivery baseline](department-delivery-baseline.md) — show a red zero chart for no recorded progress; green rises require real delivery activity.
+- [Department icon identity](department-icon-identity.md) — objectives use their responsible manager's department symbol; keep status in separate text and badges.

@@ -7,4 +7,4 @@ Show the department delivery chart even when there are no linked tasks. With no 
 
 **Why:** The user specifically rejected the empty chart for inactive departments and supplied a line-chart reference. A visible zero baseline communicates inactivity more clearly than an absent chart, while invented activity would misrepresent delivery.
 
-**How to apply:** Use the same no-progress treatment in Superadmin and Manager department detail. Treat creation or comments alone as insufficient to claim delivery improvement; retain recorded task events for real rises and setbacks.
+**How to apply:** Keep the same zero/red baseline and green-for-real-improvement chart language across Superadmin, Manager, and Intern views, even when the time windows differ. Treat creation or comments alone as insufficient to claim delivery improvement; retain recorded task events for real rises and setbacks.

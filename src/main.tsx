@@ -10,6 +10,7 @@ import "./responsive.css";
 import "./objective-detail.css";
 import "./objective-list.css";
 import "./project-task-colors.css";
+import "./project-detail-improved.css";
 
 function Login() {
   const [email, setEmail] = useState("info@olyxee.com");

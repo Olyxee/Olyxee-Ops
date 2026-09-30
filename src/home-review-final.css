@@ -1026,6 +1026,10 @@ body .department-trend-chart .department-trend-segment.up { stroke: #25855e; }
 body .department-trend-chart .department-trend-segment.down,
 body .department-trend-chart .department-trend-segment.no-progress { stroke: #c9524c; }
 body .department-trend-chart .department-trend-segment.steady { stroke: #9aa4a4; }
+body .department-trend-chart.department-trend-compact { width: 100%; margin: 4px 0 14px; }
+body .department-trend-compact .department-trend-plot { min-height: 165px; max-height: 210px; }
+body .department-trend-compact .department-trend-axis { font-size: 12px; }
+body .manager-health-state.no-activity { background: #faeae8; color: #a34f49; }
 
 body .department-trend-point {
   fill: #fff;
@@ -1624,7 +1628,7 @@ body .workspace-department-market-row {
   align-items: center;
   gap: 9px;
   width: 100%;
-  min-height: 62px;
+  min-height: 74px;
   padding: 8px 2px;
   border: 0;
   border-bottom: 1px solid rgba(60,60,67,.1);
@@ -1641,10 +1645,46 @@ body .department-market-copy,
 body .department-market-change { display: grid; min-width: 0; gap: 4px; }
 body .department-market-copy b { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 body .department-market-copy small { overflow: hidden; color: #858a90; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+body .department-market-copy .department-market-comparison { white-space: normal; font-size: 10px; line-height: 1.3; }
+body .department-market-comparison.up { color: #198754; }
+body .department-market-comparison.down { color: #c3403b; }
 body .department-market-change { display: flex; align-items: center; justify-content: center; min-width: 0; }
 body .department-market-change.up { color: #198754; }
 body .department-market-change.down { color: #c3403b; }
 body .department-market-chevron { color: #a6a9ad; }
+
+/* A department has one recognizable symbol across its cards and objectives.
+   Status remains in text badges, not in the identity icon's color. */
+body .department-identity-icon {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #dfe3e5;
+  border-radius: 10px;
+  background: #f4f5f5;
+  color: #293136;
+  box-shadow: none;
+}
+body .department-market-icon.department-identity-icon { width: 28px; height: 28px; border: 0; background: transparent; }
+body .workspace-department-market-row { grid-template-columns: 27px 28px minmax(0,1fr) 28px 14px; }
+body .department-card-head > div { flex: 1; min-width: 0; }
+body .department-card-head .department-card-icon { width: 40px; height: 40px; }
+body .manager-department-main > div { flex: 1; min-width: 0; }
+body .manager-department-main .department-card-icon { width: 44px; height: 44px; }
+body .weekly-review-list-page .objective-list-row .objective-list-icon.department-identity-icon,
+body .weekly-review-focused .focused-objective-icon.department-identity-icon,
+body .workspace-review-home .review-objective-marker.department-identity-icon {
+  border: 1px solid #dfe3e5 !important;
+  background: #f4f5f5 !important;
+  color: #293136 !important;
+  box-shadow: none !important;
+}
+body .weekly-review-focused .focused-objective-icon.department-identity-icon { width: 44px; height: 44px; }
+body .workspace-review-home .review-objective-marker.department-identity-icon { width: 30px; height: 30px; border-radius: 9px; }
+body .weekly-review-list-page .objective-department-heading h2 { display: inline-flex; align-items: center; gap: 9px; }
+body .weekly-review-list-page .objective-department-heading h2 svg { flex: 0 0 auto; color: #293136; }
 
 /* Objective actions and linked projects */
 body .weekly-review-focused .focused-review-actions { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -1669,7 +1709,7 @@ body .objective-linked-project-empty { grid-column: 1 / -1; margin: 0; color: #8
 
 @media (max-width: 600px) {
   body .workspace-department-market-list { padding-inline: 10px; }
-  body .workspace-department-market-row { grid-template-columns: 22px 22px minmax(0,1fr) 24px; gap: 6px; }
+  body .workspace-department-market-row { grid-template-columns: 22px 28px minmax(0,1fr) 24px; gap: 6px; }
   body .department-market-chevron { display: none; }
   body .department-market-icon svg { width: 18px; height: 18px; }
   body .department-market-copy b { font-size: 10px; }
