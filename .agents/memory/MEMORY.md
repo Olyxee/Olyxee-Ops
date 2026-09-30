@@ -4,3 +4,4 @@
 - [Ops email sender domain](ops-email-sender-domain.md) — transactional Ops email must use the verified ops.olyxee.com subdomain, leaving root-domain mail isolated.
 - [Vercel cron limit](vercel-cron-limit.md) — keep the scheduled-email Vercel cron daily; more frequent schedules cause deployment rejection before build.
 - [Completed objective removal](completed-objective-removal.md) — only Superadmins remove completed weekly objectives; linked projects, tasks, and progress remain.
+- [Department home trend](department-home-trend.md) — compare completed tasks this week with the same elapsed period last week, not tasks due in those windows.
