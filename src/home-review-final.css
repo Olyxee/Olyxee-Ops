@@ -1608,7 +1608,7 @@ body .workspace-department-period { display: block; margin-top: 3px; color: #797
 body .workspace-department-market-list { padding: 4px 15px 10px; }
 body .workspace-department-market-row {
   display: grid;
-  grid-template-columns: 27px minmax(0, 1fr) 58px 128px 14px;
+  grid-template-columns: 27px 26px minmax(0, 1fr) 113px 14px;
   align-items: center;
   gap: 9px;
   width: 100%;
@@ -1624,14 +1624,11 @@ body .workspace-department-market-row:last-child { border-bottom: 0; }
 body .workspace-department-market-row:hover,
 body .workspace-department-market-row:focus-visible { background: rgba(255,255,255,.6); }
 body .department-market-rank { color: #8e9298; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
+body .department-market-icon { display: inline-flex; align-items: center; justify-content: center; color: #34373b; }
 body .department-market-copy,
-body .department-market-rate,
 body .department-market-change { display: grid; min-width: 0; gap: 4px; }
 body .department-market-copy b { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 body .department-market-copy small { overflow: hidden; color: #858a90; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
-body .department-market-rate { justify-items: end; }
-body .department-market-rate b { font-size: 13px; font-variant-numeric: tabular-nums; }
-body .department-market-rate small,
 body .department-market-change small { color: #858a90; font-size: 8px; white-space: nowrap; }
 body .department-market-change { display: flex; align-items: center; gap: 7px; min-width: 0; padding: 7px; border-radius: 9px; background: #f0f1f2; color: #62676d; }
 body .department-market-change > svg,
@@ -1639,8 +1636,8 @@ body .department-market-change > span:first-child { flex: 0 0 auto; }
 body .department-market-change > span:last-child { display: grid; min-width: 0; gap: 2px; }
 body .department-market-change b { font-size: 10px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 body .department-market-change small { color: inherit; opacity: .8; }
-body .department-market-change.up { background: #e7f4ec; color: #187148; }
-body .department-market-change.down { background: #faeae8; color: #b73531; }
+body .department-market-change.up { background: #edf1ef; color: #36584c; }
+body .department-market-change.down { background: #f2eeee; color: #69504d; }
 body .department-market-chevron { color: #a6a9ad; }
 
 /* Objective actions and linked projects */
@@ -1666,9 +1663,9 @@ body .objective-linked-project-empty { grid-column: 1 / -1; margin: 0; color: #8
 
 @media (max-width: 600px) {
   body .workspace-department-market-list { padding-inline: 10px; }
-  body .workspace-department-market-row { grid-template-columns: 22px minmax(0,1fr) 42px 95px; gap: 6px; }
-  body .department-market-chevron,
-  body .department-market-rate small { display: none; }
+  body .workspace-department-market-row { grid-template-columns: 22px 22px minmax(0,1fr) 90px; gap: 6px; }
+  body .department-market-chevron { display: none; }
+  body .department-market-icon svg { width: 18px; height: 18px; }
   body .department-market-copy b { font-size: 10px; }
   body .department-market-change { gap: 3px; padding: 5px 4px; }
   body .department-market-change svg { width: 14px; }

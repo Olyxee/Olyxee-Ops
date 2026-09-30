@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Archive, ArrowDownRight, ArrowLeft, ArrowUpRight, Bell, BriefcaseBusiness, Building2, Check, ChevronRight, CircleHelp, ClipboardList, Clock3, FileCheck2, FileText, GitPullRequest, Image, LayoutDashboard, ListTodo, LogOut, Menu, MessageSquare, Pencil, Plus, Search, Settings, Trash2, Upload, UserPlus, UserRound, Users, X } from "lucide-react";
+import { AlertTriangle, Archive, ArrowDownRight, ArrowLeft, ArrowUpRight, Bell, BriefcaseBusiness, Building2, Check, ChevronRight, CircleHelp, ClipboardList, Clock3, Code2, FileCheck2, FileText, FlaskConical, GitPullRequest, Image, LayoutDashboard, ListTodo, LogOut, Megaphone, Menu, MessageSquare, Minus, Pencil, Plus, Search, Settings, ShieldCheck, Trash2, Upload, UserPlus, UserRound, Users, X } from "lucide-react";
 import { Audit, departments, seedProjects, seedTasks, seedAudit, seedNotices, seedWeeklyObjectives, seedStaffStatuses, Project, ProjectResource, Task, User, users, Notice, AccessRole, EmploymentType, AccountStatus, WeeklyObjective, WeeklyObjectiveResource, ObjectiveStatus, StaffStatus, Availability } from "./data";
 import { OFFICIAL_DEPARTMENTS, UNASSIGNED_DEPARTMENT } from "../shared/departments.mjs";
 import "./person-modal.css";
@@ -47,16 +47,22 @@ const departmentWeeklyPerformance=(departments:[string,string,string][],tasks:Ta
   });
 };
 function DepartmentMarketItem({row,rank,onOpen}:{row:DepartmentMarketRow;rank:number;onOpen:(department:string)=>void}){
-  const direction=row.change>0?"up":"down";
-  const movement=row.change>0?`Up ${row.change}`:row.change<0?`Declining ${Math.abs(row.change)}`:"Declining";
-  const Arrow=row.change>0?ArrowUpRight:ArrowDownRight;
-  return <button type="button" className="workspace-department-market-row" onClick={()=>onOpen(row.department[0])} aria-label={`${row.department[0]}, rank ${rank}, ${row.currentCompleted} tasks completed this week, ${row.previousCompleted} last week, ${row.change===0?"not improving":movement.toLowerCase()}`}>
+   const direction=row.change>0?"up":row.change<0?"down":"steady";
+   const movement=row.change>0?"Improving":row.change<0?"Declining":"No change";
+   const Arrow=row.change>0?ArrowUpRight:row.change<0?ArrowDownRight:Minus;
+   const Icon=({
+     "Engineering":Code2,
+     "Research & Development (R&D)":FlaskConical,
+     "Data & Security":ShieldCheck,
+     "Sales & Marketing":Megaphone,
+   } as Record<string,typeof Code2>)[row.department[0]]||Building2;
+   return <button type="button" className="workspace-department-market-row" onClick={()=>onOpen(row.department[0])} aria-label={`${row.department[0]}, rank ${rank}, ${movement.toLowerCase()} compared with last week`}>
     <span className="department-market-rank">{String(rank).padStart(2,"0")}</span>
+     <span className="department-market-icon" aria-hidden="true"><Icon size={20} strokeWidth={1.8}/></span>
     <span className="department-market-copy"><b>{row.department[0]}</b><small>{row.department[1]==="Unassigned"?row.department[2]:`Lead ${row.department[1]}`}</small></span>
-    <span className="department-market-rate"><b>{row.currentCompleted}</b><small>completed</small></span>
     <span className={`department-market-change ${direction}`}>
-      <Arrow size={19} strokeWidth={2.7} aria-hidden="true"/>
-      <span><b>{movement}</b><small>{row.change===0?"No growth · ":""}vs {row.previousCompleted} last week</small></span>
+       <Arrow size={17} strokeWidth={2} aria-hidden="true"/>
+       <span><b>{movement}</b><small>vs last week</small></span>
     </span>
     <ChevronRight className="department-market-chevron" size={14}/>
   </button>;
@@ -369,7 +375,7 @@ function UnifiedWorkspace({user,team,statuses,tasks,allTasks,projectsData,depart
     <section id="workspace-people" className="workspace-card workspace-people workspace-managers"><div className="workspace-card-head"><div><span className="workspace-icon violet"><Users size={17}/></span><b>{isManager(user)?"Department people":"Managers"}</b></div><span className="workspace-head-actions">{can("person")&&<button onClick={()=>onModal("person")}><UserPlus size={14}/> Add</button>}<button onClick={()=>onView("People")}>View all <ChevronRight size={13}/></button></span></div><div className="workspace-people-columns" aria-hidden="true"><span>{isManager(user)?"Team member":"Manager"}</span><span>{isManager(user)?"Role":"Department"}</span><span>Working hours</span></div><div className="workspace-list">{homePeople.map(person=>{const status=statuses.find(item=>item.userId===person.id);return <button key={person.id} onClick={()=>onManage(person)}><span className="workspace-person-row"><Avatar person={person} size={36}/><span><b>{person.name}</b><small>{person.position||(isManager(user)?employmentOf(person):"Manager")}</small></span></span><span className="workspace-person-detail"><small>{isManager(user)?"Role":"Department"}</small><b>{isManager(user)?(person.position||employmentOf(person)):person.department}</b></span><WorkHoursPill status={status}/></button>})}{homePeople.length===0&&<div className="workspace-empty">{isManager(user)?"No department members available.":"No managers available."}</div>}</div></section>
      <section id="workspace-departments" className="workspace-card workspace-departments">
        <div className="workspace-card-head">
-         <div><span className="workspace-icon teal"><Building2 size={17}/></span><span><b>{isManager(user)?"Department health":accessOf(user)==="Superadmin"?"Top 4 departments":"Departments"}</b>{!isManager(user)&&<small className="workspace-department-period">Tasks completed · this week vs same days last week</small>}</span></div>
+          <div><span className="workspace-icon teal"><Building2 size={17}/></span><span><b>{isManager(user)?"Department health":accessOf(user)==="Superadmin"?"Top 4 departments":"Departments"}</b>{!isManager(user)&&<small className="workspace-department-period">This week · compared with the same point last week</small>}</span></div>
          <span className="workspace-head-actions">{isAdmin(user)&&<button onClick={()=>onModal("department")}><Plus size={14}/> New</button>}<button onClick={()=>isManager(user)?onDepartment(user.department):onView("Departments")}>{isManager(user)?"View department":"View all"} <ChevronRight size={13}/></button></span>
        </div>
        {isManager(user)?<div className="manager-health-card"><button type="button" className="manager-health-open" onClick={()=>onDepartment(user.department)}><span><b>{user.department}</b><small className={`manager-health-state ${departmentHealthState.toLowerCase().replace(/\s+/g,"-")}`}>{departmentHealthState}</small></span><ChevronRight size={15}/></button><CompactDepartmentHealthChart curve={departmentHealthCurve} label={`${user.department} hourly delivery health: ${departmentHealthState}`}/><button type="button" className="manager-health-action" onClick={()=>departmentReview[0]?onOpen(departmentReview[0].id):onModal("task")}><AlertTriangle size={16}/><span><small>Recommended next action</small><b>{departmentAction}</b></span><ChevronRight size={15}/></button></div>
