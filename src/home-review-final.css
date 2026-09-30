@@ -1653,22 +1653,29 @@ body .department-market-change.up { color: #198754; }
 body .department-market-change.down { color: #c3403b; }
 body .department-market-chevron { color: #a6a9ad; }
 
-/* A department has one recognizable symbol across its cards and objectives.
-   Status remains in text badges, not in the identity icon's color. */
+/* Simple, familiar symbols in compact iOS-style color tiles.
+   Department color identifies the team; status remains in its own badge. */
 body .department-identity-icon {
+  --department-bg: linear-gradient(145deg,#a0a8b0,#78838d);
+  --department-shadow: 0 3px 8px rgba(52,62,70,.16);
   display: inline-grid;
   place-items: center;
   flex: 0 0 auto;
   width: 36px;
   height: 36px;
-  border: 1px solid #dfe3e5;
-  border-radius: 10px;
-  background: #f4f5f5;
-  color: #293136;
-  box-shadow: none;
+  border: 0;
+  border-radius: 11px;
+  background: var(--department-bg);
+  color: #fff;
+  box-shadow: var(--department-shadow), inset 0 1px 0 rgba(255,255,255,.25);
 }
-body .department-market-icon.department-identity-icon { width: 28px; height: 28px; border: 0; background: transparent; }
-body .workspace-department-market-row { grid-template-columns: 27px 28px minmax(0,1fr) 28px 14px; }
+body .department-tone-engineering { --department-bg: linear-gradient(145deg,#61a8f0,#2b76d2); --department-shadow: 0 3px 8px rgba(43,118,210,.2); }
+body .department-tone-research { --department-bg: linear-gradient(145deg,#aa82df,#8055c1); --department-shadow: 0 3px 8px rgba(128,85,193,.2); }
+body .department-tone-data { --department-bg: linear-gradient(145deg,#4dbdaa,#238973); --department-shadow: 0 3px 8px rgba(35,137,115,.2); }
+body .department-tone-sales { --department-bg: linear-gradient(145deg,#f5b16e,#e3883a); --department-shadow: 0 3px 8px rgba(227,136,58,.2); }
+body .department-market-icon.department-identity-icon { width: 32px; height: 32px; border-radius: 10px; background: var(--department-bg); color: #fff; }
+body .workspace-department-market-row { grid-template-columns: 27px 32px minmax(0,1fr) 28px 14px; }
+body .workspace-icon.teal.department-identity-icon { background: var(--department-bg) !important; color: #fff !important; }
 body .department-card-head > div { flex: 1; min-width: 0; }
 body .department-card-head .department-card-icon { width: 40px; height: 40px; }
 body .manager-department-main > div { flex: 1; min-width: 0; }
@@ -1676,15 +1683,27 @@ body .manager-department-main .department-card-icon { width: 44px; height: 44px;
 body .weekly-review-list-page .objective-list-row .objective-list-icon.department-identity-icon,
 body .weekly-review-focused .focused-objective-icon.department-identity-icon,
 body .workspace-review-home .review-objective-marker.department-identity-icon {
-  border: 1px solid #dfe3e5 !important;
-  background: #f4f5f5 !important;
-  color: #293136 !important;
-  box-shadow: none !important;
+  border: 0 !important;
+  background: var(--department-bg) !important;
+  color: #fff !important;
+  box-shadow: var(--department-shadow), inset 0 1px 0 rgba(255,255,255,.25) !important;
 }
 body .weekly-review-focused .focused-objective-icon.department-identity-icon { width: 44px; height: 44px; }
 body .workspace-review-home .review-objective-marker.department-identity-icon { width: 30px; height: 30px; border-radius: 9px; }
+body .weekly-review-list-page .department-filter-icon { width: 26px; height: 26px; border-radius: 8px; }
+body .weekly-review-list-page .department-heading-icon { width: 32px; height: 32px; border-radius: 9px; }
+body .weekly-review-list-page .objective-department-filters button .department-filter-icon {
+  min-width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 8px;
+  background: var(--department-bg);
+  color: #fff;
+}
+body .weekly-review-list-page .objective-department-filters button.active .department-filter-icon { background: var(--department-bg); color: #fff; }
 body .weekly-review-list-page .objective-department-heading h2 { display: inline-flex; align-items: center; gap: 9px; }
-body .weekly-review-list-page .objective-department-heading h2 svg { flex: 0 0 auto; color: #293136; }
+body .weekly-review-list-page .objective-department-heading .department-heading-icon { color: #fff; }
+body .weekly-review-list-page .objective-department-heading h2 svg { flex: 0 0 auto; }
 
 /* Objective actions and linked projects */
 body .weekly-review-focused .focused-review-actions { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -1709,7 +1728,7 @@ body .objective-linked-project-empty { grid-column: 1 / -1; margin: 0; color: #8
 
 @media (max-width: 600px) {
   body .workspace-department-market-list { padding-inline: 10px; }
-  body .workspace-department-market-row { grid-template-columns: 22px 28px minmax(0,1fr) 24px; gap: 6px; }
+  body .workspace-department-market-row { grid-template-columns: 22px 32px minmax(0,1fr) 24px; gap: 6px; }
   body .department-market-chevron { display: none; }
   body .department-market-icon svg { width: 18px; height: 18px; }
   body .department-market-copy b { font-size: 10px; }
