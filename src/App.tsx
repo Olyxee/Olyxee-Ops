@@ -46,16 +46,16 @@ const departmentWeeklyPerformance=(departments:[string,string,string][],tasks:Ta
   });
 };
 function DepartmentMarketItem({row,rank,onOpen}:{row:DepartmentMarketRow;rank:number;onOpen:(department:string)=>void}){
-  const direction=row.change>0?"up":row.change<0?"down":"steady";
-  const movement=row.change>0?`Up ${row.change}`:row.change<0?`Down ${Math.abs(row.change)}`:"No change";
-  const Arrow=row.change>0?ArrowUpRight:row.change<0?ArrowDownRight:null;
-  return <button type="button" className="workspace-department-market-row" onClick={()=>onOpen(row.department[0])} aria-label={`${row.department[0]}, rank ${rank}, ${row.currentCompleted} tasks completed this week, ${row.previousCompleted} last week, ${movement.toLowerCase()}`}>
+  const direction=row.change>0?"up":"down";
+  const movement=row.change>0?`Up ${row.change}`:row.change<0?`Declining ${Math.abs(row.change)}`:"Declining";
+  const Arrow=row.change>0?ArrowUpRight:ArrowDownRight;
+  return <button type="button" className="workspace-department-market-row" onClick={()=>onOpen(row.department[0])} aria-label={`${row.department[0]}, rank ${rank}, ${row.currentCompleted} tasks completed this week, ${row.previousCompleted} last week, ${row.change===0?"not improving":movement.toLowerCase()}`}>
     <span className="department-market-rank">{String(rank).padStart(2,"0")}</span>
     <span className="department-market-copy"><b>{row.department[0]}</b><small>{row.department[1]==="Unassigned"?row.department[2]:`Lead ${row.department[1]}`}</small></span>
     <span className="department-market-rate"><b>{row.currentCompleted}</b><small>completed</small></span>
     <span className={`department-market-change ${direction}`}>
-      {Arrow?<Arrow size={19} strokeWidth={2.7} aria-hidden="true"/>:<span aria-hidden="true">—</span>}
-      <span><b>{movement}</b><small>vs {row.previousCompleted} last week</small></span>
+      <Arrow size={19} strokeWidth={2.7} aria-hidden="true"/>
+      <span><b>{movement}</b><small>{row.change===0?"No growth · ":""}vs {row.previousCompleted} last week</small></span>
     </span>
     <ChevronRight className="department-market-chevron" size={14}/>
   </button>;
