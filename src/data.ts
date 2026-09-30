@@ -31,9 +31,8 @@ export const seedAudit:Audit[]=[];
 export const seedNotices:Notice[]=[];
 export const seedWeeklyObjectives:WeeklyObjective[]=[];
 export const departments:[string,string,string][]=[
-  ["Research & Development (R&D)","Unassigned","Software, product, research engineering, and prototyping."],
   ["Engineering","Unassigned","Software, machine learning, applied AI, agents, and technical systems."],
+  ["Research & Development (R&D)","Unassigned","Software, product, research engineering, and prototyping."],
   ["Data & Security","Unassigned","Data platforms, analytics, governance, cybersecurity, and protection."],
   ["Sales & Marketing","Unassigned","Growth, sales, partnerships, customer success, and communications."],
-  ["Business Operations","Unassigned","Operations, finance, people, administration, legal, and coordination."],
 ];

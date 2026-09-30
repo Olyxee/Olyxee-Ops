@@ -1,9 +1,8 @@
 export const OFFICIAL_DEPARTMENTS = Object.freeze([
-  "Research & Development (R&D)",
   "Engineering",
+  "Research & Development (R&D)",
   "Data & Security",
   "Sales & Marketing",
-  "Business Operations",
 ]);
 
 export const UNASSIGNED_DEPARTMENT = "Unassigned";
@@ -39,14 +38,6 @@ const rules = [
     keywords: [
       "sales", "marketing", "business development", "partnership",
       "customer success", "communications", "content marketing", "growth",
-    ],
-  },
-  {
-    department: "Business Operations",
-    keywords: [
-      "operations", "finance", "human resources", "people operations", "hr ",
-      "administrator", "administration", "legal", "compliance",
-      "project coordinator", "project coordination", "office manager",
     ],
   },
 ];
@@ -103,6 +94,18 @@ export function resolveDepartment(details = {}) {
   const currentDepartment = normalizeDepartment(details.department);
   const classification = classifyDepartment(details);
 
+  // A deliberate staff assignment takes precedence over inferred job-title keywords.
+  if (currentDepartment) {
+    return {
+      department: currentDepartment,
+      previousDepartment: details.department || null,
+      matchedKeywords: [],
+      confident: true,
+      changed: false,
+      reviewRequired: false,
+    };
+  }
+
   if (classification.confident) {
     return {
       ...classification,
@@ -127,5 +130,4 @@ export const DEPARTMENT_DESCRIPTIONS = Object.freeze({
   "Engineering": "Software, machine learning, applied AI, agents, and technical systems.",
   "Data & Security": "Data platforms, analytics, governance, cybersecurity, and protection.",
   "Sales & Marketing": "Growth, sales, partnerships, customer success, and communications.",
-  "Business Operations": "Operations, finance, people, administration, legal, and coordination.",
 });

@@ -423,7 +423,7 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
         email: account.email,
         employmentType: "Employee",
         accessRole: isManager ? "Manager" : "Member",
-        accountStatus: opsAccount ? (opsAccount.active ? "Active" : "Suspended") : "Pending",
+        accountStatus: account.active ? "Active" : "Suspended",
         department: validateDepartment(account.department) || UNASSIGNED_DEPARTMENT,
         reportsTo: account.reports_to_account_id ? `account-${account.reports_to_account_id}` : undefined,
         position: isManager ? "Department Manager" : "Team Member",
@@ -459,7 +459,7 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
         email: intern.email || "",
         employmentType: "Intern",
         accessRole: opsAccount?.role || "Member",
-        accountStatus: opsAccount ? (opsAccount.active ? "Active" : "Suspended") : "Pending",
+        accountStatus: active ? "Active" : "Suspended",
         department: resolvedDepartment.department,
         position: intern.position || "Intern",
         reportsTo,
@@ -641,6 +641,42 @@ app.post("/api/people", requireAuth, requireAccount, async (request, response) =
   } catch (error) {
     console.error("Person creation failed:", error instanceof Error ? error.message : "Unknown error");
     return response.status(500).json({ error: "Could not add this person." });
+  }
+});
+
+app.patch("/api/people/:id/department", requireAuth, requireAccount, async (request, response) => {
+  if (request.appAccount.app_role !== "Superadmin") return response.status(403).json({ error: "Only Superadmins can assign people to departments." });
+  if (!peoplePool) return response.status(503).json({ error: "People database is not configured." });
+  const match = /^(intern|account)-(\d+)$/.exec(request.params.id);
+  const department = validateDepartment(request.body.department, { allowUnassigned: false });
+  if (!match || !department) return response.status(400).json({ error: "Choose a person and one of the four official departments." });
+  const [, kind, rawId] = match;
+  try {
+    if (kind === "account") {
+      const result = await peoplePool.query(`
+        UPDATE public.workspace_accounts SET department = $1, updated_at = now()
+        WHERE id = $2 RETURNING id
+      `, [department, Number(rawId)]);
+      if (!result.rowCount) return response.status(404).json({ error: "Person not found." });
+    } else {
+      const manager = await peoplePool.query(`
+        SELECT id, display_name, email FROM public.workspace_accounts
+        WHERE active = true AND department = $1 AND (manage_interns = true OR manage_projects = true)
+        ORDER BY manage_interns DESC, id LIMIT 1
+      `, [department]);
+      if (!manager.rowCount) return response.status(400).json({ error: `Assign an active Manager to ${department} in People before adding an Intern.` });
+      const lead = manager.rows[0];
+      const result = await peoplePool.query(`
+        UPDATE public.interns SET department = $1, supervisor_name = $2,
+          supervisor_email = $3, supervisor_account_id = $4, updated_at = now()
+        WHERE id = $5 AND archived_at IS NULL RETURNING id
+      `, [department, lead.display_name || lead.email, lead.email, lead.id, Number(rawId)]);
+      if (!result.rowCount) return response.status(404).json({ error: "Intern not found." });
+    }
+    return response.json({ ok: true });
+  } catch (error) {
+    console.error("Department assignment failed:", error instanceof Error ? error.message : "Unknown error");
+    return response.status(503).json({ error: "Could not add this person to the department." });
   }
 });
 
@@ -2292,13 +2328,13 @@ app.put("/api/state/:key", requireAuth, requireAccount, async (request, response
   if (request.params.key === "departments") {
     if (appRole !== "Superadmin") return response.status(403).json({ error: "Only Superadmins can manage departments." });
     const value = request.body.value;
-    if (!Array.isArray(value) || value.length > 100 || value.some((item) =>
+    if (!Array.isArray(value) || value.length > OFFICIAL_DEPARTMENTS.length || value.some((item) =>
       !Array.isArray(item) || item.length !== 3
-      || typeof item[0] !== "string" || !item[0].trim() || item[0] !== item[0].trim() || item[0].length > 80
+      || typeof item[0] !== "string" || !OFFICIAL_DEPARTMENTS.includes(item[0])
       || typeof item[1] !== "string" || !item[1].trim() || item[1].length > 120
       || typeof item[2] !== "string" || item[2].length > 240
     ) || new Set(value.map((item) => item[0].toLowerCase())).size !== value.length) {
-      return response.status(400).json({ error: "Departments must have unique names, a lead, and a description." });
+      return response.status(400).json({ error: "Only the four official departments can be saved, with unique names and a lead." });
     }
   }
   if (["Manager", "Member"].includes(appRole) && request.params.key === "staff-statuses") {
