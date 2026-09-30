@@ -1,0 +1,78 @@
+/* Weekly Review / View all: department groups with a clear All filter. */
+body .weekly-review-list-page { max-width: 1080px; }
+body .weekly-review-list-page .weekly-review-list-hero .sub { font-size: 13px; line-height: 1.5; }
+body .weekly-review-list-page .objective-department-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+}
+body .weekly-review-list-page .objective-department-filters button {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 40px;
+  padding: 7px 13px;
+  border: 1px solid #dce0e2;
+  border-radius: 999px;
+  background: #fff;
+  color: #475158;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+}
+body .weekly-review-list-page .objective-department-filters button:hover { border-color: #adb8ba; background: #f9fafa; }
+body .weekly-review-list-page .objective-department-filters button.active { border-color: #343b40; background: #343b40; color: #fff; }
+body .weekly-review-list-page .objective-department-filters button.active:hover { background: #252a2e; }
+body .weekly-review-list-page .objective-department-filters button:focus-visible,
+body .weekly-review-list-page .objective-list-open:focus-visible,
+body .weekly-review-list-page .objective-list-edit:focus-visible { outline: 2px solid #467f9b; outline-offset: 2px; }
+body .weekly-review-list-page .objective-department-filters button span {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #f0f2f3;
+  color: #566166;
+  font-size: 11px;
+  font-weight: 700;
+}
+body .weekly-review-list-page .objective-department-filters button.active span { background: #626a6e; color: #fff; }
+body .weekly-review-list-page .objective-department-groups { display: grid; gap: 28px; }
+body .weekly-review-list-page .objective-department-group { min-width: 0; }
+body .weekly-review-list-page .objective-department-heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin: 0 2px 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #dfe2e5;
+}
+body .weekly-review-list-page .objective-department-heading h2 { margin: 0; color: #22282c; font-size: 17px; line-height: 1.35; letter-spacing: -.02em; }
+body .weekly-review-list-page .objective-department-heading span { color: #737b80; font-size: 12px; }
+body .weekly-review-list-page .objective-list-page .list { gap: 7px; }
+body .weekly-review-list-page .objective-list-row {
+  min-height: 76px;
+  border-color: #e3e6e8;
+  border-radius: 12px;
+  box-shadow: none;
+}
+body .weekly-review-list-page .objective-list-row:hover { border-radius: 12px; box-shadow: 0 4px 14px rgba(30,38,44,.06); }
+body .weekly-review-list-page .objective-list-open .row-title { font-size: 14px; line-height: 1.35; white-space: normal; }
+body .weekly-review-list-page .objective-list-owner { color: #626c72; font-size: 11px; }
+body .weekly-review-list-page .objective-list-state .badge,
+body .weekly-review-list-page .objective-list-state .review-priority { font-size: 10px; }
+body .weekly-review-list-page .objective-department-groups > .empty { padding: 32px 18px; }
+@media (max-width: 700px) {
+  body .weekly-review-list-page .objective-department-filters { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 8px; scrollbar-width: thin; }
+  body .weekly-review-list-page .objective-department-filters button { flex: 0 0 auto; }
+  body .weekly-review-list-page .objective-department-groups { gap: 22px; }
+  body .weekly-review-list-page .objective-department-heading h2 { font-size: 15px; }
+}

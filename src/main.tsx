@@ -7,6 +7,9 @@ import "./logo-overrides.css";
 import "./home-card-overrides.css";
 import "./home-review-final.css";
 import "./responsive.css";
+import "./objective-detail.css";
+import "./objective-list.css";
+import "./project-task-colors.css";
 
 function Login() {
   const [email, setEmail] = useState("info@olyxee.com");

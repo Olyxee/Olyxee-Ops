@@ -986,9 +986,9 @@ body .department-trend-chart {
 body .department-trend-plot {
   position: relative;
   width: 100%;
-  aspect-ratio: 600 / 190;
+  aspect-ratio: 600 / 216;
   min-height: 190px;
-  max-height: 250px;
+  max-height: 280px;
 }
 
 body .department-trend-plot .manager-health-grid {
@@ -1001,7 +1001,14 @@ body .department-trend-plot .manager-health-grid {
 
 body .department-trend-plot .manager-health-grid i { border-top: 1px dashed #dfe2e5; }
 body .department-trend-plot svg { position: relative; display: block; width: 100%; height: 100%; overflow: visible; }
+body .department-trend-gridline { stroke: #e5e8e8; stroke-width: 1; vector-effect: non-scaling-stroke; }
+body .department-trend-axis { fill: #858d90; font-size: 11px; font-family: inherit; }
+body .department-trend-day { font-size: 11px; }
+body .department-trend-note { margin: 4px 0 0; color: #a34f49; font-size: 12px; line-height: 1.4; text-align: center; }
+body .manager-detail-state.no-activity { border-color: #ebc9c5; background: #fff1ef; color: #a34f49; }
 body .department-trend-plot .manager-health-area { fill: rgba(55,120,166,.07); }
+body .department-trend-days { display: flex; justify-content: space-between; padding: 0 26px; color: #8e8e93; font-size: 10px; }
+body .department-trend-empty { margin: 18px 0; padding: 50px 18px; border: 1px dashed #d9dce0; border-radius: 12px; color: #6e6e73; text-align: center; font-size: 13px; }
 
 body .department-trend-segment {
   fill: none;
@@ -1014,6 +1021,11 @@ body .department-trend-segment {
 body .department-trend-segment.up { stroke: #347fb4; }
 body .department-trend-segment.down { stroke: #c85a54; }
 body .department-trend-segment.steady { stroke: #a8adb3; stroke-dasharray: 4 5; }
+body .department-trend-chart .department-trend-segment { stroke-width: 3.5; stroke-dasharray: none; }
+body .department-trend-chart .department-trend-segment.up { stroke: #25855e; }
+body .department-trend-chart .department-trend-segment.down,
+body .department-trend-chart .department-trend-segment.no-progress { stroke: #c9524c; }
+body .department-trend-chart .department-trend-segment.steady { stroke: #9aa4a4; }
 
 body .department-trend-point {
   fill: #fff;

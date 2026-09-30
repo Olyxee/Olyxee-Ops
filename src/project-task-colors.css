@@ -1,0 +1,56 @@
+/* Small status accents make project tasks scannable without hiding their labels. */
+body .project-detail-simplified .project-task-row {
+  --task-accent: #77818a;
+  --task-soft: #f3f5f6;
+  --task-surface: #fbfcfc;
+  position: relative;
+  border-left: 3px solid var(--task-accent);
+  background: var(--task-surface);
+  transition: background .16s ease, border-color .16s ease;
+}
+body .project-detail-simplified .project-task-row:hover,
+body .project-detail-simplified .project-task-row:focus-visible {
+  background: var(--task-soft);
+}
+body .project-detail-simplified .project-task-row:focus-visible { outline: 2px solid var(--task-accent); outline-offset: -2px; }
+body .project-detail-simplified .project-task-row.project-task-in-progress {
+  --task-accent: #3777a9;
+  --task-soft: #e9f3fb;
+  --task-surface: #f7fbfe;
+}
+body .project-detail-simplified .project-task-row.project-task-submitted-for-review {
+  --task-accent: #9b7024;
+  --task-soft: #fbf1dd;
+  --task-surface: #fefbf5;
+}
+body .project-detail-simplified .project-task-row.project-task-blocked {
+  --task-accent: #ad514b;
+  --task-soft: #fbeae8;
+  --task-surface: #fef9f8;
+}
+body .project-detail-simplified .project-task-row.project-task-changes-requested {
+  --task-accent: #ad613e;
+  --task-soft: #fbede4;
+  --task-surface: #fefaf7;
+}
+body .project-detail-simplified .project-task-row.project-task-completed {
+  --task-accent: #43846a;
+  --task-soft: #e9f5ee;
+  --task-surface: #f8fcf9;
+}
+body .project-detail-simplified .project-task-row.project-task-cancelled {
+  --task-accent: #92979b;
+  --task-soft: #f0f1f2;
+  --task-surface: #fafafa;
+}
+/* The global workspace theme neutralizes badges; restore the row's status cue here only. */
+body .workspace-section .project-detail-simplified .project-task-row .badge {
+  border: 1px solid var(--task-accent) !important;
+  background: var(--task-soft) !important;
+  color: var(--task-accent) !important;
+  font-weight: 700;
+}
+@media (max-width: 600px) {
+  body .project-detail-simplified .project-task-row { gap: 7px 10px; }
+  body .project-detail-simplified .project-task-row .badge { margin-left: 0; }
+}
