@@ -305,3 +305,4 @@ tr.task-overdue{box-shadow:none;background:rgba(217,45,32,.06)}
 .task-overdue .row-meta,.task-overdue small{color:#b42318}
 .overdue-badge{font-weight:700;margin-right:6px}
 @media (prefers-color-scheme:dark){.task-overdue,tr.task-overdue{background:rgba(240,68,56,.14)}.task-overdue .row-meta,.task-overdue small{color:#fda29b}}
+.objective-remove-confirm{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}.objective-remove-confirm small{color:#9a453d;max-width:260px}

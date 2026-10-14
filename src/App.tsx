@@ -1266,6 +1266,7 @@ function Review({objectives,objectiveId,team,tasks,projects,user,onBack,onShowLi
   const [uploading,setUploading]=useState(false);
   const [uploadError,setUploadError]=useState("");
   const [removing,setRemoving]=useState(false);
+  const [confirmingRemove,setConfirmingRemove]=useState(false);
    const [selectedObjectiveDepartment,setSelectedObjectiveDepartment]=useState("All");
   if(focused){
     const responsible=owner(focused);
@@ -1299,8 +1300,6 @@ function Review({objectives,objectiveId,team,tasks,projects,user,onBack,onShowLi
     };
      const removeObjective=async()=>{
         if(accessOf(user)!=="Superadmin"||removing)return;
-       const confirmed=window.confirm(`Delete “${focused.title}” from Weekly Review? This removes only the objective. Its linked projects, tasks, and all task progress will remain unchanged.`);
-       if(!confirmed)return;
        setRemoving(true);
        try{
          const remaining=objectives.filter(objective=>objective.id!==focused.id);
@@ -1311,10 +1310,10 @@ function Review({objectives,objectiveId,team,tasks,projects,user,onBack,onShowLi
          onShowList();
          flash("Weekly objective removed. Its linked tasks and progress are unchanged.");
        }catch(error){flash(error instanceof Error?error.message:"Could not remove this weekly objective.");}
-       finally{setRemoving(false);}
+       finally{setRemoving(false);setConfirmingRemove(false);}
      };
     return <div className="weekly-review-page weekly-review-focused">
-         <div className="focused-review-nav"><BackButton className="workspace-back" onClick={onShowList} label="Back to objectives"/><span>Weekly review / Objective</span><div className="focused-review-actions">{canEdit&&<button type="button" className="btn" onClick={()=>onEditObjective(focused)}><Pencil size={14}/> Edit</button>}{accessOf(user)==="Superadmin"&&<button type="button" className="btn danger objective-remove-button" disabled={removing} onClick={()=>void removeObjective()}><Trash2 size={14}/>{removing?"Deleting…":"Delete objective"}</button>}</div></div>
+         <div className="focused-review-nav"><BackButton className="workspace-back" onClick={onShowList} label="Back to objectives"/><span>Weekly review / Objective</span><div className="focused-review-actions">{canEdit&&<button type="button" className="btn" onClick={()=>onEditObjective(focused)}><Pencil size={14}/> Edit</button>}{accessOf(user)==="Superadmin"&&(confirmingRemove?<span className="objective-remove-confirm" role="alertdialog" aria-label="Confirm delete"><small>Delete this objective? Linked projects, tasks and progress stay unchanged.</small><button type="button" className="btn danger objective-remove-button" disabled={removing} onClick={()=>void removeObjective()}><Trash2 size={14}/>{removing?"Deleting…":"Yes, delete"}</button><button type="button" className="btn" disabled={removing} onClick={()=>setConfirmingRemove(false)}>Cancel</button></span>:<button type="button" className="btn danger objective-remove-button" onClick={()=>setConfirmingRemove(true)}><Trash2 size={14}/> Delete objective</button>)}</div></div>
       <section className={`panel objective-detail-card status-${focused.status.toLowerCase().replace(/\s+/g,"-")}`}>
         <div className="focused-objective-heading"><div className="focused-objective-title"><span className={`focused-objective-icon department-identity-icon ${departmentTone(objectiveDepartment)}`} aria-hidden="true"><DepartmentIcon department={objectiveDepartment} size={22}/></span><div><span className="eyebrow">Weekly objective · {objectiveDepartment||"Unassigned department"}</span><h1>{focused.title}</h1><div className="focused-objective-chips"><Status s={focused.status}/><span className={`review-priority priority-${focused.priority.toLowerCase()}`}>{focused.priority} priority</span></div></div></div><div className="focused-objective-owner">{responsible?<Avatar person={responsible} size={34}/>:<span className="objective-owner-fallback"><UserRound size={16}/></span>}<span><small>Responsible manager</small><strong>{responsible?.name||"Unassigned"}</strong></span></div></div>
          <section className="focused-objective-projects" aria-labelledby="focused-objective-projects-title"><h2 id="focused-objective-projects-title" className="panel-kicker">Linked {linkedProjects.length===1?"project":"projects"}</h2><div className="focused-objective-project-list">{linkedProjects.map(project=><button type="button" key={project.id} className="focused-objective-project" onClick={()=>onOpenProject(project.id)} aria-label={`Open project ${project.name}`}><ProjectLogo project={project} size={38}/><span><strong>{project.name}</strong><small>Open project</small></span><ChevronRight size={15} aria-hidden="true"/></button>)}{missingLinkedProjects>0&&<span className="focused-objective-project-unavailable">{missingLinkedProjects} linked {missingLinkedProjects===1?"project is":"projects are"} unavailable.</span>}{!linkedProjects.length&&!missingLinkedProjects&&<span className="focused-objective-project-unavailable">No project is linked to this objective yet.</span>}</div></section>
