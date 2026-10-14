@@ -2469,9 +2469,6 @@ app.put("/api/state/:key", requireAuth, requireAccount, async (request, response
       return response.status(400).json({ error: "Weekly objectives must be provided as a list." });
     }
     const incomingIds = new Set(request.body.value.map((objective) => objective.id));
-    if (appRole === "Superadmin" && previousObjectives.some((objective) => !incomingIds.has(objective.id) && objective.status !== "Complete")) {
-      return response.status(403).json({ error: "Only completed weekly objectives can be removed." });
-    }
     if (appRole !== "Superadmin") {
       if (previousObjectives.some((objective) => !incomingIds.has(objective.id))) {
         return response.status(403).json({ error: "Only the Superadmin can remove weekly objectives." });
