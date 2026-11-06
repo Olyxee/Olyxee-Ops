@@ -27,7 +27,13 @@
 /* Top-down hierarchy: pure-CSS connectors drawn from the nested lists */
 .org-layout-toggle{display:flex;gap:6px}
 .org-hier-wrap{padding:8px 12px 20px;margin-bottom:16px;overflow:hidden}
-.org-hier{overflow-x:auto;padding:24px 16px 8px;text-align:center}
+.org-hier{overflow:auto;max-height:72vh;padding:24px 16px 8px;text-align:center;cursor:grab;overscroll-behavior:contain}
+.org-hier.panning{cursor:grabbing;user-select:none}
+.org-hier-sizer{margin:0 auto;position:relative}
+.org-hier-inner{width:max-content;transform-origin:top left}
+.org-zoom{display:flex;justify-content:flex-end;align-items:center;gap:6px;padding:4px 4px 0}
+.org-zoom .btn{padding:4px 9px;display:inline-flex;align-items:center;gap:5px;font-size:12px}
+.org-zoom-level{min-width:52px;justify-content:center}
 .org-hier ul{display:flex;justify-content:center;list-style:none;margin:0;padding:24px 0 0;position:relative;width:max-content;min-width:100%}
 .org-hier>ul{padding-top:0}
 .org-hier li{position:relative;display:flex;flex-direction:column;align-items:center;padding:24px 10px 0}
