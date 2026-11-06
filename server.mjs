@@ -280,7 +280,7 @@ app.post("/api/presence/heartbeat", requireAuth, requireAccount, async (request,
   const person = await resolveExternalPerson(request.appAccount.email);
   if (!person?.external_id) return response.status(403).json({ error: "Your staff profile could not be resolved." });
   const now = Date.now();
-  if (now - (persistedPresence.get(person.external_id) || 0) >= 5 * 60_000) {
+  if (now - (persistedPresence.get(person.external_id) || 0) >= 60_000) {
     try {
       await appPool.query(
         `UPDATE public.ops_users SET profile_data = jsonb_set(coalesce(profile_data, '{}'::jsonb), '{lastSeenAt}', to_jsonb($2::text), true) WHERE id = $1`,

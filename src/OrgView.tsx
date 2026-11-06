@@ -241,14 +241,16 @@ export function OrgView({ org, onChangeRole, flash, avatars = {} }: { org: OrgAc
   const reload = () => setReloadKey(value => value + 1);
   const tabs = [
     { id: "chart" as const, label: "Chart", show: true },
-    { id: "proposals" as const, label: "Proposals", show: org.can("org.approve") || org.can("org.propose") },
-    { id: "history" as const, label: "History", show: true },
-    { id: "access" as const, label: "Authority", show: org.can("org.delegate") },
+    // Proposals, History and Authority are intentionally not shown for now: the page is the chart only.
+    // The components and API remain, so a tab can be switched back on here without other changes.
+    { id: "proposals" as const, label: "Proposals", show: false },
+    { id: "history" as const, label: "History", show: false },
+    { id: "access" as const, label: "Authority", show: false },
   ].filter(item => item.show);
 
   return <div className="org-page">
     <div className="page-head"><div><div className="eyebrow">Company structure</div><h1 className="title">Organisation</h1><p className="subtitle">Built live from Olyxee’s records. Titles, reporting lines and permissions are managed separately.</p></div></div>
-    <div className="project-task-filters org-tabs" role="tablist">{tabs.map(item => <button key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "selected" : ""} onClick={() => setTab(item.id)}>{item.label}</button>)}</div>
+    {tabs.length > 1 && <div className="project-task-filters org-tabs" role="tablist">{tabs.map(item => <button key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "selected" : ""} onClick={() => setTab(item.id)}>{item.label}</button>)}</div>}
     {error && <div className="panel"><div className="empty"><strong>Organisation unavailable</strong>{error}</div></div>}
     {tab === "chart" && !chart && !error && <ChartSkeleton />}
     {tab === "chart" && chart && <ChartTab avatars={avatars} chart={chart} canChange={canChange} proposeOnly={!org.can("org.approve")} onChangeRole={onChangeRole}
