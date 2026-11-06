@@ -464,7 +464,7 @@ function UnifiedWorkspace({ceoSchedule,flash,user,team,statuses,tasks,allTasks,p
     <div className="workspace-stack workspace-stack-summary">
     <section id="workspace-overview" className="workspace-card workspace-welcome me-card">
       <h1 className="me-greeting">{welcomeTitle}</h1>
-      <div className="me-profile"><Avatar person={user} size={64}/><div className="me-id"><h2>{user.name}</h2><p className="me-role">{jobTitle}</p><p className="me-email">{user.email}</p></div></div>
+      <div className="me-profile"><Avatar person={user} size={120}/><div className="me-id"><h2>{user.name}</h2><p className="me-role">{jobTitle}</p><p className="me-email">{user.email}</p></div></div>
       <div className="me-meta"><span>{employmentOf(user)}</span>{user.department&&user.department!==UNASSIGNED_DEPARTMENT&&<span>{user.department}</span>}</div>
     </section>
     {intern&&<section className="workspace-card workspace-intern-activity" aria-labelledby="intern-activity-title"><div className="workspace-intern-activity-head"><div><span>Last 24 hours</span><h2 id="intern-activity-title">Your work activity</h2><p>New assignments give a small lift. Work progress lifts it further; setbacks show in red.</p></div>{internActiveTask&&<button type="button" onClick={()=>onOpen(internActiveTask.id)}>Update work <ChevronRight size={14}/></button>}</div><CompactDepartmentHealthChart curve={internActivityCurve} label="Your work activity during the last 24 hours" noTasks={!tasks.length}/></section>}
