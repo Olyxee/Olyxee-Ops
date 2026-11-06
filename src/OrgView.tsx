@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronRight, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronRight, Maximize2, X, ZoomIn, ZoomOut } from "lucide-react";
 import "./org.css";
 
 type Capability = { capability: string; scopeDepartmentId: string | null };
@@ -92,6 +92,7 @@ export function ChangeRoleModal({ personRef, org, onClose, onDone }: { personRef
   const [departmentId, setDepartmentId] = useState("");
   const [reportsTo, setReportsTo] = useState("");
   const [supervisor, setSupervisor] = useState("");
+  const [employment, setEmployment] = useState<"Employee" | "Intern">("Employee");
   const [leads, setLeads] = useState<string[]>([]);
   const [reason, setReason] = useState("");
   const [review, setReview] = useState<{ summary: string[]; version: number } | null>(null);
@@ -109,13 +110,14 @@ export function ChangeRoleModal({ personRef, org, onClose, onDone }: { personRef
         setDepartmentId(node.departmentId || "");
         setReportsTo(node.reportsTo || "");
         setSupervisor(node.internSupervisor || "");
+        setEmployment(node.employmentType === "Intern" ? "Intern" : "Employee");
         setLeads(node.leadsDepartments);
       }
     })();
   }, [personRef]);
 
   const subject = chart?.nodes[personRef];
-  const isIntern = subject?.employmentType === "Intern";
+  const isIntern = employment === "Intern";
   const eligible = useMemo(() => Object.values(chart?.nodes || {}).filter(node => node.employmentType !== "Intern" && node.active && node.ref !== personRef).sort((a, b) => a.name.localeCompare(b.name)), [chart, personRef]);
 
   const buildInput = () => {
@@ -123,6 +125,7 @@ export function ChangeRoleModal({ personRef, org, onClose, onDone }: { personRef
     const input: Record<string, unknown> = { subjectRef: personRef, reason };
     const cleanTitle = title.trim();
     if (cleanTitle && cleanTitle !== subject.title) input.title = cleanTitle;
+    if (employment !== subject.employmentType) input.employmentType = employment;
     if ((departmentId || null) !== subject.departmentId) input.departmentId = departmentId || null;
     if (!isIntern && (reportsTo || null) !== subject.reportsTo) input.reportsTo = reportsTo || null;
     if (isIntern && (supervisor || null) !== subject.internSupervisor) input.internSupervisor = supervisor || null;
@@ -174,7 +177,13 @@ export function ChangeRoleModal({ personRef, org, onClose, onDone }: { personRef
             <input className="input" list="org-positions" value={title} maxLength={120} onChange={event => setTitle(event.target.value)} placeholder="e.g. VP of Engineering" />
             <datalist id="org-positions">{positions.map(item => <option key={item} value={item} />)}</datalist>
           </label>
-          <label className="form-label">Department
+          <label className="form-label">Employment
+            <select className="select" value={employment} onChange={event => setEmployment(event.target.value as "Employee" | "Intern")}>
+              <option value="Employee">Employee</option><option value="Intern">Intern</option>
+            </select>
+            {subject.employmentType !== employment && <span className="muted">{employment === "Employee" ? "Internship supervision ends; choose who they report to." : "Their reporting line ends; choose a supervisor."}</span>}
+          </label>
+          <label className="form-label">Function
             <select className="select" value={departmentId} onChange={event => setDepartmentId(event.target.value)}>
               <option value="">Unassigned</option>{chart!.departments.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
             </select>
@@ -189,7 +198,7 @@ export function ChangeRoleModal({ personRef, org, onClose, onDone }: { personRef
               <option value="">No supervisor</option>{eligible.map(item => <option key={item.ref} value={item.ref}>{item.name}</option>)}
             </select>
           </label>}
-          {!isIntern && <fieldset className="org-leads"><legend>Leads department</legend>
+          {!isIntern && <fieldset className="org-leads"><legend>Leads function</legend>
             {chart!.departments.map(item => <label key={item.id} className="org-check"><input type="checkbox" checked={leads.includes(item.id)} onChange={event => setLeads(current => event.target.checked ? [...current, item.id] : current.filter(id => id !== item.id))} /> {item.name}</label>)}
           </fieldset>}
           <label className="form-label">Reason <span className="muted">(optional)</span>
@@ -241,14 +250,16 @@ export function OrgView({ org, onChangeRole, flash, avatars = {} }: { org: OrgAc
   const reload = () => setReloadKey(value => value + 1);
   const tabs = [
     { id: "chart" as const, label: "Chart", show: true },
-    { id: "proposals" as const, label: "Proposals", show: org.can("org.approve") || org.can("org.propose") },
-    { id: "history" as const, label: "History", show: true },
-    { id: "access" as const, label: "Authority", show: org.can("org.delegate") },
+    // Proposals, History and Authority are intentionally not shown for now: the page is the chart only.
+    // The components and API remain, so a tab can be switched back on here without other changes.
+    { id: "proposals" as const, label: "Proposals", show: false },
+    { id: "history" as const, label: "History", show: false },
+    { id: "access" as const, label: "Authority", show: false },
   ].filter(item => item.show);
 
   return <div className="org-page">
     <div className="page-head"><div><div className="eyebrow">Company structure</div><h1 className="title">Organisation</h1><p className="subtitle">Built live from Olyxee’s records. Titles, reporting lines and permissions are managed separately.</p></div></div>
-    <div className="project-task-filters org-tabs" role="tablist">{tabs.map(item => <button key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "selected" : ""} onClick={() => setTab(item.id)}>{item.label}</button>)}</div>
+    {tabs.length > 1 && <div className="project-task-filters org-tabs" role="tablist">{tabs.map(item => <button key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "selected" : ""} onClick={() => setTab(item.id)}>{item.label}</button>)}</div>}
     {error && <div className="panel"><div className="empty"><strong>Organisation unavailable</strong>{error}</div></div>}
     {tab === "chart" && !chart && !error && <ChartSkeleton />}
     {tab === "chart" && chart && <ChartTab avatars={avatars} chart={chart} canChange={canChange} proposeOnly={!org.can("org.approve")} onChangeRole={onChangeRole}
@@ -317,6 +328,59 @@ function ChartTab({ avatars, chart, canChange, proposeOnly, onChangeRole, asOf, 
   const unsupervised = Object.values(chart.nodes).filter(node => node.employmentType === "Intern" && !node.internSupervisor);
   const [layout, setLayout] = useState<"tree" | "list">("tree");
 
+  // Zoom and pan for the hierarchy: buttons, Ctrl/Cmd + scroll, and drag-to-pan. `zoom` keeps scrolling and layout correct.
+  const MIN_ZOOM = 0.3, MAX_ZOOM = 1.8;
+  const [scale, setScale] = useState(1);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [natural, setNatural] = useState({ width: 0, height: 0 });          // chart size at 100%, unaffected by the transform
+  const clampScale = (value: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(value * 100) / 100));
+  const zoomBy = (factor: number) => setScale(current => clampScale(current * factor));
+  const fit = useCallback(() => {
+    const box = boxRef.current, inner = innerRef.current;
+    if (!box || !inner) return;
+    setScale(clampScale(Math.min(1, (box.clientWidth - 32) / inner.offsetWidth)));
+    box.scrollTo({ left: 0, top: 0 });
+  }, []);
+  useEffect(() => {
+    const inner = innerRef.current;
+    if (!inner || layout !== "tree") return;
+    const measure = () => setNatural({ width: inner.offsetWidth, height: inner.offsetHeight });
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(inner);
+    return () => observer.disconnect();
+  }, [layout, chart]);
+  const fitted = useRef(false);
+  useEffect(() => { if (layout === "tree" && !fitted.current && boxRef.current) { fitted.current = true; fit(); } }, [layout, fit, chart.roots.length]);
+  useEffect(() => {
+    const box = boxRef.current;
+    if (!box || layout !== "tree") return;
+    const onWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey && !event.metaKey) return;      // plain scrolling still scrolls the page / chart
+      event.preventDefault();
+      setScale(current => clampScale(current * (event.deltaY < 0 ? 1.1 : 1 / 1.1)));
+    };
+    box.addEventListener("wheel", onWheel, { passive: false });
+    return () => box.removeEventListener("wheel", onWheel);
+  }, [layout]);
+  const drag = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
+  const [panning, setPanning] = useState(false);
+  const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "touch" || event.button !== 0 || (event.target as HTMLElement).closest("button, a, input")) return;
+    const box = boxRef.current!;
+    drag.current = { x: event.clientX, y: event.clientY, left: box.scrollLeft, top: box.scrollTop };
+    box.setPointerCapture(event.pointerId);
+    setPanning(true);
+  };
+  const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!drag.current) return;
+    const box = boxRef.current!;
+    box.scrollLeft = drag.current.left - (event.clientX - drag.current.x);
+    box.scrollTop = drag.current.top - (event.clientY - drag.current.y);
+  };
+  const endPan = () => { drag.current = null; setPanning(false); };
+
   // Top-down hierarchy: direct reports first, then supervised interns, all as children of the same person.
   const card = (ref: string, trail: Set<string>): React.ReactNode => {
     const node = chart.nodes[ref];
@@ -359,7 +423,21 @@ function ChartTab({ avatars, chart, canChange, proposeOnly, onChangeRole, asOf, 
     {chart.issues.length > 0 && <div className="panel org-issues"><button className="org-issues-head" onClick={() => setShowIssues(!showIssues)} aria-expanded={showIssues}><b>{chart.issues.length} item{chart.issues.length === 1 ? "" : "s"} need attention</b><span className="muted">{showIssues ? "Hide" : "Show"}</span></button>
       {showIssues && <ul>{chart.issues.map((issue, index) => <li key={`${issue.ref}-${index}`}>{issue.message}</li>)}</ul>}</div>}
     {layout === "tree"
-      ? <div className="panel org-hier-wrap"><div className="org-hier"><ul>{chart.roots.map(ref => card(ref, new Set()))}</ul></div>
+      ? <div className="panel org-hier-wrap">
+        <div className="org-zoom" role="group" aria-label="Chart zoom">
+          <button type="button" className="btn" onClick={() => zoomBy(1 / 1.2)} disabled={scale <= MIN_ZOOM} aria-label="Zoom out" title="Zoom out"><ZoomOut size={15} /></button>
+          <button type="button" className="btn org-zoom-level" onClick={() => setScale(1)} aria-label="Reset to 100%" title="Reset to 100%">{Math.round(scale * 100)}%</button>
+          <button type="button" className="btn" onClick={() => zoomBy(1.2)} disabled={scale >= MAX_ZOOM} aria-label="Zoom in" title="Zoom in"><ZoomIn size={15} /></button>
+          <button type="button" className="btn" onClick={fit} aria-label="Fit chart to screen" title="Fit to screen"><Maximize2 size={14} /> Fit</button>
+        </div>
+        <div className={`org-hier${panning ? " panning" : ""}`} ref={boxRef}
+          onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={endPan} onPointerCancel={endPan}>
+          <div className="org-hier-sizer" style={natural.width ? { width: natural.width * scale, height: natural.height * scale } : undefined}>
+            <div className="org-hier-inner" ref={innerRef} style={{ transform: `scale(${scale})` }}>
+              <ul>{chart.roots.map(ref => card(ref, new Set()))}</ul>
+            </div>
+          </div>
+        </div>
         {!chart.roots.length && <div className="empty"><strong>No organisation records yet</strong>Records appear here once the organisation data has been set up.</div>}
       </div>
       : <div className="panel org-tree"><ul>{chart.roots.map(ref => row(ref, 0, new Set()))}</ul>

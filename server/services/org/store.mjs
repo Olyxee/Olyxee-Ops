@@ -140,13 +140,20 @@ async function readTables(db, asOf) {
   };
 }
 
+/** People as recorded, with the Ops-owned employment classification applied on top. */
+export async function loadClassifiedPeople(db, loadPeople) {
+  const [people, rows] = await Promise.all([loadPeople(), db.query("SELECT person_ref, employment_type FROM public.org_person_classification")]);
+  const override = new Map(rows.rows.map((row) => [row.person_ref, row.employment_type]));
+  return people.map((person) => (override.has(person.ref) ? { ...person, employmentType: override.get(person.ref) } : person));
+}
+
 export async function getChart(db, loadPeople, { asOf = null, includeAlumni = false } = {}) {
-  const [people, tables, version] = await Promise.all([loadPeople(), readTables(db, asOf), getVersion(db)]);
+  const [people, tables, version] = await Promise.all([loadClassifiedPeople(db, loadPeople), readTables(db, asOf), getVersion(db)]);
   return { ...buildChart({ people, ...tables }, { includeAlumni }), version, asOf: asOf ? new Date(asOf).toISOString() : null };
 }
 
 async function loadSnapshot(tx, loadPeople) {
-  const [people, tables] = await Promise.all([loadPeople(), readTables(tx, null)]);
+  const [people, tables] = await Promise.all([loadClassifiedPeople(tx, loadPeople), readTables(tx, null)]);
   const canonical = (ref) => tables.identityLinks.find((link) => link.supersededRef === ref)?.canonicalRef || ref;
   const snapshot = {
     people: new Map(people.filter((person) => !tables.identityLinks.some((link) => link.supersededRef === person.ref)).map((person) => [person.ref, person])),
@@ -179,6 +186,13 @@ async function executePlan(tx, { plan, change, actor, proposalId = null, kind })
   );
   const changeId = recorded.rows[0].id;
   const { ops } = plan;
+  if (ops.classification) {
+    await tx.query(
+      `INSERT INTO public.org_person_classification (person_ref, employment_type, change_id) VALUES ($1,$2,$3)
+       ON CONFLICT (person_ref) DO UPDATE SET employment_type = EXCLUDED.employment_type, change_id = EXCLUDED.change_id, set_at = now()`,
+      [plan.subjectRef, ops.classification.employmentType, changeId],
+    );
+  }
   if (ops.assignment) {
     await tx.query("UPDATE public.org_assignments SET effective_to = now() WHERE person_ref = $1 AND effective_to IS NULL", [plan.subjectRef]);
     await tx.query(

@@ -264,7 +264,9 @@ app.get("/api/me", requireAuth, requireAccount, async (request, response) => {
     id: person?.external_id || `account-${account.id}`,
     name: profile.displayName || person?.name || account.display_name || account.email,
     email: account.email,
-    employmentType: person?.employment_type || "Employee",
+    employmentType: (orgEnabled() && orgDb && person?.external_id
+      ? (await orgDb.query("SELECT employment_type FROM public.org_person_classification WHERE person_ref = $1", [person.external_id]).catch(() => ({ rows: [] }))).rows[0]?.employment_type
+      : undefined) || person?.employment_type || "Employee",
     accessRole: account.app_role,
     accountStatus: account.active ? "Active" : "Suspended",
     department: person?.department || "Operations",
@@ -280,7 +282,7 @@ app.post("/api/presence/heartbeat", requireAuth, requireAccount, async (request,
   const person = await resolveExternalPerson(request.appAccount.email);
   if (!person?.external_id) return response.status(403).json({ error: "Your staff profile could not be resolved." });
   const now = Date.now();
-  if (now - (persistedPresence.get(person.external_id) || 0) >= 5 * 60_000) {
+  if (now - (persistedPresence.get(person.external_id) || 0) >= 60_000) {
     try {
       await appPool.query(
         `UPDATE public.ops_users SET profile_data = jsonb_set(coalesce(profile_data, '{}'::jsonb), '{lastSeenAt}', to_jsonb($2::text), true) WHERE id = $1`,

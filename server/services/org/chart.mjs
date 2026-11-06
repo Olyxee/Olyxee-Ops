@@ -72,7 +72,7 @@ export function buildChart(input, { includeAlumni = false } = {}) {
   }
 
   for (const node of nodes.values()) {
-    if (node.employmentType === "Intern" && node.active && !node.internSupervisor) {
+    if (node.employmentType === "Intern" && node.active && !node.internSupervisor && !node.reportsTo) {
       issues.push({ code: "no_supervisor", ref: node.ref, message: `${node.name} has no internship supervisor.` });
     }
     if (node.employmentType !== "Intern" && node.active && !node.reportsTo && node.directReports.length === 0) {

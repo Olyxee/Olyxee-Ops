@@ -132,6 +132,15 @@ CREATE TABLE IF NOT EXISTS public.org_initiative_owners (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS org_initiative_owner_current_idx ON public.org_initiative_owners (initiative_id) WHERE effective_to IS NULL;
 
+-- Employment type is owned by Ops, not by the People database: a person recorded there as an intern can be an employee here.
+-- Every change is also in org_changes (before/after), so the history is kept.
+CREATE TABLE IF NOT EXISTS public.org_person_classification (
+  person_ref text PRIMARY KEY,
+  employment_type text NOT NULL CHECK (employment_type IN ('Employee','Intern')),
+  change_id uuid REFERENCES public.org_changes(id),
+  set_at timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS public.org_identity_links (
   superseded_ref text PRIMARY KEY,
   canonical_ref text NOT NULL,
@@ -209,7 +218,7 @@ END $$;
 `;
 
 export const ORG_DROP_SQL = `
-DROP TABLE IF EXISTS public.org_initiative_owners, public.org_initiatives, public.org_proposals, public.org_capabilities, public.org_chart_exclusions,
+DROP TABLE IF EXISTS public.org_person_classification, public.org_initiative_owners, public.org_initiatives, public.org_proposals, public.org_capabilities, public.org_chart_exclusions,
   public.org_identity_links, public.org_department_leads, public.org_relationships,
   public.org_assignments, public.org_changes, public.org_positions, public.org_departments, public.org_state CASCADE;
 DROP FUNCTION IF EXISTS public.org_guard_history();
