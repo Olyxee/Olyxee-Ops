@@ -215,7 +215,7 @@ export function ChangeRoleModal({ personRef, org, onClose, onDone }: { personRef
 
 /* ------------------------------- Org view ------------------------------- */
 
-export function OrgView({ org, onChangeRole, flash }: { org: OrgAccess; onChangeRole: (ref: string) => void; flash: Flash }) {
+export function OrgView({ org, onChangeRole, flash, avatars = {} }: { org: OrgAccess; onChangeRole: (ref: string) => void; flash: Flash; avatars?: Record<string, string> }) {
   const [tab, setTab] = useState<"chart" | "proposals" | "history" | "access">("chart");
   const [chart, setChart] = useState<Chart | null>(null);
   const [error, setError] = useState("");
@@ -250,7 +250,7 @@ export function OrgView({ org, onChangeRole, flash }: { org: OrgAccess; onChange
     <div className="page-head"><div><div className="eyebrow">Company structure</div><h1 className="title">Organisation</h1><p className="subtitle">Built live from Olyxee’s records. Titles, reporting lines and permissions are managed separately.</p></div></div>
     <div className="project-task-filters org-tabs" role="tablist">{tabs.map(item => <button key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "selected" : ""} onClick={() => setTab(item.id)}>{item.label}</button>)}</div>
     {error && <div className="panel"><div className="empty"><strong>Organisation unavailable</strong>{error}</div></div>}
-    {tab === "chart" && chart && <ChartTab chart={chart} canChange={canChange} proposeOnly={!org.can("org.approve")} onChangeRole={onChangeRole}
+    {tab === "chart" && chart && <ChartTab avatars={avatars} chart={chart} canChange={canChange} proposeOnly={!org.can("org.approve")} onChangeRole={onChangeRole}
       asOf={asOf} setAsOf={setAsOf} alumni={alumni} setAlumni={setAlumni} showIssues={showIssues} setShowIssues={setShowIssues} />}
     {tab === "proposals" && <ProposalsTab org={org} chart={chart} flash={flash} onChanged={() => { reload(); void org.refresh(); }} />}
     {tab === "history" && <HistoryTab chart={chart} />}
@@ -258,8 +258,8 @@ export function OrgView({ org, onChangeRole, flash }: { org: OrgAccess; onChange
   </div>;
 }
 
-function ChartTab({ chart, canChange, proposeOnly, onChangeRole, asOf, setAsOf, alumni, setAlumni, showIssues, setShowIssues }: {
-  chart: Chart; canChange: boolean; proposeOnly: boolean; onChangeRole: (ref: string) => void; asOf: string; setAsOf: (value: string) => void;
+function ChartTab({ avatars, chart, canChange, proposeOnly, onChangeRole, asOf, setAsOf, alumni, setAlumni, showIssues, setShowIssues }: {
+  avatars: Record<string, string>; chart: Chart; canChange: boolean; proposeOnly: boolean; onChangeRole: (ref: string) => void; asOf: string; setAsOf: (value: string) => void;
   alumni: boolean; setAlumni: (value: boolean) => void; showIssues: boolean; setShowIssues: (value: boolean) => void;
 }) {
   const historic = Boolean(chart.asOf);
@@ -309,7 +309,7 @@ function ChartTab({ chart, canChange, proposeOnly, onChangeRole, asOf, setAsOf, 
     const initials = node.name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase();
     return <li key={ref}>
       <div className={`org-card${intern ? " org-card-intern" : ""}${node.active ? "" : " org-inactive"}${trail.size === 0 ? " org-card-root" : ""}`}>
-        <span className="org-avatar" aria-hidden="true">{initials}</span>
+        {avatars[ref] ? <img className="org-avatar org-avatar-photo" src={avatars[ref]} alt={`${node.name}'s profile`} /> : <span className="org-avatar" aria-hidden="true">{initials}</span>}
         <b className="org-card-name">{node.name}</b>
         <span className="org-card-title">{node.title && node.title !== "Title not set" ? node.title : (intern ? "Intern" : "Title not set")}</span>
         {node.department && <span className="org-card-dept">{node.department}</span>}

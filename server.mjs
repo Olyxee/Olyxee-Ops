@@ -318,7 +318,7 @@ app.patch("/api/me/profile", requireAuth, requireAccount, async (request, respon
   };
   const result = await appPool.query(`
     UPDATE public.ops_users
-    SET profile_data = $1::jsonb, updated_at = now()
+    SET profile_data = coalesce(profile_data, '{}'::jsonb) || $1::jsonb, updated_at = now()
     WHERE id = $2
     RETURNING profile_data
   `, [JSON.stringify(allowed), request.appAccount.id]);
