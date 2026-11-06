@@ -110,14 +110,34 @@ export function useFunctions(signedIn: boolean, version: number) {
   }, [signedIn, refresh]);
   const lookup = useMemo(() => {
     const map = new Map<string, string>();
-    for (const fn of functions) {
-      for (const key of [fn.name, ...fn.legacyKeys]) map.set(key.toLowerCase(), fn.name);
-      for (const spec of fn.specialisations) for (const key of [spec.name, ...spec.legacyKeys]) map.set(key.toLowerCase(), fn.name);
+    for (const fn of functions) {                                   // pass 1: old stored names
+      for (const key of fn.legacyKeys) map.set(key.toLowerCase(), fn.name);
+      for (const spec of fn.specialisations) for (const key of spec.legacyKeys) map.set(key.toLowerCase(), fn.name);
+    }
+    for (const fn of functions) {                                   // pass 2: current names always win
+      map.set(fn.name.toLowerCase(), fn.name);
+      for (const spec of fn.specialisations) map.set(spec.name.toLowerCase(), fn.name);
     }
     return map;
   }, [functions]);
-  const functionOf = useCallback((name?: string) => (name ? lookup.get(name.toLowerCase()) || name : name), [lookup]);
-  return { functions, ready: functions.length > 0, lookup, functionOf, refresh };
+  // A person's function or team comes from the organisation, so a current NAME wins. Text stored on old tasks keeps the meaning
+  // it had when it was written, so an old department name wins. They only differ when a function reuses an old department's name.
+  const nameFirst = lookup;
+  const storedFirst = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const fn of functions) {
+      for (const key of [fn.name]) map.set(key.toLowerCase(), fn.name);
+      for (const spec of fn.specialisations) map.set(spec.name.toLowerCase(), fn.name);
+    }
+    for (const fn of functions) {
+      for (const key of fn.legacyKeys) map.set(key.toLowerCase(), fn.name);
+      for (const spec of fn.specialisations) for (const key of spec.legacyKeys) map.set(key.toLowerCase(), fn.name);
+    }
+    return map;
+  }, [functions]);
+  const functionOf = useCallback((name?: string) => (name ? nameFirst.get(name.toLowerCase()) || name : name), [nameFirst]);
+  const storedFunctionOf = useCallback((name?: string) => (name ? storedFirst.get(name.toLowerCase()) || name : name), [storedFirst]);
+  return { functions, ready: functions.length > 0, lookup, functionOf, storedFunctionOf, refresh };
 }
 
 /* ------------------------------ Change Role ------------------------------ */

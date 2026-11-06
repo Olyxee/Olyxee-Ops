@@ -98,3 +98,19 @@ test("a manager of a specialisation is treated as being in the whole function fo
   assert.equal(departmentInList(groups, ["Engineering"], ""), false);
   assert.equal(departmentInList(new Map(), ["Engineering"], "Engineering"), true);               // unknown names fall back to exact match
 });
+
+test("a function may reuse an old department's name: stored text keeps its old meaning, live names win", async () => {
+  const w = await world();
+  const product = await w.fn({ name: "Product Engineering", legacyKeys: ["Engineering"] });
+  await w.fn({ name: "AI Research & Development", parentId: product.id, legacyKeys: ["Research & Development (R&D)"] });   // old R&D department
+  await w.fn({ name: "Research & Development (R&D)", legacyKeys: ["Data & Security"] });                                    // a function that now has that same name
+  const { keys, groups, nameGroups } = await loadFunctionKeys(w.db);
+  const rd = "research & development (r&d)";
+  assert.equal(keys.get(rd), "Data & Security");                                    // picking the R&D function stores the key its own records use
+  assert.equal(groups.get(rd), "product engineering");                              // old tasks stored as "Research & Development (R&D)" stay with the team that did them
+  assert.equal(nameGroups.get(rd), rd);                                             // a person assigned to the R&D function is in that function
+  assert.equal(nameGroups.get("ai research & development"), "product engineering");
+  assert.equal(departmentInList(groups, ["Research & Development (R&D)"], "AI Research & Development", nameGroups), true);   // the AI team sees its old R&D-stored work
+  assert.equal(departmentInList(groups, ["Data & Security"], "Research & Development (R&D)", nameGroups), true);              // the R&D function sees work stored under its own old key
+  assert.equal(departmentInList(groups, ["Engineering"], "Research & Development (R&D)", nameGroups), false);                 // and not the other function's work
+});

@@ -29,21 +29,21 @@ const CEO_EMAIL = "scofield@olyxee.com";
 
 // Existing departments become functions (matched by their current name).
 const FUNCTIONS = [
-  { from: "Engineering", name: "Technology & Engineering", legacy: ["Engineering"], order: 10,
+  { from: "Engineering", name: "Product Engineering", legacy: ["Engineering"], order: 10,
     description: "Engineering leadership across AI research and development, data engineering and software engineering.", leader: "alisha.fatima@olyxee.com" },
-  { from: "Data & Security", name: "Data Science & Intelligence", legacy: ["Data & Security"], order: 20,
+  { from: "Data & Security", name: "Research & Development (R&D)", legacy: ["Data & Security"], order: 20,
     description: "Modelling, quantitative research, AI evaluation and applied intelligence.", leader: "thokozani.dlomo@olyxee.com" },
   { from: "Sales & Marketing", name: "Growth & Partnerships", legacy: ["Sales & Marketing"], order: 30,
     description: "Marketing, acquisition, outreach and partnerships.", leader: CEO_EMAIL },
 ];
 // Specialisations inside Technology & Engineering. `from` re-uses an existing row; otherwise a new one is created.
 const SPECIALISATIONS = [
-  { from: "Research & Development (R&D)", name: "AI Research & Development", legacy: ["Research & Development (R&D)"], order: 11,
+  { name: "AI Research & Development", legacy: ["Research & Development (R&D)"], order: 11,
     description: "AI research, prototyping and applied model development.", leader: "emmanuel.stakio@olyxee.com" },
   { name: "Data Engineering", legacy: [], order: 12, description: "Data platforms, pipelines and data security.", leader: "mosa.maseko@olyxee.com" },
   { name: "Software Engineering", legacy: [], order: 13, description: "Product and platform software engineering and quality.", leader: "zaid.muhammad.dev@gmail.com" },
 ];
-const PARENT = "Technology & Engineering";
+const PARENT = "Product Engineering";
 // Who sits where. Titles and relationships are left exactly as they are.
 const PLACEMENT = {
   "alisha.fatima@olyxee.com": PARENT,
@@ -53,7 +53,7 @@ const PLACEMENT = {
   "hlakotaketji@gmail.com": "Data Engineering",
   "zaid.muhammad.dev@gmail.com": "Software Engineering",
   "jaymotsweni@gmail.com": "Software Engineering",
-  "thokozani.dlomo@olyxee.com": "Data Science & Intelligence",
+  "thokozani.dlomo@olyxee.com": "Research & Development (R&D)",
   "abdullahsiddiqui1590@gmail.com": "Growth & Partnerships",
 };
 

@@ -91,18 +91,20 @@ validateEmailConfiguration({ production: isProduction });
 // Function names (and specialisations) map to the key existing records already use; see function-keys.mjs.
 let functionKeys = new Map();
 let functionGroups = new Map();
+let functionNameGroups = new Map();
 let functionKeysAt = 0;
-const departmentInList = (list, department) => departmentInGroupList(functionGroups, list, department);
+const departmentInList = (list, department) => departmentInGroupList(functionGroups, list, department, functionNameGroups);
 const refreshFunctionKeys = async () => {
   if (!orgEnabled() || !orgDb || Date.now() - functionKeysAt < 20_000) return;
   functionKeysAt = Date.now();
-  try { ({ keys: functionKeys, groups: functionGroups } = await loadFunctionKeys(orgDb)); } catch (error) { console.error("Could not load function names:", error instanceof Error ? error.message : "Unknown error"); }
+  try { ({ keys: functionKeys, groups: functionGroups, nameGroups: functionNameGroups } = await loadFunctionKeys(orgDb)); } catch (error) { console.error("Could not load function names:", error instanceof Error ? error.message : "Unknown error"); }
 };
 const validateDepartment = (value, { allowUnassigned = true } = {}) => {
   const department = String(value || "").trim();
-  if (isOfficialDepartment(department)) return department;
+  // A live function or team name is stored under the key its records already use, even when that name matches an old department.
   const mapped = functionKeys.get(department.toLowerCase());
   if (mapped) return mapped;
+  if (isOfficialDepartment(department)) return department;
   if (allowUnassigned && (!department || department === UNASSIGNED_DEPARTMENT)) return UNASSIGNED_DEPARTMENT;
   return null;
 };
