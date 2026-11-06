@@ -31,6 +31,7 @@ import {
 } from "./server/services/accounts/account-setup.mjs";
 import { registerOrgRoutes } from "./server/services/org/routes.mjs";
 import { fromPgPool } from "./server/services/org/store.mjs";
+import { registerPersonalCalendarRoutes } from "./server/services/personal-calendar/routes.mjs";
 import { createPeopleLoader } from "./server/services/org/people-source.mjs";
 import { recordNewPerson, endPersonOrg, currentResponsibilities } from "./server/services/org/lifecycle.mjs";
 import { createOrgNotifier } from "./server/services/org/notify.mjs";
@@ -397,6 +398,8 @@ app.get("/api/staff-summary", requireAuth, requireAccount, async (_request, resp
 
 const orgDb = appPool ? fromPgPool(appPool) : null;
 const loadOrgPeople = peoplePool ? createPeopleLoader(peoplePool) : null;
+// The CEO's private calendar and agenda (own table, own account only; see server/services/personal-calendar).
+if (orgDb) registerPersonalCalendarRoutes(app, { db: orgDb, requireAuth, requireAccount });
 if (orgDb && loadOrgPeople) {
   registerOrgRoutes(app, {
     db: orgDb,

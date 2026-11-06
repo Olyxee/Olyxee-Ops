@@ -1,0 +1,72 @@
+/* CEO dashboard: My Calendar (left) and Your Agenda (right). Reuses the workspace card, head, badge and button styles. */
+.ceo-schedule{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:stretch;width:100%;min-width:0;box-sizing:border-box;align-self:stretch}
+.ceo-schedule>.workspace-card{min-width:0}
+/* The dashboard places its cards in a 12-column grid; this takes exactly the place the Tasks card had (row 1, beside the profile). */
+@media (min-width:701px){.workspace-board:not(.workspace-board-member) .ceo-schedule{grid-area:1 / 5 / 2 / 13 !important}}
+@media (max-width:900px){.ceo-schedule{grid-template-columns:1fr}}
+
+/* calendar */
+.ceo-cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;padding:2px 12px 6px}
+.ceo-cal-weekday{display:grid;place-items:center;height:20px;color:#7b8783;font-size:10px;font-weight:600;letter-spacing:.04em}
+.ceo-cal-day{position:relative;display:grid;place-items:center;height:28px;border:0;border-radius:8px;background:transparent;color:#303b37;font-size:11.5px;cursor:pointer;transition:background .12s ease}
+.ceo-cal-day:hover{background:#eef2f0}
+.ceo-cal-day.out{color:#a9b3ae}
+.ceo-cal-day.today{font-weight:700;box-shadow:inset 0 0 0 1.5px #598b78}
+.ceo-cal-day.selected{background:#27312e;color:#fff}
+.ceo-cal-day.selected.today{box-shadow:none}
+.ceo-cal-day i{position:absolute;bottom:3px;left:50%;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:#598b78}
+.ceo-cal-day i.done{background:#b5c0ba}
+.ceo-cal-day.selected i{background:#fff}
+.ceo-cal-day:focus-visible,.ceo-cal-event:focus-visible,.ceo-agenda-main:focus-visible,.ceo-agenda-check:focus-visible{outline:2px solid #598b78;outline-offset:1px}
+
+.ceo-cal-day-list{display:grid;gap:4px;padding:6px 12px 12px;border-top:1px solid #edf0ef}
+.ceo-cal-day-head{display:flex;align-items:center;justify-content:space-between;color:#68716e;font-size:11px}
+.ceo-cal-day-head b{color:#27312e;font-size:12px}
+.ceo-cal-event{display:flex;align-items:center;gap:8px;width:100%;padding:6px 8px;border:0;border-left:3px solid #9aa5a0;border-radius:6px;background:#f6f8f7;text-align:left;cursor:pointer}
+.ceo-cal-event:hover{background:#eef2f0}
+.ceo-cal-event.kind-meeting{border-left-color:#4a8ac4}
+.ceo-cal-event.kind-deadline{border-left-color:#c95f56}
+.ceo-cal-event.kind-follow_up{border-left-color:#c98a3f}
+.ceo-cal-event.kind-important_date{border-left-color:#8055c1}
+.ceo-cal-event.kind-reminder{border-left-color:#598b78}
+.ceo-cal-event.completed{opacity:.55;text-decoration:line-through}
+.ceo-cal-event-time{flex:0 0 auto;min-width:44px;color:#68716e;font-size:11px;font-variant-numeric:tabular-nums}
+.ceo-cal-event-title{flex:1;min-width:0;overflow:hidden;color:#27312e;font-size:12px;text-overflow:ellipsis;white-space:nowrap}
+.ceo-empty-line{color:#79817e;font-size:11.5px}
+.ceo-empty-line button{border:0;background:transparent;color:#3d5e51;font-size:11.5px;font-weight:600;cursor:pointer;padding:0}
+
+/* agenda */
+.ceo-agenda-list{display:grid;padding:0 8px 8px}
+.ceo-agenda-item{display:flex;align-items:center;gap:10px;padding:2px 4px;border-top:1px solid #edf0ef}
+.ceo-agenda-item:first-child{border-top:0}
+.ceo-agenda-item.completed .ceo-agenda-main{opacity:.55}
+.ceo-agenda-item.completed .ceo-agenda-main b{text-decoration:line-through}
+.ceo-agenda-check{display:grid;place-items:center;flex:0 0 20px;width:20px;height:20px;border:1.5px solid #b5c0ba;border-radius:50%;background:transparent;color:#fff;cursor:pointer}
+.ceo-agenda-check:hover{border-color:#598b78}
+.ceo-agenda-item.completed .ceo-agenda-check{background:#598b78;border-color:#598b78}
+.ceo-agenda-main{display:grid;gap:2px;flex:1;min-width:0;padding:10px 6px;border:0;background:transparent;text-align:left;cursor:pointer;border-radius:8px}
+.ceo-agenda-main:hover{background:#f6f8f7}
+.ceo-agenda-main b{overflow:hidden;color:#27312e;font-size:13px;font-weight:600;text-overflow:ellipsis;white-space:nowrap}
+.ceo-agenda-main small{overflow:hidden;color:#68716e;font-size:11.5px;text-overflow:ellipsis;white-space:nowrap}
+.ceo-agenda-item .badge{flex:0 0 auto;display:inline-flex;align-items:center;gap:3px}
+.ceo-agenda-group h4{margin:12px 0 4px;color:#68716e;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.ceo-agenda-group h4 span{font-weight:500}
+
+/* dialogs */
+.ceo-modal{width:min(480px,100%)}
+.ceo-time-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ceo-event-details{display:grid;margin:0}
+.ceo-event-details>div{display:grid;grid-template-columns:84px minmax(0,1fr);gap:10px;padding:9px 0;border-top:1px solid #edf0ef;font-size:13px}
+.ceo-event-details>div:first-child{border-top:0}
+.ceo-event-details dt{color:#68716e;font-weight:600}
+.ceo-event-details dd{margin:0;color:#303b37;overflow-wrap:anywhere}
+
+@media (prefers-color-scheme:dark){
+  .ceo-cal-day{color:#dbe6e0}.ceo-cal-day:hover{background:#232c28}.ceo-cal-day.out{color:#5f6e67}
+  .ceo-cal-day.selected{background:#e3ece7;color:#16241d}.ceo-cal-day.selected i{background:#16241d}
+  .ceo-cal-day-list,.ceo-agenda-item,.ceo-event-details>div{border-color:#2f3a35}
+  .ceo-cal-event{background:#222b27}.ceo-cal-event:hover{background:#2a3430}
+  .ceo-cal-event-title,.ceo-agenda-main b,.ceo-cal-day-head b,.ceo-event-details dd{color:#e3ece7}
+  .ceo-agenda-main:hover{background:#232c28}
+  .ceo-agenda-check{border-color:#52625b}
+}
