@@ -20,7 +20,9 @@ export function buildChart(input, { includeAlumni = false } = {}) {
   const excluded = new Map(input.exclusions.map((item) => [item.personRef, item.reason]));
   const canonical = (ref) => input.identityLinks.find((link) => link.supersededRef === ref)?.canonicalRef || ref;
   const assignments = new Map();
-  for (const item of input.assignments) assignments.set(canonical(item.personRef), item);
+  // A merged duplicate must never override the person's own record: apply superseded rows first.
+  const isSuperseded = (ref) => canonical(ref) !== ref;
+  for (const item of [...input.assignments].sort((a, b) => Number(isSuperseded(b.personRef)) - Number(isSuperseded(a.personRef)))) assignments.set(canonical(item.personRef), item);
 
   const issues = [];
   const nodes = new Map();

@@ -151,7 +151,8 @@ async function loadSnapshot(tx, loadPeople) {
   const snapshot = {
     people: new Map(people.filter((person) => !tables.identityLinks.some((link) => link.supersededRef === person.ref)).map((person) => [person.ref, person])),
     departments: new Map(tables.departments.map((department) => [department.id, department])),
-    assignments: new Map(tables.assignments.map((item) => [canonical(item.personRef), item])),
+    // A merged duplicate must never override the person's own record: apply superseded rows first.
+    assignments: new Map([...tables.assignments].sort((a, b) => Number(canonical(b.personRef) !== b.personRef) - Number(canonical(a.personRef) !== a.personRef)).map((item) => [canonical(item.personRef), item])),
     reportsTo: new Map(tables.relationships.filter((item) => item.type === "reports_to").map((item) => [canonical(item.subjectRef), canonical(item.managerRef)])),
     supervisors: new Map(tables.relationships.filter((item) => item.type === "intern_supervisor").map((item) => [canonical(item.subjectRef), canonical(item.managerRef)])),
     functional: tables.relationships.filter((item) => item.type === "functional_lead"),
