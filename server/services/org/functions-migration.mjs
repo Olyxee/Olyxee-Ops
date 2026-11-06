@@ -40,7 +40,6 @@ export async function applyFunctionsMigration(db, loadPeople, actor, config, { l
   for (const unit of [...functions, ...specialisations]) {
     const person = byEmail(unit.leader);
     if (!person) throw new Error(`No person with email ${unit.leader}.`);
-    if (person.employmentType !== "Employee") { log(`skipped leader of "${unit.name}" (${person.name} is an intern record)`); continue; }
     await applyChange(db, loadPeople, { actor, expectedVersion: await version(), input: { subjectRef: person.ref, leadOfAdd: [unitIds[unit.name]], reason: REASON } }).catch(ignoreNoChange);
   }
   return unitIds;

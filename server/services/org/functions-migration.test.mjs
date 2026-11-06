@@ -94,7 +94,7 @@ test("the migration reshapes departments into functions without losing or changi
   assert.equal(science.leader.name, "Theo Head");
   assert.equal(growth.leader.name, "Carl CEO");
   assert.deepEqual(tech.specialisations.map((s) => s.name), ["AI Research & Development", "Data Engineering", "Software Engineering"]);
-  assert.deepEqual(tech.specialisations.map((s) => s.leader?.name ?? null), ["Eve Research", "Moe Data", null]);   // Zed is an intern record: no leader yet
+  assert.deepEqual(tech.specialisations.map((s) => s.leader?.name ?? null), ["Eve Research", "Moe Data", "Zed Eng"]);   // Zed is still recorded as an intern and leads Software Engineering
   assert.deepEqual([...tech.memberRefs].sort(), ["account-1", "account-2", "account-3", "intern-14", "intern-31", "intern-34", "intern-35"]);
   assert.deepEqual(science.memberRefs, ["intern-13"]);
   assert.deepEqual(growth.memberRefs, ["intern-33"]);
@@ -102,7 +102,7 @@ test("the migration reshapes departments into functions without losing or changi
   assert.equal(after.roots.length, 1);
   assert.equal(after.roots[0], "account-17");
   assert.equal(after.issues.length, 0);
-  assert.ok(logs.some((line) => /Zed Eng/.test(line)), "the skipped leader is reported");
+  assert.equal(logs.length, 0);                                                                  // nothing had to be skipped
 
   // old department names still resolve, so existing tasks and people keep their place
   const lookup = functionLookup(view);

@@ -204,7 +204,7 @@ export function planChange(snapshot, change) {
   for (const id of change.leadOfAdd) {
     const department = snapshot.departments.get(id);
     if (!department || !department.active) throw new OrgError("Choose an active department to lead.", 400, "department");
-    if (!isEmployee(subjectRef)) throw new OrgError("Only employees can lead a department.", 409, "ineligible");
+    // Any active person can lead a function: leadership is a role in the structure, not an employment type.
     if (ledNow.has(id)) continue;
     const incumbent = snapshot.departmentLeads.get(id);
     if (incumbent) ops.closeLeads.push({ departmentId: id, personRef: incumbent }); // replacing the lead keeps their history
@@ -221,11 +221,6 @@ export function planChange(snapshot, change) {
     after.leadOf = [...after_].sort();
     const replaced = ops.closeLeads.filter((lead) => lead.personRef !== subjectRef);
     if (replaced.length) after.replacedLeads = replaced;
-  }
-
-  if (!isEmployee(subjectRef)) {
-    const stillLeads = [...ledNow].filter((id) => !change.leadOfRemove.includes(id));
-    if (stillLeads.length) throw new OrgError("This person leads a function. Remove that first before recording them as an intern.", 409, "ineligible");
   }
 
   const changed = ops.classification || ops.assignment || ops.closeRelationships.length || ops.openRelationships.length || ops.openLeads.length || ops.closeLeads.length;

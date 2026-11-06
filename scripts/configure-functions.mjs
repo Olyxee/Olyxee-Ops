@@ -91,8 +91,7 @@ for (const [email, unit] of Object.entries(PLACEMENT)) {
 for (const unit of [...FUNCTIONS, ...SPECIALISATIONS]) {
   const person = byEmail(unit.leader);
   if (!person) { problems.push(`No person with email ${unit.leader}.`); continue; }
-  const ok = person.employmentType === "Employee";
-  lines.push(ok ? `appoint ${person.name} as leader of "${unit.name}"` : `SKIP leader of "${unit.name}": ${person.name} is recorded as an intern (convert them to Employee first)`);
+  lines.push(`appoint ${person.name} as leader of "${unit.name}"`);
 }
 console.log(APPLY ? "APPLYING" : "DRY RUN — nothing will be written", `\nSchema additions needed: ${hasNewColumns ? "none (already present)" : "new columns on org_departments and the org_initiatives tables"}`);
 lines.forEach((line) => console.log(" •", line));
