@@ -5,6 +5,7 @@ import {
   revokeCapability, withdrawProposal,
 } from "./store.mjs";
 import { createFunction, createInitiative, listInitiatives, updateFunction, updateInitiative } from "./structure.mjs";
+import { buildFunctionsView } from "./functions-view.mjs";
 
 /**
  * Registers /api/org/*. Authority comes only from server-side capability grants (org_capabilities),
@@ -50,6 +51,10 @@ export function registerOrgRoutes(app, { db, loadPeople, requireAuth, requireAcc
     response.status(201).json({ position: await createPosition(db, request.body || {}) }), { any: ["org.approve"] }));
 
   // Functions (departments), specialisations and cross-functional initiatives. Structure edits need org.approve.
+  // Read-only view for the Functions page and home card. Any signed-in person may read it: it carries function names,
+  // leaders (name and title) and member references, never contact details.
+  app.get("/api/org/functions", ...base, guard(async ({ response }) =>
+    response.json(buildFunctionsView(await getChart(db, loadPeople, { includeAlumni: false }))), { any: [] }));
   app.post("/api/org/functions", ...base, guard(async ({ request, response, actor }) =>
     response.status(201).json(await createFunction(db, { ...(request.body || {}), actor })), { any: ["org.approve"] }));
   app.patch("/api/org/functions/:id", ...base, guard(async ({ request, response, actor }) =>

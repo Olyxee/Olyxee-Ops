@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, Archive, ArrowDownRight, ArrowLeft, ArrowUpRight, Bell, BriefcaseBusiness, Building2, Check, ChevronRight, CircleHelp, ClipboardList, Clock3, Code2, FileCheck2, FileText, FlaskConical, GitPullRequest, Image, LayoutDashboard, ListTodo, LogOut, Megaphone, Menu, MessageSquare, MoreVertical, Pencil, Plus, Search, Settings, ShieldCheck, Trash2, Upload, UserPlus, UserRound, Users, X } from "lucide-react";
 import { zipFiles } from "./zip-upload";
-import { OrgView, ChangeRoleModal, useOrgAccess, OrgAccess } from "./OrgView";
+import { OrgView, ChangeRoleModal, useOrgAccess, OrgAccess, useFunctions, FunctionInfo } from "./OrgView";
 import { AvatarPrompt } from "./AvatarPrompt";
 import { Audit, departments, seedProjects, seedTasks, seedAudit, seedNotices, seedWeeklyObjectives, seedStaffStatuses, Project, ProjectResource, Task, User, users, Notice, AccessRole, EmploymentType, AccountStatus, WeeklyObjective, WeeklyObjectiveResource, ObjectiveStatus, StaffStatus, Availability } from "./data";
 import { OFFICIAL_DEPARTMENTS, UNASSIGNED_DEPARTMENT } from "../shared/departments.mjs";
 import { departmentDailyTrend } from "../shared/department-trend.mjs";
+import { functionDelivery, mapDepartmentNames } from "../shared/function-metrics.mjs";
 import { departmentHourlyTrend } from "../shared/department-hourly-trend.mjs";
 import { objectiveWorkFor } from "../shared/objective-work.mjs";
 import { objectiveGroupsFor } from "../shared/objective-groups.mjs";
@@ -30,6 +31,7 @@ const isCurrentTeamMember=(person:User)=>employmentOf(person)!=="Intern"||person
 const accountOf=(person:User):AccountStatus=>person.accountStatus||(person.active===false?"Suspended":"Active");
 const isAdmin=(person:User)=>["Superadmin","Admin"].includes(accessOf(person));
 const isManager=(person:User)=>accessOf(person)==="Manager";
+const manages=(manager:User,person:User)=>person.orgManaged?person.reportsTo===manager.id:Boolean(manager.department)&&person.department===manager.department;
 const departmentIcons:Record<string,typeof Building2>={
   "Engineering":Code2,
   "Research & Development (R&D)":FlaskConical,
@@ -219,7 +221,11 @@ function WorkspaceApp(){
    const [onlineUserIds,setOnlineUserIds]=useState<string[]>([]);
     const [presenceLastSeen,setPresenceLastSeen]=useState<Record<string,number>>({});
   const [databasePeople,setDatabasePeople]=useState<DatabasePerson[]|null>(null); const [databasePeopleError,setDatabasePeopleError]=useState("");
-   const [tasks,setTasks]=useState<Task[]>(seedTasks); const [projectsData,setProjectsData]=useStore<Project[]>("projects",seedProjects); const [audit,setAudit]=useStore<Audit[]>("audit",seedAudit); const [notices,setNotices]=useStore<Notice[]>("notices",seedNotices); const [objectives,setObjectives]=useStore<WeeklyObjective[]>("objectives",seedWeeklyObjectives); const [staffStatuses,setStaffStatuses]=useStore<StaffStatus[]>("staff-statuses",seedStaffStatuses); const [departmentsData,setDepartmentsData]=useStore<[string,string,string][]>("departments",departments,false); const [team,setTeam]=useState<User[]>([]);
+   const [tasksRaw,setTasks]=useState<Task[]>(seedTasks); const [projectsData,setProjectsData]=useStore<Project[]>("projects",seedProjects); const [audit,setAudit]=useStore<Audit[]>("audit",seedAudit); const [notices,setNotices]=useStore<Notice[]>("notices",seedNotices); const [objectives,setObjectives]=useStore<WeeklyObjective[]>("objectives",seedWeeklyObjectives); const [staffStatuses,setStaffStatuses]=useStore<StaffStatus[]>("staff-statuses",seedStaffStatuses); const [storedDepartments,setDepartmentsData]=useStore<[string,string,string][]>("departments",departments,false); const [teamRaw,setTeam]=useState<User[]>([]);
+   const fx=useFunctions(Boolean(user),org.version);
+   const team=useMemo(()=>fx.ready?teamRaw.map(person=>{const next=fx.functionOf(person.department);return next===person.department?person:{...person,department:next as string}}):teamRaw,[teamRaw,fx.ready,fx.lookup]);
+   const tasks=useMemo(()=>fx.ready?tasksRaw.map(task=>{const names=task.departmentIds?.length?task.departmentIds:task.department?[task.department]:[];if(!names.length)return task;const mapped=mapDepartmentNames(names,name=>fx.functionOf(name) as string);return{...task,department:mapped[0],departmentIds:mapped}}):tasksRaw,[tasksRaw,fx.ready,fx.lookup]);
+   const departmentsData=useMemo<[string,string,string][]>(()=>fx.ready?fx.functions.map(fn=>[fn.name,fn.leader?.name||"Unassigned",fn.description||""] as [string,string,string]):storedDepartments,[fx.ready,fx.functions,storedDepartments]);
    const [notice,setNotice]=useState(""); const [modal,setModal]=useState<"task"|"person"|"blocker"|"project"|"objective"|"department"|null>(null); const [editingPerson,setEditingPerson]=useState<User|undefined>(); const [personDepartment,setPersonDepartment]=useState<string|undefined>(); const [editingObjective,setEditingObjective]=useState<WeeklyObjective|undefined>(); const [profileOpen,setProfileOpen]=useState(false); const [notificationsOpen,setNotificationsOpen]=useState(false); const [seenLiveNotices,setSeenLiveNotices]=useState<string[]>([]); const [settingsOpen,setSettingsOpen]=useState(false); const [departmentId,setDepartmentId]=useState<string|null>(null);
     const active=team.find(person=>person.id===user?.id)||user||emptyUser;
     const displayedStaffStatuses=useMemo<StaffStatus[]>(()=>team.map(person=>{const saved=staffStatuses.find(status=>status.userId===person.id);const online=onlineUserIds.includes(person.id);return{userId:person.id,availability:online?(saved?.availability==="Busy"?"Busy":"Available"):"Offline",start:saved?.start||"09:00",end:saved?.end||"17:30",note:saved?.note||"",updatedAt:saved?.updatedAt||""}}),[team,staffStatuses,onlineUserIds]);
@@ -368,7 +374,7 @@ function WorkspaceApp(){
            <BackButton className="workspace-back" onClick={()=>setProjectId(null)} label="Back to projects"/><div className="empty">This project is not available in your assigned work.</div>
          </div>:visibleView==="Overview"||visibleView==="Home"?<UnifiedWorkspace user={active} team={team} statuses={displayedStaffStatuses} tasks={visibleTasks} allTasks={tasks} projectsData={projectsData} departmentsData={availableDepartments} objectives={objectives} can={can} onOpen={setTaskId} onFeedback={(taskId,feedbackId)=>{setFeedbackSelection({taskId,feedbackId});window.scrollTo({top:0,behavior:"smooth"})}} onProject={setProjectId} onDepartment={openDepartment} onModal={setModal} onEditObjective={objective=>{setEditingObjective(objective);setModal("objective")}} onManage={person=>{setEditingPerson(person);setModal("person")}} onView={selectView} onObjective={openObjective}/>:<div className="workspace-section">
            {!(visibleView==="Weekly Review"&&objectiveId)&&<BackButton className="workspace-back" onClick={()=>selectView(intern?"Home":"Overview")} label={`Back to ${intern?"Home":"Overview"}`}/>}
-           <ViewContent org={org} onChangeRole={setRoleChangeRef} view={visibleView} user={active} team={team} databasePeople={databasePeople} databasePeopleError={databasePeopleError} presenceLastSeen={presenceLastSeen} onlineUserIds={onlineUserIds} statuses={displayedStaffStatuses} tasks={visibleTasks} allTasks={tasks} projectsData={projectsData} departmentsData={availableDepartments} initialDepartment={departmentId} audit={audit} notices={notices.filter(n=>n.userId===active.id)} objectives={objectives} objectiveId={objectiveId} can={can} onOpen={setTaskId} onProject={setProjectId} onView={selectView} onObjective={openObjective} onEditObjective={objective=>{setEditingObjective(objective);setModal("objective")}} onModal={setModal} onManage={person=>{setPersonDepartment(undefined);setEditingPerson(person);setModal("person")}} onAddPerson={department=>{setEditingPerson(undefined);setPersonDepartment(department);setModal("person")}} onMovePerson={movePersonToDepartment} update={updateTask} setTasks={setTasks} setObjectives={setObjectives} setDepartmentsData={setDepartmentsData} log={log} flash={flash} onSettings={()=>setSettingsOpen(true)}/>
+           <ViewContent org={org} functions={fx.functions} refreshFunctions={fx.refresh} onChangeRole={setRoleChangeRef} view={visibleView} user={active} team={team} databasePeople={databasePeople} databasePeopleError={databasePeopleError} presenceLastSeen={presenceLastSeen} onlineUserIds={onlineUserIds} statuses={displayedStaffStatuses} tasks={visibleTasks} allTasks={tasks} projectsData={projectsData} departmentsData={availableDepartments} initialDepartment={departmentId} audit={audit} notices={notices.filter(n=>n.userId===active.id)} objectives={objectives} objectiveId={objectiveId} can={can} onOpen={setTaskId} onProject={setProjectId} onView={selectView} onObjective={openObjective} onEditObjective={objective=>{setEditingObjective(objective);setModal("objective")}} onModal={setModal} onManage={person=>{setPersonDepartment(undefined);setEditingPerson(person);setModal("person")}} onAddPerson={department=>{setEditingPerson(undefined);setPersonDepartment(department);setModal("person")}} onMovePerson={movePersonToDepartment} update={updateTask} setTasks={setTasks} setObjectives={setObjectives} setDepartmentsData={setDepartmentsData} log={log} flash={flash} onSettings={()=>setSettingsOpen(true)}/>
          </div>}
        </div></main>
    {user&&!active.avatarUrl&&<AvatarPrompt name={active.name} onSaved={avatarUrl=>setTeam(all=>all.map(person=>person.id===active.id?{...person,avatarUrl}:person))}/>}
@@ -406,7 +412,7 @@ function UnifiedWorkspace({user,team,statuses,tasks,allTasks,projectsData,depart
    useEffect(()=>{const timer=window.setInterval(()=>setHealthNow(Date.now()),60_000);return()=>window.clearInterval(timer)},[]);
   const blocked=tasks.filter(task=>task.status==="Blocked"); const review=tasks.filter(task=>task.status==="Submitted for Review");
   const scopedProjects=projectsData.filter(project=>isAdmin(user)||isManager(user)||project.assigneeIds.includes(user.id)||tasks.some(task=>task.project===project.name));
-   const scopedPeople=team.filter(person=>isCurrentTeamMember(person)&&(isAdmin(user)||(isManager(user)?person.department===user.department:person.id===user.id||person.reportsTo===user.id)));
+   const scopedPeople=team.filter(person=>isCurrentTeamMember(person)&&(isAdmin(user)||(isManager(user)?(person.id===user.id||manages(user,person)):person.id===user.id||person.reportsTo===user.id)));
    const directLinks=isManager(user)?[]:team.filter(person=>person.reportsTo===user.id&&person.active!==false&&person.id!==user.id);
    const directMode=directLinks.length>0;
    const homePeople=isManager(user)?scopedPeople.filter(person=>person.id!==user.id):directMode?directLinks:scopedPeople.filter(person=>person.id!==user.id&&isManager(person)).slice(0,4);
@@ -458,15 +464,15 @@ function UnifiedWorkspace({user,team,statuses,tasks,allTasks,projectsData,depart
     <section id="workspace-people" className="workspace-card workspace-people workspace-managers"><div className="workspace-card-head"><div><span className="workspace-icon violet"><Users size={17}/></span><b>{isManager(user)?"Function people":directMode?"Direct reports":"Managers"}</b></div><span className="workspace-head-actions">{can("person")&&<button onClick={()=>onModal("person")}><UserPlus size={14}/> Add</button>}<button onClick={()=>onView("People")}>View all <ChevronRight size={13}/></button></span></div><div className="workspace-people-columns" aria-hidden="true"><span>{isManager(user)?"Team member":directMode?"Person":"Manager"}</span><span>{isManager(user)||directMode?"Role":"Function"}</span><span>Working hours</span></div><div className="workspace-list">{homePeople.map(person=>{const status=statuses.find(item=>item.userId===person.id);return <button key={person.id} onClick={()=>onManage(person)}><span className="workspace-person-row"><Avatar person={person} size={36}/><span><b>{person.name}</b><small>{person.position||(isManager(user)||directMode?employmentOf(person):"Manager")}</small></span></span><span className="workspace-person-detail"><small>{isManager(user)||directMode?"Role":"Function"}</small><b>{isManager(user)||directMode?(person.position||employmentOf(person)):person.department}</b></span><WorkHoursPill status={status}/></button>})}{homePeople.length===0&&<div className="workspace-empty">{isManager(user)?"No function members available.":directMode?"No direct reports.":"No managers available."}</div>}</div></section>
      <section id="workspace-departments" className="workspace-card workspace-departments">
        <div className="workspace-card-head">
-          <div><span className={`workspace-icon teal${isManager(user)?` department-identity-icon ${departmentTone(user.department)}`:""}`}>{isManager(user)?<DepartmentIcon department={user.department} size={17}/>:<Building2 size={17}/>}</span><span><b>{isManager(user)?"Function health":accessOf(user)==="Superadmin"?"Top 4 functions":"Functions"}</b>{!isManager(user)&&<small className="workspace-department-period">This week · compared with the same point last week</small>}</span></div>
+          <div><span className={`workspace-icon teal${isManager(user)?` department-identity-icon ${departmentTone(user.department)}`:""}`}>{isManager(user)?<DepartmentIcon department={user.department} size={17}/>:<Building2 size={17}/>}</span><span><b>{isManager(user)?"Function health":accessOf(user)==="Superadmin"?(homeDepartmentRows.length?`Top ${homeDepartmentRows.length} functions`:"Functions"):"Functions"}</b>{!isManager(user)&&<small className="workspace-department-period">This week · compared with the same point last week</small>}</span></div>
          <span className="workspace-head-actions">{isAdmin(user)&&<button onClick={()=>onModal("department")}><Plus size={14}/> New</button>}<button onClick={()=>isManager(user)?onDepartment(user.department):onView("Functions")}>{isManager(user)?"View function":"View all"} <ChevronRight size={13}/></button></span>
        </div>
         {isManager(user)?<div className="manager-health-card"><button type="button" className="manager-health-open" onClick={()=>onDepartment(user.department)}><span><b>{user.department}</b><small className={`manager-health-state ${departmentHealthState.toLowerCase().replace(/\s+/g,"-")}`}>{departmentHealthState}</small></span><ChevronRight size={15}/></button><CompactDepartmentHealthChart curve={departmentHealthCurve} label={`${user.department} hourly delivery health: ${departmentHealthState}`} noTasks={!departmentTasks.length}/><button type="button" className="manager-health-action" onClick={()=>departmentReview[0]?onOpen(departmentReview[0].id):onModal("task")}><AlertTriangle size={16}/><span><small>Recommended next action</small><b>{departmentAction}</b></span><ChevronRight size={15}/></button></div>
          :<div className="workspace-department-market-list">
            {homeDepartmentRows.map((row,index)=>{
-             const manager=team.find(person=>isManager(person)&&accountOf(person)==="Active"&&person.department===row.department[0]&&person.name===row.department[1])
-               ||team.find(person=>isManager(person)&&accountOf(person)==="Active"&&person.department===row.department[0]);
-             const managerName=manager?.name||(row.department[1]&&row.department[1]!=="Unassigned"?row.department[1]:"Not assigned");
+             const leaderName=row.department[1]&&row.department[1]!=="Unassigned"?row.department[1]:undefined;
+             const manager=leaderName?undefined:team.find(person=>isManager(person)&&accountOf(person)==="Active"&&person.department===row.department[0]);
+             const managerName=leaderName||manager?.name||"Not assigned";
              return <DepartmentMarketItem key={row.department[0]} row={row} rank={index+1} managerName={managerName} onOpen={onDepartment}/>;
            })}
            {!homeDepartmentRows.length&&<div className="workspace-empty">No functions to rank.</div>}
@@ -500,38 +506,45 @@ function UnifiedWorkspace({user,team,statuses,tasks,allTasks,projectsData,depart
  function InternProjectFinder({projects}:{projects:Project[]}){
    return <div className="intern-project-finder"><Header eyebrow="Your projects" title="Projects" subtitle=""/><div className="intern-project-grid">{projects.map(project=><a className="intern-project-card" key={project.id} href={project.githubUrl} target="_blank" rel="noreferrer"><ProjectLogo project={project} size={72}/><b>{project.name}</b></a>)}{!projects.length&&<div className="intern-project-empty"><strong>No projects yet</strong></div>}</div></div>;
  }
- function ViewContent(p:{org:OrgAccess;onChangeRole:(ref:string)=>void;view:View;user:User;team?:User[];databasePeople:DatabasePerson[]|null;databasePeopleError:string;presenceLastSeen:Record<string,number>;onlineUserIds:string[];statuses:StaffStatus[];tasks:Task[];allTasks:Task[];projectsData:Project[];departmentsData:[string,string,string][];initialDepartment?:string|null;audit:Audit[];notices?:Notice[];objectives:WeeklyObjective[];objectiveId?:string|null;can:(x:string)=>boolean;onOpen:(id:string)=>void;onProject:(id:string)=>void;onView:(v:View)=>void;onObjective:(id:string)=>void;onEditObjective:(objective:WeeklyObjective)=>void;onSettings:()=>void;onModal:(x:"task"|"person"|"blocker"|"project"|"objective"|"department"|null)=>void;onManage:(u:User)=>void;onAddPerson:(department:string)=>void;onMovePerson:(person:User,department:string)=>Promise<void>;update:(id:string,x:Partial<Task>)=>void;setTasks:React.Dispatch<React.SetStateAction<Task[]>>;setObjectives:React.Dispatch<React.SetStateAction<WeeklyObjective[]>>;setDepartmentsData:React.Dispatch<React.SetStateAction<[string,string,string][]>>;log:(s:string)=>void;flash:(s:string)=>void}){
+ function ViewContent(p:{org:OrgAccess;functions:FunctionInfo[];refreshFunctions:()=>Promise<void>;onChangeRole:(ref:string)=>void;view:View;user:User;team?:User[];databasePeople:DatabasePerson[]|null;databasePeopleError:string;presenceLastSeen:Record<string,number>;onlineUserIds:string[];statuses:StaffStatus[];tasks:Task[];allTasks:Task[];projectsData:Project[];departmentsData:[string,string,string][];initialDepartment?:string|null;audit:Audit[];notices?:Notice[];objectives:WeeklyObjective[];objectiveId?:string|null;can:(x:string)=>boolean;onOpen:(id:string)=>void;onProject:(id:string)=>void;onView:(v:View)=>void;onObjective:(id:string)=>void;onEditObjective:(objective:WeeklyObjective)=>void;onSettings:()=>void;onModal:(x:"task"|"person"|"blocker"|"project"|"objective"|"department"|null)=>void;onManage:(u:User)=>void;onAddPerson:(department:string)=>void;onMovePerson:(person:User,department:string)=>Promise<void>;update:(id:string,x:Partial<Task>)=>void;setTasks:React.Dispatch<React.SetStateAction<Task[]>>;setObjectives:React.Dispatch<React.SetStateAction<WeeklyObjective[]>>;setDepartmentsData:React.Dispatch<React.SetStateAction<[string,string,string][]>>;log:(s:string)=>void;flash:(s:string)=>void}){
        const {view,user,tasks,audit}=p; const today=new Date().toISOString().slice(0,10); const mine=tasks.filter(t=>t.assignee===user.id); const [peopleFilter,setPeopleFilter]=useState<"All"|"Employee"|"Intern">("All"); const [selectedDepartment,setSelectedDepartment]=useState<string|null>(p.initialDepartment||null); const [editingDepartment,setEditingDepartment]=useState<[string,string,string]|null>(null);
        const [departmentModalOpen,setDepartmentModalOpen]=useState(false);
        const [peoplePickerOpen,setPeoplePickerOpen]=useState(false);
        const [deletingDepartment,setDeletingDepartment]=useState(false);
-       const saveDepartment=async (value:[string,string,string])=>{
-         if(accessOf(user)!=="Superadmin")throw new Error("Only Superadmins can manage departments.");
-         const next=editingDepartment
-           ?p.departmentsData.map(item=>item[0]===editingDepartment[0]?value:item)
-           :[...p.departmentsData,value];
-         const response=await fetch("/api/state/departments",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({value:next})});
-         if(!response.ok)throw new Error((await response.json()).error||"Could not save department.");
-         p.setDepartmentsData(next);
-         setSelectedDepartment(value[0]);
-         p.log(`${editingDepartment?"Updated":"Created"} department ${value[0]}`);
+       const orgPost=async (url:string,method:string,body:Record<string,unknown>)=>{const response=await fetch(url,{method,headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const result=await response.json().catch(()=>({}));if(!response.ok)throw new Error(result.error||"The change could not be saved.");return result};
+       const saveDepartment=async (value:{name:string;leaderRef:string;description:string})=>{
+         if(!p.org.can("org.approve"))throw new Error("Only people with organisational approval authority can manage functions.");
+         let version=(await (await fetch("/api/org/me")).json()).version as number;
+         const info=editingDepartment?p.functions.find(fn=>fn.name===editingDepartment[0]):undefined;
+         let id=info?.id;
+         if(info){
+           if(value.name!==info.name||value.description!==(info.description||"")){version=(await orgPost(`/api/org/functions/${info.id}`,"PATCH",{name:value.name,description:value.description,expectedVersion:version})).version}
+         }else{
+           const created=await orgPost("/api/org/functions","POST",{name:value.name,description:value.description,expectedVersion:version});id=created.id;version=created.version;
+         }
+         const currentLeader=info?.leader?.ref||"";
+         if(id&&value.leaderRef&&value.leaderRef!==currentLeader)await orgPost("/api/org/changes","POST",{input:{subjectRef:value.leaderRef,leadOfAdd:[id]},expectedVersion:version});
+         else if(id&&!value.leaderRef&&currentLeader)await orgPost("/api/org/changes","POST",{input:{subjectRef:currentLeader,leadOfRemove:[id]},expectedVersion:version});
+         await p.org.refresh();await p.refreshFunctions();
+         setSelectedDepartment(value.name);
+         p.log(`${editingDepartment?"Updated":"Created"} function ${value.name}`);
          p.flash(`Function ${editingDepartment?"updated":"created"}.`);
          setDepartmentModalOpen(false);
          setEditingDepartment(null);
        };
        const removeDepartment=async (name:string)=>{
-         if(accessOf(user)!=="Superadmin"||deletingDepartment)return;
-         if(!window.confirm(`Remove “${name}” from the Ops department directory? Staff assignments, tasks, and objectives will not be deleted or reassigned. This cannot be undone automatically.`))return;
+         if(!p.org.can("org.approve")||deletingDepartment)return;
+         const info=p.functions.find(fn=>fn.name===name);
+         if(!info||!window.confirm(`Archive “${name}”? People, tasks and history are kept. A function can only be archived when nobody is assigned to it.`))return;
          setDeletingDepartment(true);
          try{
-           const next=p.departmentsData.filter(item=>item[0]!==name);
-           const response=await fetch("/api/state/departments",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({value:next})});
-           if(!response.ok)throw new Error((await response.json()).error||"Could not remove department.");
-           p.setDepartmentsData(next);
+           const version=(await (await fetch("/api/org/me")).json()).version as number;
+           await orgPost(`/api/org/functions/${info.id}`,"PATCH",{active:false,expectedVersion:version});
+           await p.org.refresh();await p.refreshFunctions();
            setSelectedDepartment(null);
-           p.log(`Removed department ${name} from directory`);
-           p.flash("Function removed from directory. Staff and work were preserved.");
-         }catch(error){p.flash(error instanceof Error?error.message:"Could not remove department.");}
+           p.log(`Archived function ${name}`);
+           p.flash("Function archived. People, tasks and history were preserved.");
+         }catch(error){p.flash(error instanceof Error?error.message:"Could not archive this function.");}
          finally{setDeletingDepartment(false);}
        };
   if(view==="Overview"){
@@ -547,7 +560,7 @@ function UnifiedWorkspace({user,team,statuses,tasks,allTasks,projectsData,depart
     const owner=(id?:string)=>id?((p.team||users).find(u=>u.id===id)?.name||"Unassigned"):"Unassigned";
      const myObjectives=p.objectives.filter(o=>user.role==="Super Admin"||o.managerId===user.id);
       if(user.role==="Manager"){
-        const directReports=(p.team||[]).filter(person=>employmentOf(person)==="Intern"&&person.department===user.department&&isCurrentTeamMember(person));
+        const directReports=(p.team||[]).filter(person=>employmentOf(person)==="Intern"&&manages(user,person)&&isCurrentTeamMember(person));
         const decisions=[...blocked,...review].sort((a,b)=>a.due.localeCompare(b.due)).slice(0,4);
         const completeObjectives=myObjectives.filter(objective=>objective.status==="Complete").length;
          const openCommitments=commitments.filter(task=>!["Completed","Cancelled"].includes(task.status));
@@ -593,7 +606,7 @@ function UnifiedWorkspace({user,team,statuses,tasks,allTasks,projectsData,depart
      if(view==="People"){
           const canSeeEveryone=isAdmin(user);
           const directorySource=(isAdmin(user)||isManager(user)?(p.databasePeople||[]):(p.team||users)).filter(isCurrentTeamMember);
-          const directory=directorySource.filter(person=>isAdmin(user)||(isManager(user)?person.department===user.department:person.reportsTo===user.id));
+          const directory=directorySource.filter(person=>isAdmin(user)||(isManager(user)?manages(user,person):person.reportsTo===user.id));
        const employees=directory.filter(person=>employmentOf(person)==="Employee"); const interns=directory.filter(person=>employmentOf(person)==="Intern");
        const people=directory.filter(person=>peopleFilter==="All"||employmentOf(person)===peopleFilter);
           return <><Header eyebrow="Team directory" title="People" subtitle="People, access, and recent activity." action={<>{p.org.canView&&<button className="btn" onClick={()=>p.onView("Organisation")}>Organisation chart</button>}{p.can("person")&&<button className="btn primary" onClick={()=>p.onModal("person")}><UserPlus size={14}/> Add {isManager(user)?"staff member":"person"}</button>}</>}/>
@@ -623,7 +636,7 @@ function UnifiedWorkspace({user,team,statuses,tasks,allTasks,projectsData,depart
     if(view==="Functions"){
       const directory=(p.team||users).filter(person=>isCurrentTeamMember(person));
         const visibleDepartments=p.departmentsData.filter(d=>isAdmin(user)||d[0]===user.department);
-       const departmentEditor=departmentModalOpen&&accessOf(user)==="Superadmin"&&<DepartmentModal key={editingDepartment?.[0]||"new"} managers={directory.filter(person=>isManager(person)&&accountOf(person)==="Active")} existing={p.departmentsData} initial={editingDepartment||undefined} onClose={()=>{setDepartmentModalOpen(false);setEditingDepartment(null)}} onSave={saveDepartment}/>;
+       const departmentEditor=departmentModalOpen&&p.org.can("org.approve")&&<DepartmentModal key={editingDepartment?.[0]||"new"} managers={directory.filter(person=>employmentOf(person)==="Employee"&&accountOf(person)==="Active")} existing={p.departmentsData} initial={editingDepartment||undefined} onClose={()=>{setDepartmentModalOpen(false);setEditingDepartment(null)}} onSave={saveDepartment}/>;
        const departmentTasks=(name:string)=>p.allTasks.filter(task=>taskDepartments(task).includes(name)&&task.status!=="Cancelled");
        const departmentPeople=(name:string)=>directory.filter(person=>person.department===name);
      if(selectedDepartment){
@@ -637,7 +650,7 @@ function UnifiedWorkspace({user,team,statuses,tasks,allTasks,projectsData,depart
         return <div className="department-detail">
            <BackButton className="department-back" onClick={()=>setSelectedDepartment(null)} label="Back to functions"/>
             <Header eyebrow="Function workspace" title={selectedDepartment} subtitle={`Lead: ${department[1]} · ${department[2]}`}/>
-             {accessOf(user)==="Superadmin"&&<div className="department-detail-actions"><button type="button" className="btn" onClick={()=>{setEditingDepartment(department);setDepartmentModalOpen(true)}}><Pencil size={14}/> Edit department / manager</button><button type="button" className="btn danger" disabled={deletingDepartment} onClick={()=>void removeDepartment(department[0])}><Trash2 size={14}/>{deletingDepartment?"Removing…":"Delete department"}</button></div>}
+             {p.org.can("org.approve")&&<div className="department-detail-actions"><button type="button" className="btn" onClick={()=>{setEditingDepartment(department);setDepartmentModalOpen(true)}}><Pencil size={14}/> Edit function / leader</button><button type="button" className="btn danger" disabled={deletingDepartment} onClick={()=>void removeDepartment(department[0])}><Trash2 size={14}/>{deletingDepartment?"Archiving…":"Archive function"}</button></div>}
             <DepartmentHealthPanel departmentName={selectedDepartment} tasks={departmentTaskList}/>
             <div className="grid cols department-insights department-insights-clean">
               <section className="panel"><div className="panel-head"><span><span className="panel-kicker">Monday–Sunday</span><span className="panel-title">Weekly goals</span></span><span className="mono">{departmentObjectives.length} recorded</span></div><div className="list">{departmentObjectives.map(objective=><div className="row" key={objective.id}><div className="row-main"><div className="row-title">{objective.title}</div><div className="row-meta">{objective.priority} priority · Due {objective.dueDate}</div></div><Status s={objective.status}/></div>)}{!departmentObjectives.length&&<div className="empty"><strong>No weekly goals</strong>No manager goal is assigned to this function for the week.</div>}</div></section>
@@ -652,10 +665,10 @@ function UnifiedWorkspace({user,team,statuses,tasks,allTasks,projectsData,depart
             const departmentTaskList=departmentTasks(d[0]); const staff=departmentPeople(d[0]); const active=departmentTaskList.filter(task=>!["Completed","Cancelled"].includes(task.status)); const completed=departmentTaskList.filter(task=>task.status==="Completed").length; const blocked=active.filter(task=>task.status==="Blocked").length; const reviews=active.filter(task=>task.status==="Submitted for Review").length; const overdue=active.filter(task=>task.due<currentDate()).length; const completion=departmentTaskList.length?Math.round(completed/departmentTaskList.length*100):0;
             return <><Header eyebrow="Your team" title="Function" subtitle="A focused view of the function you lead and the work that needs your attention."/><button className="panel manager-department-card" onClick={()=>setSelectedDepartment(d[0])}><div className="manager-department-main"><span className={`department-identity-icon department-card-icon ${departmentTone(d[0])}`}><DepartmentIcon department={d[0]} size={22}/></span><div><div className="eyebrow">Your assigned department</div><h2>{d[0]}</h2><p>{d[2]}</p></div><span className="manager-department-open">View department <ChevronRight size={16}/></span></div><div className="manager-department-health"><div><span>Delivery health</span><strong>{completion}%</strong><div className="department-progress"><span style={{width:`${completion}%`}}/></div></div><div><span>Your staff</span><strong>{staff.length}</strong><small>direct reports</small></div><div><span>Active work</span><strong>{active.length}</strong><small>{overdue} overdue</small></div><div className={reviews?"attention":""}><span>Needs review</span><strong>{reviews}</strong><small>awaiting decision</small></div><div className={blocked?"danger":""}><span>Blocked</span><strong>{blocked}</strong><small>needs support</small></div></div></button></>;
          }
-          return <><Header eyebrow="Organization" title="Functions" subtitle="Select a function to view its team, objectives, and delivery health." action={accessOf(user)==="Superadmin"&&<button type="button" className="btn primary" disabled={p.departmentsData.length>=OFFICIAL_DEPARTMENTS.length} onClick={()=>{setEditingDepartment(null);setDepartmentModalOpen(true)}}><Plus size={14}/> Add department</button>}/><div className="department-grid">{visibleDepartments.map(d=>{
-        const departmentTaskList=departmentTasks(d[0]); const people=departmentPeople(d[0]); const completed=departmentTaskList.filter(task=>task.status==="Completed").length; const open=departmentTaskList.filter(task=>!["Completed","Cancelled"].includes(task.status)).length; const blocked=departmentTaskList.filter(task=>task.status==="Blocked").length; const completion=departmentTaskList.length?Math.round(completed/departmentTaskList.length*100):0;
-            return <button className="panel department-card department-card-open" key={d[0]} onClick={()=>setSelectedDepartment(d[0])}><div className="department-card-head"><span className={`department-identity-icon department-card-icon ${departmentTone(d[0])}`}><DepartmentIcon department={d[0]} size={21}/></span><div><div className="eyebrow">Function</div><div className="task-title">{d[0]}</div></div><ChevronRight size={16}/></div><div className="row-meta">Lead · {d[1]}</div><div className="department-meter"><span style={{width:`${completion}%`}}/></div><div className="department-card-stats"><span><b>{completion}%</b> complete</span><span><b>{open}</b> open</span><span className={blocked?"metric-alert":""}><b>{blocked}</b> blocked</span><span><b>{people.length}</b> people</span></div></button>;
-        })}</div>{!visibleDepartments.length&&<div className="empty"><strong>No departments in the directory</strong>Add a function to get started.</div>}{departmentEditor}</>;
+          return <><Header eyebrow="Organisation" title="Functions" subtitle="Explore functional teams, responsibilities, objectives and delivery progress." action={p.org.can("org.approve")&&<button type="button" className="btn primary" onClick={()=>{setEditingDepartment(null);setDepartmentModalOpen(true)}}><Plus size={14}/> Add function</button>}/><div className="department-grid">{visibleDepartments.map(d=>{
+        const departmentTaskList=departmentTasks(d[0]); const people=departmentPeople(d[0]); const {open,blocked,completionPercent}=functionDelivery(departmentTaskList); const completion=completionPercent??0;
+            return <button className="panel department-card department-card-open" key={d[0]} onClick={()=>setSelectedDepartment(d[0])}><div className="department-card-head"><span className={`department-identity-icon department-card-icon ${departmentTone(d[0])}`}><DepartmentIcon department={d[0]} size={21}/></span><div><div className="eyebrow">Function</div><div className="task-title">{d[0]}</div></div><ChevronRight size={16}/></div><div className="row-meta">{d[1]&&d[1]!=="Unassigned"?<>Lead · {d[1]}{p.functions.find(fn=>fn.name===d[0])?.leader?.title?` · ${p.functions.find(fn=>fn.name===d[0])?.leader?.title}`:""}</>:"No leader appointed"}</div>{!!p.functions.find(fn=>fn.name===d[0])?.specialisations.length&&<div className="row-meta">{p.functions.find(fn=>fn.name===d[0])?.specialisations.map(spec=>spec.name).join(" · ")}</div>}{departmentTaskList.length>0&&<div className="department-meter"><span style={{width:`${completion}%`}}/></div>}<div className="department-card-stats">{departmentTaskList.length?<span><b>{completion}%</b> complete</span>:<span>No measurable work yet</span>}<span><b>{open}</b> open</span><span className={blocked?"metric-alert":""}><b>{blocked}</b> blocked</span><span><b>{people.length}</b> people</span></div></button>;
+        })}</div>{!visibleDepartments.length&&<div className="empty"><strong>No functions yet</strong>Add a function to get started.</div>}{departmentEditor}</>;
    }
   if(view==="Blockers")return <><Header eyebrow="Needs a decision" title="Blockers" subtitle="Surface constraints early. Resolve or replan with context."/><div className="panel table-wrap"><table className="table"><thead><tr><th>Task</th><th>Blocker</th><th>Owner</th><th>Action</th></tr></thead><tbody>{tasks.filter(t=>t.status==="Blocked").map(t=><tr key={t.id}><td><b>{t.title}</b><br/><span className="muted">{t.id}</span></td><td>{t.blocker?.reason}</td><td>{users.find(u=>u.id===t.assignee)?.name}</td><td><button className="btn" onClick={()=>p.onOpen(t.id)}>Open task</button></td></tr>)}</tbody></table></div></>;
  if(view==="Organisation")return <OrgView org={p.org} onChangeRole={p.onChangeRole} flash={p.flash} avatars={Object.fromEntries(p.team.filter(person=>person.avatarUrl).map(person=>[person.id,person.avatarUrl as string]))}/>;
@@ -735,7 +748,7 @@ function ProjectDetail({user,project,tasks,objectives,team,onBack,onOpen,onProje
    const shownTasks=orderedTasks.filter(task=>taskFilter==="All"||taskFilter==="Needs attention"&&needsAttention(task)||taskFilter==="Active"&&isActiveTask(task)||taskFilter==="Completed"&&task.status==="Completed");
   const manager=isManager(user);
   const canManageProject=isAdmin(user)||manager;
-  const assignable=(manager?team.filter(person=>employmentOf(person)==="Intern"&&person.department===user.department&&person.active!==false):team.filter(isCurrentTeamMember)).sort((a,b)=>a.name.localeCompare(b.name));
+  const assignable=(manager?team.filter(person=>employmentOf(person)==="Intern"&&manages(user,person)&&person.active!==false):team.filter(isCurrentTeamMember)).sort((a,b)=>a.name.localeCompare(b.name));
   const projectDepartments=[...new Set([
     ...projectTasks.flatMap(task=>taskDepartments(task)),
     ...currentAssigneeIds.map(id=>team.find(person=>person.id===id)?.department).filter(Boolean) as string[],
@@ -1410,23 +1423,20 @@ function DepartmentPeoplePicker({department,hasManager,people,onClose,onMove,onC
     })}{!filtered.length&&<div className="empty"><strong>No available people found</strong>Try another search or create a new person.</div>}</div>
   </Modal>;
 }
-function DepartmentModal({managers,existing,initial,onClose,onSave}:{managers:User[];existing:[string,string,string][];initial?:[string,string,string];onClose:()=>void;onSave:(department:[string,string,string])=>Promise<void>}){
-   const availableNames=OFFICIAL_DEPARTMENTS.filter(official=>official===initial?.[0]||!existing.some(item=>item[0]===official));
-   const [name,setName]=useState(initial?.[0]||availableNames[0]||"");
-  const [leadId,setLeadId]=useState(managers.find(manager=>manager.name===initial?.[1])?.id||"");
+function DepartmentModal({managers,existing,initial,onClose,onSave}:{managers:User[];existing:[string,string,string][];initial?:[string,string,string];onClose:()=>void;onSave:(value:{name:string;leaderRef:string;description:string})=>Promise<void>}){
+   const [name,setName]=useState(initial?.[0]||"");
+  const [leaderRef,setLeaderRef]=useState(managers.find(person=>person.name===initial?.[1])?.id||"");
   const [description,setDescription]=useState(initial?.[2]||"");
    const [saving,setSaving]=useState(false);
    const [error,setError]=useState("");
-  const normalized=name.trim().toLowerCase();
-  const duplicate=existing.some(department=>department[0]!==initial?.[0]&&department[0].trim().toLowerCase()===normalized);
-  const lead=managers.find(manager=>manager.id===leadId);
-   const submit=async()=>{setSaving(true);setError("");try{await onSave([name.trim(),lead?.name||"Unassigned",description.trim()])}catch(cause){setError(cause instanceof Error?cause.message:"Could not save department.")}finally{setSaving(false)}};
-   return <Modal title={initial?"Edit department":"Create department"} onClose={onClose} footer={<><button className="btn" onClick={onClose} disabled={saving}>Cancel</button><button className="btn primary" disabled={saving||!name||duplicate} onClick={()=>void submit()}>{saving?"Saving…":initial?"Save changes":"Create department"}</button></>}>
+  const duplicate=existing.some(item=>item[0]!==initial?.[0]&&item[0].trim().toLowerCase()===name.trim().toLowerCase());
+   const submit=async()=>{setSaving(true);setError("");try{await onSave({name:name.trim(),leaderRef,description:description.trim()})}catch(cause){setError(cause instanceof Error?cause.message:"Could not save this function.")}finally{setSaving(false)}};
+   return <Modal title={initial?"Edit function":"Add function"} onClose={onClose} footer={<><button className="btn" onClick={onClose} disabled={saving}>Cancel</button><button className="btn primary" disabled={saving||name.trim().length<2||duplicate} onClick={()=>void submit()}>{saving?"Saving…":initial?"Save changes":"Add function"}</button></>}>
     <div className="form-grid">
-       <label className="form-label">Function name<select className="select" value={name} onChange={event=>setName(event.target.value)}>{availableNames.map(official=><option key={official} value={official}>{official}</option>)}</select>{duplicate&&<span className="field-error">A department with this name already exists.</span>}</label>
-      <label className="form-label">Function lead<select className="select" value={leadId} onChange={event=>setLeadId(event.target.value)}><option value="">Unassigned</option>{managers.map(manager=><option key={manager.id} value={manager.id}>{manager.name}</option>)}</select></label>
-      <label className="form-label">Purpose / description<textarea className="textarea" rows={3} maxLength={240} value={description} onChange={event=>setDescription(event.target.value)} placeholder="What is this function responsible for?"/></label>
-       <div className="notice">This changes only the Ops department directory. Renaming or changing the lead does not move staff, tasks, or objectives. Existing work keeps its original department name.</div>
+       <label className="form-label">Function name<input className="input" value={name} maxLength={80} autoFocus onChange={event=>setName(event.target.value)} placeholder="e.g. Technology & Engineering"/>{duplicate&&<span className="field-error">A function with this name already exists.</span>}</label>
+      <label className="form-label">Function leader<select className="select" value={leaderRef} onChange={event=>setLeaderRef(event.target.value)}><option value="">Unassigned</option>{managers.map(person=><option key={person.id} value={person.id}>{person.name}{person.position&&person.position!=="Title not set"?` · ${person.position}`:""}</option>)}</select></label>
+      <label className="form-label">Responsibilities<textarea className="textarea" rows={3} maxLength={500} value={description} onChange={event=>setDescription(event.target.value)} placeholder="What is this function responsible for?"/></label>
+       <div className="notice">Renaming a function or changing its leader keeps its people, tasks, objectives and history. Existing work keeps resolving to the same function. Appointing a new leader replaces the previous one in the history.</div>
        {error&&<div className="field-error" role="alert">{error}</div>}
     </div>
   </Modal>

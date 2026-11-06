@@ -36,6 +36,7 @@ import { recordNewPerson, endPersonOrg, currentResponsibilities } from "./server
 import { createOrgNotifier } from "./server/services/org/notify.mjs";
 import { LEGACY_HIDDEN_INTERN_NAMES } from "./shared/legacy-hidden.mjs";
 import { applyOrgOverlay, loadOrgOverlayData } from "./server/services/org/overlay.mjs";
+import { departmentInList as departmentInGroupList, loadFunctionKeys } from "./server/services/org/function-keys.mjs";
 import {
   FeedbackResponseError,
   persistFeedbackResponse,
@@ -86,9 +87,21 @@ const loginAttempts = new Map();
 const dummyPasswordHash = await bcrypt.hash(crypto.randomUUID(), 12);
 validateEmailConfiguration({ production: isProduction });
 
+// Function names (and specialisations) map to the key existing records already use; see function-keys.mjs.
+let functionKeys = new Map();
+let functionGroups = new Map();
+let functionKeysAt = 0;
+const departmentInList = (list, department) => departmentInGroupList(functionGroups, list, department);
+const refreshFunctionKeys = async () => {
+  if (!orgEnabled() || !orgDb || Date.now() - functionKeysAt < 20_000) return;
+  functionKeysAt = Date.now();
+  try { ({ keys: functionKeys, groups: functionGroups } = await loadFunctionKeys(orgDb)); } catch (error) { console.error("Could not load function names:", error instanceof Error ? error.message : "Unknown error"); }
+};
 const validateDepartment = (value, { allowUnassigned = true } = {}) => {
   const department = String(value || "").trim();
   if (isOfficialDepartment(department)) return department;
+  const mapped = functionKeys.get(department.toLowerCase());
+  if (mapped) return mapped;
   if (allowUnassigned && (!department || department === UNASSIGNED_DEPARTMENT)) return UNASSIGNED_DEPARTMENT;
   return null;
 };
@@ -104,6 +117,7 @@ app.post("/api/webhooks/resend", express.raw({ type: "application/json", limit: 
   return response.status(result.statusCode).json(result.body);
 });
 app.use(express.json({ limit: "2mb" }));
+app.use("/api", async (_request, _response, next) => { await refreshFunctionKeys(); next(); });
 if (appPool) {
   if (!process.env.SESSION_SECRET) throw new Error("SESSION_SECRET is required when Ops authentication is enabled.");
   const PgSession = connectPgSimple(session);
@@ -1241,17 +1255,37 @@ const taskTransitions = {
 
 async function getTaskIdentity(request) {
   const person = await resolveExternalPerson(request.appAccount.email);
+  const externalId = person?.external_id || `account-${request.appAccount.id}`;
+  let department = person?.department || UNASSIGNED_DEPARTMENT;
+  // Under the organisation model a person's function comes from their organisational assignment, not the old text column.
+  if (orgEnabled() && orgDb) {
+    const assigned = await orgDb.query(
+      "SELECT d.name FROM public.org_assignments a JOIN public.org_departments d ON d.id = a.department_id WHERE a.person_ref = $1 AND a.effective_to IS NULL",
+      [externalId],
+    ).catch(() => ({ rows: [] }));
+    if (assigned.rows[0]) department = assigned.rows[0].name;
+  }
   return {
     userId: request.appAccount.id,
-    externalId: person?.external_id || `account-${request.appAccount.id}`,
+    externalId,
     name: person?.name || request.appAccount.display_name || request.appAccount.email,
     role: request.appAccount.app_role,
-    department: person?.department || UNASSIGNED_DEPARTMENT,
+    department,
   };
 }
 
 async function getManagerReportIds(identity) {
-  if (!peoplePool || identity.role !== "Manager") return [];
+  if (identity.role !== "Manager") return [];
+  // Under the organisation model, who a manager answers for comes from reporting lines and internship supervision,
+  // not from the old supervisor columns (which matched by name and kept former supervisors attached).
+  if (orgEnabled() && orgDb && identity.externalId) {
+    const result = await orgDb.query(
+      "SELECT subject_ref FROM public.org_relationships WHERE manager_ref = $1 AND effective_to IS NULL AND type IN ('reports_to','intern_supervisor')",
+      [identity.externalId],
+    );
+    return result.rows.map((row) => row.subject_ref);
+  }
+  if (!peoplePool) return [];
   const managerIdMatch = /^account-(\d+)$/.exec(identity.externalId || "");
   const managerAccountId = managerIdMatch ? Number(managerIdMatch[1]) : null;
   const result = await peoplePool.query(`
@@ -1319,7 +1353,7 @@ function canViewTask(task, identity) {
     return task.creator_user_id === identity.userId
       || assignees.includes(identity.externalId)
       || assignees.some((id) => identity.reportIds.includes(id))
-      || taskDepartmentsFromRow(task).includes(identity.department);
+      || departmentInList(taskDepartmentsFromRow(task), identity.department);
   }
   return assignees.includes(identity.externalId);
 }
@@ -1725,7 +1759,7 @@ app.post("/api/tasks", requireAuth, requireAccount, async (request, response) =>
   if (!dueDate || !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) return response.status(400).json({ error: "Due date is required." });
   if (dueDate < new Date().toISOString().slice(0, 10)) return response.status(400).json({ error: "Due date cannot be in the past." });
   if (!taskPriorities.includes(priority) || !departmentIds.length) return response.status(400).json({ error: "Choose a valid priority and department." });
-  if (identity.role === "Manager" && !departmentIds.includes(identity.department)) {
+  if (identity.role === "Manager" && !departmentInList(departmentIds, identity.department)) {
     return response.status(403).json({ error: "Managers must include their own department on a task." });
   }
   if ((await Promise.all(assigneeIds.map((id) => isAssignablePerson(id)))).some((valid) => !valid)) return response.status(400).json({ error: "Choose active assignees." });
@@ -1828,7 +1862,7 @@ app.patch("/api/tasks/:id", requireAuth, requireAccount, async (request, respons
   if (metadataRequested && (await Promise.all(assigneeIds.map((id) => assigneeBelongsToDepartments(id, departmentIds)))).some((valid) => !valid)) {
     return response.status(400).json({ error: "Every assignee must belong to a participating department." });
   }
-  if (metadataRequested && identity.role === "Manager" && !departmentIds.includes(identity.department)) {
+  if (metadataRequested && identity.role === "Manager" && !departmentInList(departmentIds, identity.department)) {
     return response.status(403).json({ error: "Managers must include their own department on a task." });
   }
   if (taskLeadId && !assigneeIds.includes(taskLeadId)) {

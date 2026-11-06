@@ -38,6 +38,7 @@ ALTER TABLE public.org_departments ADD COLUMN IF NOT EXISTS parent_id uuid REFER
 ALTER TABLE public.org_departments ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'function';
 ALTER TABLE public.org_departments ADD COLUMN IF NOT EXISTS description text NOT NULL DEFAULT '';
 ALTER TABLE public.org_departments ADD COLUMN IF NOT EXISTS legacy_keys text[] NOT NULL DEFAULT '{}';
+ALTER TABLE public.org_departments ADD COLUMN IF NOT EXISTS sort_order int NOT NULL DEFAULT 100;
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'org_departments_kind_check') THEN
     ALTER TABLE public.org_departments ADD CONSTRAINT org_departments_kind_check

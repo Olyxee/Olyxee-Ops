@@ -59,7 +59,8 @@ export async function createFunction(db, { actor, expectedVersion, name, parentI
     const keys = cleanKeys(legacyKeys);
     await assertLegacyKeysFree(tx, keys);
     const { rows } = await tx.query(
-      `INSERT INTO public.org_departments (name, kind, parent_id, description, legacy_keys) VALUES ($1,$2,$3,$4,$5) RETURNING id`,
+      `INSERT INTO public.org_departments (name, kind, parent_id, description, legacy_keys, sort_order)
+       VALUES ($1,$2,$3,$4,$5, (SELECT coalesce(max(sort_order), 0) + 10 FROM public.org_departments)) RETURNING id`,
       [cleanName, parentId ? "specialisation" : "function", parentId, clean(description, 500), keys]);
     record.after = { id: rows[0].id, name: cleanName, kind: parentId ? "specialisation" : "function", parentId };
     return { id: rows[0].id };
@@ -70,17 +71,18 @@ export async function createFunction(db, { actor, expectedVersion, name, parentI
  * Rename, move, describe or archive a unit. parentId: undefined = unchanged, null = make it a top-level function.
  * Renaming never touches legacy_keys, so records stored under the old name keep resolving to this unit.
  */
-export async function updateFunction(db, { actor, expectedVersion, id, name, parentId, description, legacyKeys, active, reason = "" }) {
+export async function updateFunction(db, { actor, expectedVersion, id, name, parentId, description, legacyKeys, active, sortOrder, reason = "" }) {
   return inChange(db, { actor, expectedVersion, kind: "function.updated", reason }, async (tx, record) => {
     const unit = await loadUnit(tx, id);
     if (!unit) throw new OrgError("That function could not be found.", 404, "not_found");
-    const before = { name: unit.name, parentId: unit.parent_id, description: unit.description, legacyKeys: unit.legacy_keys, active: unit.active };
+    const before = { name: unit.name, parentId: unit.parent_id, description: unit.description, legacyKeys: unit.legacy_keys, active: unit.active, sortOrder: unit.sort_order };
     const next = { ...before };
     if (name !== undefined) {
       next.name = clean(name, 80);
       if (next.name.length < 2) throw new OrgError("Give the function a name of at least two characters.");
     }
     if (description !== undefined) next.description = clean(description, 500);
+    if (sortOrder !== undefined) next.sortOrder = Number.isInteger(sortOrder) ? sortOrder : before.sortOrder;
     if (legacyKeys !== undefined) { next.legacyKeys = cleanKeys(legacyKeys); await assertLegacyKeysFree(tx, next.legacyKeys, id); }
     if (parentId !== undefined && parentId !== unit.parent_id) {
       if (parentId !== null) {
@@ -104,8 +106,8 @@ export async function updateFunction(db, { actor, expectedVersion, id, name, par
     if (!changed.length) throw new OrgError("Nothing would change.", 409, "no_change");
     const kind = next.parentId === null ? "function" : "specialisation";
     await tx.query(
-      `UPDATE public.org_departments SET name=$2, parent_id=$3, kind=$4, description=$5, legacy_keys=$6, active=$7 WHERE id=$1`,
-      [id, next.name, next.parentId, kind, next.description, next.legacyKeys, next.active]);
+      `UPDATE public.org_departments SET name=$2, parent_id=$3, kind=$4, description=$5, legacy_keys=$6, active=$7, sort_order=$8 WHERE id=$1`,
+      [id, next.name, next.parentId, kind, next.description, next.legacyKeys, next.active, next.sortOrder]);
     record.before = Object.fromEntries(changed.map((key) => [key, before[key]]));
     record.after = Object.fromEntries(changed.map((key) => [key, next[key]]));
     return { id, changed };

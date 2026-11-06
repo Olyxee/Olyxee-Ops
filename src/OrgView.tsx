@@ -79,6 +79,38 @@ function describeProposal(payload: any, chart: Chart | null) {
   return `${nameOf(chart, payload.subjectRef)}: ${parts.join("; ") || "change"}`;
 }
 
+
+/* ------------------------------ Functions ------------------------------ */
+
+export type FunctionUnit = { id: string; name: string; description: string; legacyKeys: string[]; leader: { ref: string; name: string; title: string | null } | null; memberRefs: string[] };
+export type FunctionInfo = FunctionUnit & { specialisations: FunctionUnit[] };
+
+/**
+ * The functions as stored in the organisation database. `functionOf` turns any name a record was stored under (an old
+ * department name, a specialisation, the function itself) into its current top-level function, so tasks and people
+ * are always counted under the right function without rewriting any stored data.
+ */
+export function useFunctions(signedIn: boolean, version: number) {
+  const [functions, setFunctions] = useState<FunctionInfo[]>([]);
+  const refresh = useCallback(async () => {
+    try {
+      const result = await api("/api/org/functions");
+      if (result.ok) setFunctions(result.body.functions || []);
+    } catch { /* the app keeps working with the stored department list */ }
+  }, []);
+  useEffect(() => { if (signedIn) void refresh(); }, [signedIn, version, refresh]);
+  const lookup = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const fn of functions) {
+      for (const key of [fn.name, ...fn.legacyKeys]) map.set(key.toLowerCase(), fn.name);
+      for (const spec of fn.specialisations) for (const key of [spec.name, ...spec.legacyKeys]) map.set(key.toLowerCase(), fn.name);
+    }
+    return map;
+  }, [functions]);
+  const functionOf = useCallback((name?: string) => (name ? lookup.get(name.toLowerCase()) || name : name), [lookup]);
+  return { functions, ready: functions.length > 0, lookup, functionOf, refresh };
+}
+
 /* ------------------------------ Change Role ------------------------------ */
 
 export function ChangeRoleModal({ personRef, org, onClose, onDone }: { personRef: string; org: OrgAccess; onClose: () => void; onDone: (message: string) => void }) {
