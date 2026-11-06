@@ -238,9 +238,9 @@ function WorkspaceApp(){
    const activeNotices=[...(managerHealthNotice?[managerHealthNotice]:[]),...notices.filter(item=>item.userId===active.id&&item.id!==managerHealthNotice?.id)];
    const availableDepartments=departmentsData;
   const intern=employmentOf(active)==="Intern";
-   const allowed:View[]=intern?["Home","My Tasks","Projects","Feedback"]:isManager(active)?["Overview","Tasks","Projects","People","Blockers","Weekly Review","Functions","Notifications","Settings"]:["Overview","Tasks","Projects","People","Functions","Blockers","Weekly Review","Notifications","Settings"];
+   const allowed:View[]=intern||accessOf(active)==="Member"?["Home","My Tasks","Projects","Feedback"]:isManager(active)?["Overview","Tasks","Projects","People","Blockers","Weekly Review","Functions","Notifications","Settings"]:["Overview","Tasks","Projects","People","Functions","Blockers","Weekly Review","Notifications","Settings"];
   if(org.canView&&!intern)allowed.splice(allowed.indexOf("Weekly Review")+1,0,"Organisation");
-  const visibleView=allowed.includes(view)?view:(intern?"Home":"Overview");
+  const visibleView=allowed.includes(view)?view:(intern||accessOf(active)==="Member"?"Home":"Overview");
       const visibleTasks=accessOf(active)==="Superadmin"
        ? tasks.filter(task=>taskAssignees(task).some(id=>team.some(person=>person.id===id&&isManager(person))))
        : employmentOf(active)==="Intern"?tasks.filter(task=>taskAssignees(task).includes(active.id)):tasks;
@@ -1147,6 +1147,7 @@ export function InternTaskDetail({task,user,team,repositoryUrl,onBack,update,ref
        <p className="person-add-footnote">Sign-in access can be created after the team member is added.</p>
      </div>:editMode?<div className="person-edit-form">
        <div className="person-edit-identity"><Avatar person={person!} size={44}/><span><b>{person!.name}</b><small>{person!.email}</small></span></div>
+       {orgManaged&&<div className="notice org-person-note">Job title, function, employment type and reporting line are changed with <b>Change role</b>, so every change is recorded and the chart stays correct.{(org.can("org.approve")||org.can("org.propose"))&&<> <button type="button" className="btn" onClick={()=>onChangeRole(person!.id)}>{org.can("org.approve")?"Change role":"Propose change"}</button></>}</div>}
        <div className="person-add-fields">
          <label className="form-label person-field-wide">Full name<input className="input" value={name} onChange={event=>setName(event.target.value)} placeholder="Full name"/></label>
          <label className="form-label person-field-wide">Email address<input className="input" type="email" value={email} onChange={event=>setEmail(event.target.value)} placeholder="name@example.com"/>{email&&!emailValid&&<span className="person-field-error">Enter a valid email address.</span>}</label>

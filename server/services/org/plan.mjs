@@ -13,8 +13,6 @@ export class OrgError extends Error {
 
 const REF = /^(account|intern)-\d+$/;
 export const isPersonRef = (value) => typeof value === "string" && REF.test(value);
-const isEmployee = (ref) => ref.startsWith("account-");
-const isIntern = (ref) => ref.startsWith("intern-");
 const clean = (value, max) => String(value ?? "").trim().replace(/\s+/g, " ").slice(0, max);
 const refList = (value, field) => {
   if (value === undefined) return [];
@@ -41,15 +39,17 @@ export function normalizeChange(input) {
     functionalRemove: refList(input.functionalRemove, "functionalRemove"),
     leadOfAdd: idList(input.leadOfAdd, "leadOfAdd"),
     leadOfRemove: idList(input.leadOfRemove, "leadOfRemove"),
+    employmentType: input.employmentType === undefined ? undefined : input.employmentType,
     reason: clean(input.reason, 500),
   };
+  if (change.employmentType !== undefined && !['Employee', 'Intern'].includes(change.employmentType)) throw new OrgError("Choose Employee or Intern.");
   if (change.title !== undefined && !change.title) throw new OrgError("A job title cannot be empty.");
   if (change.departmentId !== undefined && change.departmentId !== null && typeof change.departmentId !== "string") throw new OrgError("Choose a valid department.");
   for (const field of ["reportsTo", "internSupervisor"]) {
     const value = change[field];
     if (value !== undefined && value !== null && !isPersonRef(value)) throw new OrgError(`Choose a valid person for ${field}.`);
   }
-  const noop = change.title === undefined && change.departmentId === undefined && change.reportsTo === undefined
+  const noop = change.title === undefined && change.employmentType === undefined && change.departmentId === undefined && change.reportsTo === undefined
     && change.internSupervisor === undefined && !change.functionalAdd.length && !change.functionalRemove.length
     && !change.leadOfAdd.length && !change.leadOfRemove.length;
   if (noop) throw new OrgError("No changes were requested.");
@@ -84,6 +84,13 @@ export function planChange(snapshot, change) {
   if (!subject) throw new OrgError("That person could not be found.", 404, "not_found");
   if (!subject.active) throw new OrgError("Organisational changes can only be made for active people.", 409, "inactive");
 
+  // Employment type comes from the people records plus any Ops-owned classification (see org_person_classification),
+  // with the subject's own pending change applied, so a conversion and its new relationships validate together.
+  const baseType = (ref) => snapshot.people.get(ref)?.employmentType || (ref.startsWith("intern-") ? "Intern" : "Employee");
+  const typeOf = (ref) => (ref === subjectRef && change.employmentType ? change.employmentType : baseType(ref));
+  const isEmployee = (ref) => typeOf(ref) === "Employee";
+  const isIntern = (ref) => typeOf(ref) === "Intern";
+
   const requireActiveEmployee = (ref, label) => {
     const person = snapshot.people.get(ref);
     if (!person) throw new OrgError(`${label} could not be found.`, 404, "not_found");
@@ -94,7 +101,7 @@ export function planChange(snapshot, change) {
 
   const before = {};
   const after = {};
-  const ops = { assignment: null, closeRelationships: [], openRelationships: [], closeLeads: [], openLeads: [] };
+  const ops = { classification: null, assignment: null, closeRelationships: [], openRelationships: [], closeLeads: [], openLeads: [] };
   const currentAssignment = snapshot.assignments.get(subjectRef) || null;
 
   // Title and department
@@ -113,6 +120,16 @@ export function planChange(snapshot, change) {
       after.departmentId = nextDepartmentId;
       ops.assignment = { title: nextTitle, departmentId: nextDepartmentId, positionId: change.positionId ?? null };
     }
+  }
+
+  // Employment type (Ops-owned classification). Converting ends the relationship type that no longer applies.
+  const typeNow = baseType(subjectRef);
+  if (change.employmentType !== undefined && change.employmentType !== typeNow) {
+    before.employmentType = typeNow;
+    after.employmentType = change.employmentType;
+    ops.classification = { employmentType: change.employmentType };
+    if (change.employmentType === "Employee" && snapshot.supervisors.has(subjectRef) && change.internSupervisor === undefined) change.internSupervisor = null;
+    if (change.employmentType === "Intern" && snapshot.reportsTo.has(subjectRef) && change.reportsTo === undefined) change.reportsTo = null;
   }
 
   // Organisational reporting line (employees only; interns are supervised, not line-managed)
@@ -141,7 +158,7 @@ export function planChange(snapshot, change) {
 
   // Internship supervision (separate from line management)
   if (change.internSupervisor !== undefined) {
-    if (!isIntern(subjectRef)) throw new OrgError("Only interns have an internship supervisor.", 409, "ineligible");
+    if (change.internSupervisor !== null && !isIntern(subjectRef)) throw new OrgError("Only interns have an internship supervisor.", 409, "ineligible");
     const reportsAfter = change.reportsTo !== undefined ? change.reportsTo : snapshot.reportsTo.get(subjectRef) ?? null;
     if (change.internSupervisor !== null && reportsAfter) {
       throw new OrgError("This person reports to a manager. Remove that reporting line before assigning an internship supervisor.", 409, "ineligible");
@@ -206,11 +223,17 @@ export function planChange(snapshot, change) {
     if (replaced.length) after.replacedLeads = replaced;
   }
 
-  const changed = ops.assignment || ops.closeRelationships.length || ops.openRelationships.length || ops.openLeads.length || ops.closeLeads.length;
+  if (!isEmployee(subjectRef)) {
+    const stillLeads = [...ledNow].filter((id) => !change.leadOfRemove.includes(id));
+    if (stillLeads.length) throw new OrgError("This person leads a function. Remove that first before recording them as an intern.", 409, "ineligible");
+  }
+
+  const changed = ops.classification || ops.assignment || ops.closeRelationships.length || ops.openRelationships.length || ops.openLeads.length || ops.closeLeads.length;
   if (!changed) throw new OrgError("Nothing would change.", 409, "no_change");
 
   // Visible summary used by the review step
   const summary = [];
+  if (after.employmentType !== undefined && before.employmentType !== after.employmentType) summary.push(`Employment: ${before.employmentType} → ${after.employmentType}`);
   if (after.title !== undefined && before.title !== after.title) summary.push(`Title: ${before.title ?? "none"} → ${after.title}`);
   if (after.departmentId !== undefined && before.departmentId !== after.departmentId) {
     const name = (id) => (id ? snapshot.departments.get(id)?.name || id : "none");

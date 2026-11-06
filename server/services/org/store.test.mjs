@@ -185,3 +185,24 @@ test("schema is idempotent", async () => {
   await w.pglite.exec(ORG_SCHEMA_SQL);
   await w.pglite.exec(ORG_SCHEMA_SQL);
 });
+
+test("converting an intern record to an employee persists, shows in the chart and is audited", async () => {
+  const { applyChange, getChart, getVersion } = await import("./store.mjs");
+  const { loadPeople, makeDb } = await import("./fixtures.mjs");
+  const w = await makeDb();
+  const userId = await w.user("ceo", "Manager");
+  const actor = { userId, name: "ceo" };
+  const apply = async (input) => applyChange(w.db, loadPeople, { actor, input, expectedVersion: await getVersion(w.db) });
+  await apply({ subjectRef: "intern-1", title: "Intern", internSupervisor: "account-3" });
+  await apply({ subjectRef: "intern-1", employmentType: "Employee", title: "Head of Data Science", reportsTo: "account-1" });
+  const chart = await getChart(w.db, loadPeople);
+  const node = chart.nodes["intern-1"];
+  assert.equal(node.employmentType, "Employee");
+  assert.equal(node.reportsTo, "account-1");
+  assert.equal(node.internSupervisor, null);
+  assert.equal(chart.nodes["account-3"].supervisedInterns.includes("intern-1"), false);
+  assert.equal(chart.nodes["account-1"].directReports.includes("intern-1"), true);
+  const audit = (await w.db.query("SELECT before, after FROM public.org_changes WHERE kind = 'role.change' ORDER BY version_after DESC LIMIT 1")).rows[0];
+  assert.equal(audit.before.employmentType, "Intern");
+  assert.equal(audit.after.employmentType, "Employee");
+});

@@ -97,3 +97,27 @@ test("a senior person recorded as an intern can report to a manager instead of b
   const lined = snapshot({ supervisors: new Map(), reportsTo: new Map([["intern-1", "account-2"], ["account-2", "account-1"]]) });
   rejects(() => planChange(lined, normalizeChange({ subjectRef: "intern-1", internSupervisor: "account-3" })), "ineligible");
 });
+
+test("employment type is Ops-owned: converting an intern to an employee swaps supervision for a reporting line", () => {
+  const plan = planChange(snapshot(), normalizeChange({ subjectRef: "intern-1", employmentType: "Employee", reportsTo: "account-2" }));
+  assert.deepEqual(plan.ops.classification, { employmentType: "Employee" });
+  assert.deepEqual(plan.ops.closeRelationships, [{ type: "intern_supervisor", subjectRef: "intern-1", managerRef: "account-3" }]);
+  assert.deepEqual(plan.ops.openRelationships, [{ type: "reports_to", subjectRef: "intern-1", managerRef: "account-2" }]);
+  assert.match(plan.summary[0], /Employment: Intern → Employee/);
+  // the old supervisor is closed automatically even when only the type is changed
+  const typeOnly = planChange(snapshot(), normalizeChange({ subjectRef: "intern-1", employmentType: "Employee" }));
+  assert.deepEqual(typeOnly.ops.closeRelationships, [{ type: "intern_supervisor", subjectRef: "intern-1", managerRef: "account-3" }]);
+  // once an employee they can lead a department; before converting they could not
+  const withDept = snapshot({ departments: new Map([["d-eng", { id: "d-eng", name: "Engineering", active: true }]]) });
+  rejects(() => planChange(withDept, normalizeChange({ subjectRef: "intern-1", leadOfAdd: ["d-eng"] })), "ineligible");
+  assert.equal(planChange(withDept, normalizeChange({ subjectRef: "intern-1", employmentType: "Employee", leadOfAdd: ["d-eng"] })).ops.openLeads.length, 1);
+  rejects(() => normalizeChange({ subjectRef: "intern-1", employmentType: "Contractor" }));
+});
+
+test("an employee who leads a department cannot be recorded as an intern until that is removed", () => {
+  const leading = snapshot({ departments: new Map([["d-eng", { id: "d-eng", name: "Engineering", active: true }]]), departmentLeads: new Map([["d-eng", "account-4"]]) });
+  rejects(() => planChange(leading, normalizeChange({ subjectRef: "account-4", employmentType: "Intern" })), "ineligible");
+  const ok = planChange(leading, normalizeChange({ subjectRef: "account-4", employmentType: "Intern", leadOfRemove: ["d-eng"], internSupervisor: "account-3" }));
+  assert.deepEqual(ok.ops.classification, { employmentType: "Intern" });
+  assert.deepEqual(ok.ops.closeRelationships, [{ type: "reports_to", subjectRef: "account-4", managerRef: "account-3" }]);
+});

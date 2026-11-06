@@ -92,6 +92,7 @@ export function ChangeRoleModal({ personRef, org, onClose, onDone }: { personRef
   const [departmentId, setDepartmentId] = useState("");
   const [reportsTo, setReportsTo] = useState("");
   const [supervisor, setSupervisor] = useState("");
+  const [employment, setEmployment] = useState<"Employee" | "Intern">("Employee");
   const [leads, setLeads] = useState<string[]>([]);
   const [reason, setReason] = useState("");
   const [review, setReview] = useState<{ summary: string[]; version: number } | null>(null);
@@ -109,13 +110,14 @@ export function ChangeRoleModal({ personRef, org, onClose, onDone }: { personRef
         setDepartmentId(node.departmentId || "");
         setReportsTo(node.reportsTo || "");
         setSupervisor(node.internSupervisor || "");
+        setEmployment(node.employmentType === "Intern" ? "Intern" : "Employee");
         setLeads(node.leadsDepartments);
       }
     })();
   }, [personRef]);
 
   const subject = chart?.nodes[personRef];
-  const isIntern = subject?.employmentType === "Intern";
+  const isIntern = employment === "Intern";
   const eligible = useMemo(() => Object.values(chart?.nodes || {}).filter(node => node.employmentType !== "Intern" && node.active && node.ref !== personRef).sort((a, b) => a.name.localeCompare(b.name)), [chart, personRef]);
 
   const buildInput = () => {
@@ -123,6 +125,7 @@ export function ChangeRoleModal({ personRef, org, onClose, onDone }: { personRef
     const input: Record<string, unknown> = { subjectRef: personRef, reason };
     const cleanTitle = title.trim();
     if (cleanTitle && cleanTitle !== subject.title) input.title = cleanTitle;
+    if (employment !== subject.employmentType) input.employmentType = employment;
     if ((departmentId || null) !== subject.departmentId) input.departmentId = departmentId || null;
     if (!isIntern && (reportsTo || null) !== subject.reportsTo) input.reportsTo = reportsTo || null;
     if (isIntern && (supervisor || null) !== subject.internSupervisor) input.internSupervisor = supervisor || null;
@@ -174,7 +177,13 @@ export function ChangeRoleModal({ personRef, org, onClose, onDone }: { personRef
             <input className="input" list="org-positions" value={title} maxLength={120} onChange={event => setTitle(event.target.value)} placeholder="e.g. VP of Engineering" />
             <datalist id="org-positions">{positions.map(item => <option key={item} value={item} />)}</datalist>
           </label>
-          <label className="form-label">Department
+          <label className="form-label">Employment
+            <select className="select" value={employment} onChange={event => setEmployment(event.target.value as "Employee" | "Intern")}>
+              <option value="Employee">Employee</option><option value="Intern">Intern</option>
+            </select>
+            {subject.employmentType !== employment && <span className="muted">{employment === "Employee" ? "Internship supervision ends; choose who they report to." : "Their reporting line ends; choose a supervisor."}</span>}
+          </label>
+          <label className="form-label">Function
             <select className="select" value={departmentId} onChange={event => setDepartmentId(event.target.value)}>
               <option value="">Unassigned</option>{chart!.departments.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
             </select>
@@ -189,7 +198,7 @@ export function ChangeRoleModal({ personRef, org, onClose, onDone }: { personRef
               <option value="">No supervisor</option>{eligible.map(item => <option key={item.ref} value={item.ref}>{item.name}</option>)}
             </select>
           </label>}
-          {!isIntern && <fieldset className="org-leads"><legend>Leads department</legend>
+          {!isIntern && <fieldset className="org-leads"><legend>Leads function</legend>
             {chart!.departments.map(item => <label key={item.id} className="org-check"><input type="checkbox" checked={leads.includes(item.id)} onChange={event => setLeads(current => event.target.checked ? [...current, item.id] : current.filter(id => id !== item.id))} /> {item.name}</label>)}
           </fieldset>}
           <label className="form-label">Reason <span className="muted">(optional)</span>

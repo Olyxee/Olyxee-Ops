@@ -264,7 +264,9 @@ app.get("/api/me", requireAuth, requireAccount, async (request, response) => {
     id: person?.external_id || `account-${account.id}`,
     name: profile.displayName || person?.name || account.display_name || account.email,
     email: account.email,
-    employmentType: person?.employment_type || "Employee",
+    employmentType: (orgEnabled() && orgDb && person?.external_id
+      ? (await orgDb.query("SELECT employment_type FROM public.org_person_classification WHERE person_ref = $1", [person.external_id]).catch(() => ({ rows: [] }))).rows[0]?.employment_type
+      : undefined) || person?.employment_type || "Employee",
     accessRole: account.app_role,
     accountStatus: account.active ? "Active" : "Suspended",
     department: person?.department || "Operations",
