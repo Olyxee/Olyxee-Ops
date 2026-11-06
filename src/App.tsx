@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Archive, Atom, BrainCircuit, Compass, Layers, Rocket, ArrowDownRight, ArrowLeft, ArrowUpRight, Bell, BriefcaseBusiness, Building2, Check, ChevronRight, CircleHelp, ClipboardList, Clock3, Code2, FileCheck2, FileText, GitPullRequest, Image, LayoutDashboard, ListTodo, LogOut, Megaphone, Menu, MessageSquare, MoreVertical, Pencil, Plus, Search, Settings, ShieldCheck, Trash2, Upload, UserPlus, UserRound, Users, X } from "lucide-react";
+import { AlertTriangle, Archive, ChartLine, Lightbulb, Compass, Layers, Rocket, ArrowDownRight, ArrowLeft, ArrowUpRight, Bell, BriefcaseBusiness, Building2, Check, ChevronRight, CircleHelp, ClipboardList, Clock3, Code2, FileCheck2, FileText, GitPullRequest, Image, LayoutDashboard, ListTodo, LogOut, Megaphone, Menu, MessageSquare, MoreVertical, Pencil, Plus, Search, Settings, ShieldCheck, Trash2, Upload, UserPlus, UserRound, Users, X } from "lucide-react";
 import { zipFiles } from "./zip-upload";
 import { OrgView, ChangeRoleModal, useOrgAccess, OrgAccess, useFunctions, FunctionInfo } from "./OrgView";
 import { AvatarPrompt } from "./AvatarPrompt";
 import { CeoSchedule } from "./CeoSchedule";
 import "./function-card.css";
+import "./profile-card.css";
 import { Audit, departments, seedProjects, seedTasks, seedAudit, seedNotices, seedWeeklyObjectives, seedStaffStatuses, Project, ProjectResource, Task, User, users, Notice, AccessRole, EmploymentType, AccountStatus, WeeklyObjective, WeeklyObjectiveResource, ObjectiveStatus, StaffStatus, Availability } from "./data";
 import { OFFICIAL_DEPARTMENTS, UNASSIGNED_DEPARTMENT } from "../shared/departments.mjs";
 import { departmentDailyTrend } from "../shared/department-trend.mjs";
@@ -39,14 +40,14 @@ const manages=(manager:User,person:User)=>person.orgManaged?person.reportsTo===m
 // anything else (a function added later) gets a stable icon and colour of its own so it never looks like another one.
 const legacyDepartmentStyle:Record<string,{icon:typeof Building2;tone:string}>={
   "Engineering":{icon:Code2,tone:"engineering"},
-  "Research & Development (R&D)":{icon:Atom,tone:"research"},
+  "Research & Development (R&D)":{icon:Lightbulb,tone:"research"},
   "Data & Security":{icon:ShieldCheck,tone:"data"},
   "Sales & Marketing":{icon:Megaphone,tone:"sales"},
 };
 const departmentStyleRules:{test:RegExp;icon:typeof Building2;tone:string}[]=[
-  {test:/data science|intelligence|analytic/i,icon:BrainCircuit,tone:"data"},
+  {test:/data science|intelligence|analytic/i,icon:ChartLine,tone:"data"},
   {test:/growth|partner|sales|market/i,icon:Megaphone,tone:"sales"},
-  {test:/research|r&d|ai/i,icon:Atom,tone:"research"},
+  {test:/research|r&d|ai/i,icon:Lightbulb,tone:"research"},
   {test:/technolog|engineer|software|platform|product/i,icon:Code2,tone:"engineering"},
 ];
 const spareDepartmentStyles:{icon:typeof Building2;tone:string}[]=[{icon:Compass,tone:"slate"},{icon:Rocket,tone:"rose"},{icon:Layers,tone:"indigo"}];
@@ -461,7 +462,11 @@ function UnifiedWorkspace({ceoSchedule,flash,user,team,statuses,tasks,allTasks,p
   const intern=employmentOf(user)==="Intern";
   return <div className={`workspace-board ${intern?"workspace-board-member":""}`}>
     <div className="workspace-stack workspace-stack-summary">
-    <section id="workspace-overview" className="workspace-card workspace-welcome"><div className="workspace-welcome-message"><span>Personal workspace</span><h1>{welcomeTitle}</h1><p>Here is your workspace and what needs your attention today.</p></div><div className="workspace-profile-identity"><Avatar person={user} size={112}/><div><span className="workspace-job-role"><BriefcaseBusiness size={13}/>{jobTitle}</span><h2>{user.name}</h2><p>{user.email}</p></div></div><div className="workspace-profile-foot"><div className="workspace-profile-tags"><span>{accessOf(user)}</span><span>{user.department}</span></div><small>{employmentOf(user)} · Olyxee</small></div></section>
+    <section id="workspace-overview" className="workspace-card workspace-welcome me-card">
+      <h1 className="me-greeting">{welcomeTitle}</h1>
+      <div className="me-profile"><Avatar person={user} size={64}/><div className="me-id"><h2>{user.name}</h2><p className="me-role">{jobTitle}</p><p className="me-email">{user.email}</p></div></div>
+      <div className="me-meta"><span>{employmentOf(user)}</span>{user.department&&user.department!==UNASSIGNED_DEPARTMENT&&<span>{user.department}</span>}</div>
+    </section>
     {intern&&<section className="workspace-card workspace-intern-activity" aria-labelledby="intern-activity-title"><div className="workspace-intern-activity-head"><div><span>Last 24 hours</span><h2 id="intern-activity-title">Your work activity</h2><p>New assignments give a small lift. Work progress lifts it further; setbacks show in red.</p></div>{internActiveTask&&<button type="button" onClick={()=>onOpen(internActiveTask.id)}>Update work <ChevronRight size={14}/></button>}</div><CompactDepartmentHealthChart curve={internActivityCurve} label="Your work activity during the last 24 hours" noTasks={!tasks.length}/></section>}
     </div>
     <div className="workspace-stack workspace-stack-work">
