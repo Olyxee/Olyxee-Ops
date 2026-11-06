@@ -1,72 +1,128 @@
-/* CEO dashboard: My Calendar (left) and Your Agenda (right). Reuses the workspace card, head, badge and button styles. */
-.ceo-schedule{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:stretch;width:100%;min-width:0;box-sizing:border-box;align-self:stretch}
-.ceo-schedule>.workspace-card{min-width:0}
-/* The dashboard places its cards in a 12-column grid; this takes exactly the place the Tasks card had (row 1, beside the profile). */
-@media (min-width:701px){.workspace-board:not(.workspace-board-member) .ceo-schedule{grid-area:1 / 5 / 2 / 13 !important}}
-@media (max-width:900px){.ceo-schedule{grid-template-columns:1fr}}
+/* CEO dashboard: My Calendar and Your Agenda, in the spirit of Apple's Calendar and Reminders.
+   San Francisco-style type, large month title, red "today" circle, dots under busy days, round check circles,
+   hairline separators and iOS-style grouped sheets. Layout only; data lives in CeoSchedule.tsx. */
 
-/* calendar */
-.ceo-cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;padding:2px 12px 6px}
-.ceo-cal-weekday{display:grid;place-items:center;height:20px;color:#7b8783;font-size:10px;font-weight:600;letter-spacing:.04em}
-.ceo-cal-day{position:relative;display:grid;place-items:center;height:28px;border:0;border-radius:8px;background:transparent;color:#303b37;font-size:11.5px;cursor:pointer;transition:background .12s ease}
-.ceo-cal-day:hover{background:#eef2f0}
-.ceo-cal-day.out{color:#a9b3ae}
-.ceo-cal-day.today{font-weight:700;box-shadow:inset 0 0 0 1.5px #598b78}
-.ceo-cal-day.selected{background:#27312e;color:#fff}
-.ceo-cal-day.selected.today{box-shadow:none}
-.ceo-cal-day i{position:absolute;bottom:3px;left:50%;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:#598b78}
-.ceo-cal-day i.done{background:#b5c0ba}
-.ceo-cal-day.selected i{background:#fff}
-.ceo-cal-day:focus-visible,.ceo-cal-event:focus-visible,.ceo-agenda-main:focus-visible,.ceo-agenda-check:focus-visible{outline:2px solid #598b78;outline-offset:1px}
-
-.ceo-cal-day-list{display:grid;gap:4px;padding:6px 12px 12px;border-top:1px solid #edf0ef}
-.ceo-cal-day-head{display:flex;align-items:center;justify-content:space-between;color:#68716e;font-size:11px}
-.ceo-cal-day-head b{color:#27312e;font-size:12px}
-.ceo-cal-event{display:flex;align-items:center;gap:8px;width:100%;padding:6px 8px;border:0;border-left:3px solid #9aa5a0;border-radius:6px;background:#f6f8f7;text-align:left;cursor:pointer}
-.ceo-cal-event:hover{background:#eef2f0}
-.ceo-cal-event.kind-meeting{border-left-color:#4a8ac4}
-.ceo-cal-event.kind-deadline{border-left-color:#c95f56}
-.ceo-cal-event.kind-follow_up{border-left-color:#c98a3f}
-.ceo-cal-event.kind-important_date{border-left-color:#8055c1}
-.ceo-cal-event.kind-reminder{border-left-color:#598b78}
-.ceo-cal-event.completed{opacity:.55;text-decoration:line-through}
-.ceo-cal-event-time{flex:0 0 auto;min-width:44px;color:#68716e;font-size:11px;font-variant-numeric:tabular-nums}
-.ceo-cal-event-title{flex:1;min-width:0;overflow:hidden;color:#27312e;font-size:12px;text-overflow:ellipsis;white-space:nowrap}
-.ceo-empty-line{color:#79817e;font-size:11.5px}
-.ceo-empty-line button{border:0;background:transparent;color:#3d5e51;font-size:11.5px;font-weight:600;cursor:pointer;padding:0}
-
-/* agenda */
-.ceo-agenda-list{display:grid;padding:0 8px 8px}
-.ceo-agenda-item{display:flex;align-items:center;gap:10px;padding:2px 4px;border-top:1px solid #edf0ef}
-.ceo-agenda-item:first-child{border-top:0}
-.ceo-agenda-item.completed .ceo-agenda-main{opacity:.55}
-.ceo-agenda-item.completed .ceo-agenda-main b{text-decoration:line-through}
-.ceo-agenda-check{display:grid;place-items:center;flex:0 0 20px;width:20px;height:20px;border:1.5px solid #b5c0ba;border-radius:50%;background:transparent;color:#fff;cursor:pointer}
-.ceo-agenda-check:hover{border-color:#598b78}
-.ceo-agenda-item.completed .ceo-agenda-check{background:#598b78;border-color:#598b78}
-.ceo-agenda-main{display:grid;gap:2px;flex:1;min-width:0;padding:10px 6px;border:0;background:transparent;text-align:left;cursor:pointer;border-radius:8px}
-.ceo-agenda-main:hover{background:#f6f8f7}
-.ceo-agenda-main b{overflow:hidden;color:#27312e;font-size:13px;font-weight:600;text-overflow:ellipsis;white-space:nowrap}
-.ceo-agenda-main small{overflow:hidden;color:#68716e;font-size:11.5px;text-overflow:ellipsis;white-space:nowrap}
-.ceo-agenda-item .badge{flex:0 0 auto;display:inline-flex;align-items:center;gap:3px}
-.ceo-agenda-group h4{margin:12px 0 4px;color:#68716e;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
-.ceo-agenda-group h4 span{font-weight:500}
-
-/* dialogs */
-.ceo-modal{width:min(480px,100%)}
-.ceo-time-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.ceo-event-details{display:grid;margin:0}
-.ceo-event-details>div{display:grid;grid-template-columns:84px minmax(0,1fr);gap:10px;padding:9px 0;border-top:1px solid #edf0ef;font-size:13px}
-.ceo-event-details>div:first-child{border-top:0}
-.ceo-event-details dt{color:#68716e;font-weight:600}
-.ceo-event-details dd{margin:0;color:#303b37;overflow-wrap:anywhere}
-
-@media (prefers-color-scheme:dark){
-  .ceo-cal-day{color:#dbe6e0}.ceo-cal-day:hover{background:#232c28}.ceo-cal-day.out{color:#5f6e67}
-  .ceo-cal-day.selected{background:#e3ece7;color:#16241d}.ceo-cal-day.selected i{background:#16241d}
-  .ceo-cal-day-list,.ceo-agenda-item,.ceo-event-details>div{border-color:#2f3a35}
-  .ceo-cal-event{background:#222b27}.ceo-cal-event:hover{background:#2a3430}
-  .ceo-cal-event-title,.ceo-agenda-main b,.ceo-cal-day-head b,.ceo-event-details dd{color:#e3ece7}
-  .ceo-agenda-main:hover{background:#232c28}
-  .ceo-agenda-check{border-color:#52625b}
+.ceo-card, .ceo-sheet {
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+  --label: #1d1d1f; --secondary: #6e6e73; --tertiary: #aeaeb2;
+  --separator: rgba(60, 60, 67, .14); --grouped: #f2f2f7; --surface: #fff;
+  --red: #ff3b30; --blue: #007aff; --green: #34c759; --orange: #ff9500; --purple: #af52de;
+  font-family: var(--font); -webkit-font-smoothing: antialiased; letter-spacing: -.01em;
 }
+.ceo-schedule { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 16px; align-items: stretch; width: 100%; min-width: 0; box-sizing: border-box; align-self: stretch; }
+.ceo-schedule > .ceo-card { min-width: 0; }
+/* The dashboard places its cards in a 12-column grid; this takes exactly the place the Tasks card had (row 1, beside the profile). */
+@media (min-width: 701px) { .workspace-board:not(.workspace-board-member) .ceo-schedule { grid-area: 1 / 5 / 2 / 13 !important; } }
+@media (max-width: 900px) { .ceo-schedule { grid-template-columns: 1fr; } }
+body .workspace-board .ceo-card { padding: 0; display: flex; flex-direction: column; gap: 0; overflow: hidden; }
+
+/* ---------- calendar ---------- */
+.ceo-cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 16px 16px 6px; }
+.ceo-cal-head h2 { margin: 0; font-size: 22px; line-height: 1.1; font-weight: 400; color: var(--secondary); letter-spacing: -.02em; }
+.ceo-cal-head h2 b { color: var(--label); font-weight: 700; }
+.ceo-cal-nav { display: flex; align-items: center; gap: 2px; }
+.ceo-cal-nav button { display: grid; place-items: center; min-width: 30px; height: 30px; padding: 0 4px; border: 0; border-radius: 8px; background: transparent; color: var(--red); font: inherit; font-size: 15px; cursor: pointer; }
+.ceo-cal-nav button:hover { background: rgba(255, 59, 48, .08); }
+.ceo-cal-nav button:disabled { color: var(--tertiary); cursor: default; background: transparent; }
+.ceo-cal-nav .ceo-cal-today { padding: 0 8px; font-weight: 500; }
+.ceo-cal-add { margin-left: 2px; }
+
+.ceo-cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); padding: 2px 12px 4px; row-gap: 1px; }
+.ceo-cal-weekday { display: grid; place-items: center; height: 22px; color: var(--tertiary); font-size: 11px; font-weight: 600; letter-spacing: .04em; }
+.ceo-cal-day { position: relative; display: grid; place-items: center; height: 34px; padding: 0; border: 0; background: transparent; color: var(--label); font: inherit; cursor: pointer; }
+.ceo-cal-day > span { display: grid; place-items: center; width: 28px; height: 28px; margin-top: -3px; border-radius: 50%; font-size: 14.5px; font-variant-numeric: tabular-nums; transition: background .12s ease, color .12s ease; }
+.ceo-cal-day:hover > span { background: rgba(120, 120, 128, .12); }
+.ceo-cal-day.out { color: var(--tertiary); }
+.ceo-cal-day.today > span { background: var(--red); color: #fff; font-weight: 600; }
+.ceo-cal-day.selected:not(.today) > span { background: var(--label); color: var(--surface); font-weight: 600; }
+.ceo-cal-day.today:hover > span { background: var(--red); }
+.ceo-cal-day.selected.today > span { box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px var(--red); }
+.ceo-cal-day i { position: absolute; bottom: 1px; left: 50%; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: #8e8e93; }
+.ceo-cal-day i.done { background: #d1d1d6; }
+.ceo-cal-day:focus-visible, .ceo-cal-event:focus-visible, .ceo-agenda-main:focus-visible, .ceo-agenda-check:focus-visible, .ceo-link:focus-visible, .ceo-cal-nav button:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; border-radius: 8px; }
+
+.ceo-cal-day-list { display: grid; margin-top: 4px; padding: 8px 16px 14px; border-top: .5px solid var(--separator); }
+.ceo-cal-day-head { padding: 2px 0 6px; font-size: 13px; color: var(--secondary); }
+.ceo-cal-day-head b { font-weight: 600; }
+.ceo-cal-event { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; padding: 6px 0; border: 0; border-top: .5px solid var(--separator); background: transparent; text-align: left; font: inherit; cursor: pointer; }
+.ceo-cal-event:first-of-type { border-top: 0; }
+.ceo-cal-event-bar { flex: 0 0 3px; align-self: stretch; border-radius: 2px; background: var(--kind, var(--tertiary)); }
+.kind-meeting { --kind: var(--blue); }
+.kind-deadline { --kind: var(--red); }
+.kind-follow_up { --kind: var(--orange); }
+.kind-important_date { --kind: var(--purple); }
+.kind-reminder { --kind: var(--green); }
+.ceo-cal-event-time { flex: 0 0 auto; min-width: 48px; color: var(--secondary); font-size: 13px; font-variant-numeric: tabular-nums; }
+.ceo-cal-event-title { flex: 1; min-width: 0; overflow: hidden; color: var(--label); font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+.ceo-cal-event svg { color: var(--secondary); flex: 0 0 auto; }
+.ceo-cal-event.completed .ceo-cal-event-title { color: var(--tertiary); text-decoration: line-through; }
+.ceo-empty-line { display: flex; align-items: center; justify-content: space-between; min-height: 36px; color: var(--secondary); font-size: 15px; }
+.ceo-empty-line button { border: 0; background: transparent; color: var(--blue); font: inherit; font-size: 15px; cursor: pointer; padding: 0; }
+
+/* ---------- agenda ---------- */
+.ceo-agenda-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 16px 16px 6px; }
+.ceo-agenda-head h2 { margin: 0; color: var(--label); font-size: 22px; line-height: 1.1; font-weight: 700; letter-spacing: -.02em; }
+.ceo-link { display: inline-flex; align-items: center; gap: 1px; padding: 4px 2px; border: 0; background: transparent; color: var(--blue); font: inherit; font-size: 15px; cursor: pointer; }
+.ceo-link:disabled { color: var(--tertiary); cursor: default; }
+.ceo-agenda-list { display: grid; padding: 4px 16px 12px; }
+.ceo-agenda-item { position: relative; display: flex; align-items: center; gap: 12px; min-height: 58px; }
+.ceo-agenda-item + .ceo-agenda-item::before { content: ""; position: absolute; top: 0; left: 34px; right: 0; border-top: .5px solid var(--separator); }
+.ceo-agenda-check { display: grid; place-items: center; flex: 0 0 22px; width: 22px; height: 22px; padding: 0; border: 1.5px solid var(--kind, #c7c7cc); border-radius: 50%; background: transparent; color: #fff; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
+.ceo-agenda-check:hover { background: rgba(120, 120, 128, .12); }
+.ceo-agenda-item.completed .ceo-agenda-check { background: var(--kind, var(--blue)); border-color: var(--kind, var(--blue)); }
+.ceo-agenda-main { display: grid; flex: 1; gap: 1px; min-width: 0; padding: 10px 0; border: 0; background: transparent; text-align: left; font: inherit; cursor: pointer; }
+.ceo-agenda-main b { overflow: hidden; color: var(--label); font-size: 15px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.ceo-agenda-main small { overflow: hidden; color: var(--secondary); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.ceo-agenda-main small.overdue { color: var(--red); }
+.ceo-agenda-item.completed .ceo-agenda-main b { color: var(--tertiary); text-decoration: line-through; }
+.ceo-agenda-bell { flex: 0 0 auto; color: var(--orange); }
+
+.ceo-state { display: grid; gap: 4px; justify-items: center; align-content: center; flex: 1; padding: 26px 24px 30px; text-align: center; }
+.ceo-state strong { color: var(--label); font-size: 17px; font-weight: 600; }
+.ceo-state span { max-width: 30ch; color: var(--secondary); font-size: 13px; line-height: 1.4; }
+
+/* ---------- iOS-style sheets ---------- */
+.modal-back:has(.ceo-sheet) { background: rgba(0, 0, 0, .28); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.modal.ceo-sheet { width: min(430px, 100%); max-height: min(86vh, 760px); overflow: hidden; display: flex; flex-direction: column; border: 0; border-radius: 14px; background: var(--grouped); box-shadow: 0 20px 60px rgba(0, 0, 0, .28); }
+.ceo-sheet-bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; padding: 12px 14px; background: var(--grouped); border-bottom: .5px solid var(--separator); }
+.ceo-sheet-bar > b { color: var(--label); font-size: 17px; font-weight: 600; text-align: center; }
+.ceo-sheet-btn { justify-self: start; padding: 4px 2px; border: 0; background: transparent; color: var(--blue); font: inherit; font-size: 17px; cursor: pointer; }
+.ceo-sheet-bar > .ceo-sheet-btn:last-child { justify-self: end; }
+.ceo-sheet-btn.strong { font-weight: 600; }
+.ceo-sheet-btn:disabled { color: var(--tertiary); cursor: default; }
+.ceo-sheet-body { display: grid; gap: 18px; padding: 18px 16px 22px; overflow: auto; }
+
+.ceo-group { overflow: hidden; border-radius: 10px; background: var(--surface); }
+.ceo-group > * + * { border-top: .5px solid var(--separator); }
+.ceo-input { display: block; width: 100%; box-sizing: border-box; min-height: 44px; padding: 11px 16px; border: 0; border-radius: 0; background: transparent; color: var(--label); font: inherit; font-size: 17px; outline: none; }
+.ceo-input::placeholder { color: var(--tertiary); }
+.ceo-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 44px; padding: 8px 16px; color: var(--label); font-size: 17px; }
+.ceo-row > span { color: var(--label); }
+.ceo-row select, .ceo-row input[type="date"], .ceo-row input[type="time"] { max-width: 60%; padding: 4px 2px; border: 0; background: transparent; color: var(--secondary); font: inherit; font-size: 17px; text-align: right; text-align-last: right; outline: none; cursor: pointer; }
+.ceo-row b { max-width: 65%; color: var(--secondary); font-size: 17px; font-weight: 400; text-align: right; overflow-wrap: anywhere; }
+.ceo-switch { appearance: none; -webkit-appearance: none; position: relative; flex: 0 0 51px; width: 51px; height: 31px; margin: 0; border-radius: 16px; background: #e9e9ea; cursor: pointer; transition: background .2s ease; }
+.ceo-switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 2px 5px rgba(0, 0, 0, .25); transition: transform .2s ease; }
+.ceo-switch:checked { background: var(--green); }
+.ceo-switch:checked::after { transform: translateX(20px); }
+.ceo-switch:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.ceo-action { display: block; width: 100%; min-height: 44px; padding: 11px 16px; border: 0; background: transparent; color: var(--blue); font: inherit; font-size: 17px; text-align: center; cursor: pointer; }
+.ceo-action:hover { background: rgba(120, 120, 128, .08); }
+.ceo-action.danger { color: var(--red); }
+.ceo-action:disabled { color: var(--tertiary); cursor: default; }
+.ceo-error { padding: 0 6px; color: var(--red); font-size: 13px; }
+
+.ceo-view-hero { display: flex; align-items: flex-start; gap: 12px; padding: 2px 4px; }
+.ceo-kind-dot { flex: 0 0 12px; width: 12px; height: 12px; margin-top: 9px; border-radius: 50%; background: var(--kind, var(--tertiary)); }
+.ceo-view-hero h3 { margin: 0; color: var(--label); font-size: 22px; line-height: 1.2; font-weight: 700; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.ceo-view-hero p { margin: 3px 0 0; color: var(--secondary); font-size: 15px; }
+.ceo-agenda-group h4 { margin: 0 0 6px 16px; color: var(--secondary); font-size: 13px; font-weight: 400; letter-spacing: .02em; text-transform: uppercase; }
+.ceo-agenda-group .ceo-group { padding: 0 16px; }
+.ceo-agenda-group .ceo-group > * + * { border-top: 0; }
+
+@media (prefers-color-scheme: dark) {
+  .ceo-card, .ceo-sheet { --label: #f5f5f7; --secondary: #98989d; --tertiary: #636366; --separator: rgba(84, 84, 88, .65); --grouped: #1c1c1e; --surface: #2c2c2e; --blue: #0a84ff; --red: #ff453a; --green: #30d158; --orange: #ff9f0a; --purple: #bf5af2; }
+  .ceo-cal-day i { background: #8e8e93; } .ceo-cal-day i.done { background: #48484a; }
+  .ceo-switch { background: #39393d; }
+  .ceo-cal-nav button:hover { background: rgba(255, 69, 58, .14); }
+}
+@media (prefers-reduced-motion: reduce) { .ceo-cal-day > span, .ceo-agenda-check, .ceo-switch, .ceo-switch::after { transition: none; } }

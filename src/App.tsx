@@ -4,6 +4,7 @@ import { zipFiles } from "./zip-upload";
 import { OrgView, ChangeRoleModal, useOrgAccess, OrgAccess, useFunctions, FunctionInfo } from "./OrgView";
 import { AvatarPrompt } from "./AvatarPrompt";
 import { CeoSchedule } from "./CeoSchedule";
+import "./function-card.css";
 import { Audit, departments, seedProjects, seedTasks, seedAudit, seedNotices, seedWeeklyObjectives, seedStaffStatuses, Project, ProjectResource, Task, User, users, Notice, AccessRole, EmploymentType, AccountStatus, WeeklyObjective, WeeklyObjectiveResource, ObjectiveStatus, StaffStatus, Availability } from "./data";
 import { OFFICIAL_DEPARTMENTS, UNASSIGNED_DEPARTMENT } from "../shared/departments.mjs";
 import { departmentDailyTrend } from "../shared/department-trend.mjs";
@@ -94,15 +95,15 @@ const departmentWeeklyPerformance=(departments:[string,string,string][],tasks:Ta
   });
 };
 function DepartmentMarketItem({row,rank,managerName,onOpen}:{row:DepartmentMarketRow;rank:number;managerName:string;onOpen:(department:string)=>void}){
-    const direction=row.change>0?"up":"down";
-    const trendLabel=row.change>0?"Improving":row.change<0?"Down":"No growth";
-    const Arrow=row.change>0?ArrowUpRight:ArrowDownRight;
-    return <button type="button" className="workspace-department-market-row" onClick={()=>onOpen(row.department[0])} aria-label={`${row.department[0]}, rank ${rank}, manager ${managerName}, ${row.currentCompleted} tasks completed this week versus ${row.previousCompleted} at the same point last week: ${trendLabel}`}>
-    <span className="department-market-rank">{String(rank).padStart(2,"0")}</span>
-     <span className={`department-market-icon department-identity-icon ${departmentTone(row.department[0])}`} aria-hidden="true"><DepartmentIcon department={row.department[0]}/></span>
-     <span className="department-market-copy"><b>{row.department[0]}</b><small>Manager: {managerName}</small><small className={`department-market-comparison ${direction}`}>{row.currentCompleted} this week · {row.previousCompleted} last week · {trendLabel}</small></span>
-      <span className={`department-market-change ${direction}`} aria-hidden="true"><Arrow size={20} strokeWidth={2.2}/></span>
-    <ChevronRight className="department-market-chevron" size={14}/>
+  // One plain number (completed this week) and a quiet change against the same point last week. Nothing is red unless it needs to be.
+  const delta=row.currentCompleted-row.previousCompleted;
+  const led=managerName&&managerName!=="Not assigned"?`Led by ${managerName}`:"No leader appointed";
+  const summary=row.currentCompleted===0&&row.previousCompleted===0?"No completions yet":`${row.currentCompleted} completed this week${delta>0?`, up ${delta}`:delta<0?`, down ${-delta}`:", same as last week"}`;
+  return <button type="button" className="fn-row" onClick={()=>onOpen(row.department[0])} aria-label={`${row.department[0]}. ${led}. ${summary}.`}>
+    <span className={`fn-icon department-identity-icon ${departmentTone(row.department[0])}`} aria-hidden="true"><DepartmentIcon department={row.department[0]} size={20}/></span>
+    <span className="fn-copy"><b>{row.department[0]}</b><small>{led}</small></span>
+    {(row.currentCompleted>0||row.previousCompleted>0)&&<span className="fn-trend" aria-hidden="true"><b>{row.currentCompleted}</b>{delta!==0&&<em className={delta>0?"up":"down"}>{delta>0?<ArrowUpRight size={12} strokeWidth={2.6}/>:<ArrowDownRight size={12} strokeWidth={2.6}/>}{Math.abs(delta)}</em>}</span>}
+    <ChevronRight className="fn-chevron" size={16} strokeWidth={2.4}/>
   </button>;
 }
 const objectivePriorityRank:Record<WeeklyObjective["priority"],number>={Critical:0,High:1,Medium:2,Low:3};
@@ -478,13 +479,15 @@ function UnifiedWorkspace({ceoSchedule,flash,user,team,statuses,tasks,allTasks,p
      </div>
      {accessOf(user)!=="Member"&&<div className="workspace-stack workspace-stack-operations">
     <section id="workspace-people" className="workspace-card workspace-people workspace-managers"><div className="workspace-card-head"><div><span className="workspace-icon violet"><Users size={17}/></span><b>{isManager(user)?"Function people":directMode?"Direct reports":"Managers"}</b></div><span className="workspace-head-actions">{can("person")&&<button onClick={()=>onModal("person")}><UserPlus size={14}/> Add</button>}<button onClick={()=>onView("People")}>View all <ChevronRight size={13}/></button></span></div><div className="workspace-people-columns" aria-hidden="true"><span>{isManager(user)?"Team member":directMode?"Person":"Manager"}</span><span>{isManager(user)||directMode?"Role":"Function"}</span><span>Working hours</span></div><div className="workspace-list">{homePeople.map(person=>{const status=statuses.find(item=>item.userId===person.id);return <button key={person.id} onClick={()=>onManage(person)}><span className="workspace-person-row"><Avatar person={person} size={36}/><span><b>{person.name}</b>{!(isManager(user)||directMode)&&<small>{person.position||"Manager"}</small>}</span></span><span className="workspace-person-detail"><small>{isManager(user)||directMode?"Role":"Function"}</small><b>{isManager(user)||directMode?(person.position||employmentOf(person)):person.department}</b></span><WorkHoursPill status={status}/></button>})}{homePeople.length===0&&<div className="workspace-empty">{isManager(user)?"No function members available.":directMode?"No direct reports.":"No managers available."}</div>}</div></section>
-     <section id="workspace-departments" className="workspace-card workspace-departments">
-       <div className="workspace-card-head">
+     <section id="workspace-departments" className={`workspace-card workspace-departments${isManager(user)?"":" fn-card"}`}>
+       {isManager(user)?<><div className="workspace-card-head">
           <div><span className={`workspace-icon teal${isManager(user)?` department-identity-icon ${departmentTone(user.department)}`:""}`}>{isManager(user)?<DepartmentIcon department={user.department} size={17}/>:<Building2 size={17}/>}</span><span><b>{isManager(user)?"Function health":accessOf(user)==="Superadmin"?(homeDepartmentRows.length?`Top ${homeDepartmentRows.length} functions`:"Functions"):"Functions"}</b>{!isManager(user)&&<small className="workspace-department-period">This week · compared with the same point last week</small>}</span></div>
          <span className="workspace-head-actions">{isAdmin(user)&&<button onClick={()=>onModal("department")}><Plus size={14}/> New</button>}<button onClick={()=>isManager(user)?onDepartment(user.department):onView("Functions")}>{isManager(user)?"View function":"View all"} <ChevronRight size={13}/></button></span>
-       </div>
+       </div></>
+       :<header className="fn-head"><div><h2>{accessOf(user)==="Superadmin"&&homeDepartmentRows.length?`Top ${homeDepartmentRows.length} functions`:"Functions"}</h2><p>Completed this week, compared with the same point last week</p></div>
+         <span className="fn-head-actions">{isAdmin(user)&&<button type="button" className="fn-plus" aria-label="New function" onClick={()=>onModal("department")}><Plus size={18} strokeWidth={2.4}/></button>}<button type="button" className="fn-link" onClick={()=>onView("Functions")}>View all <ChevronRight size={14} strokeWidth={2.4}/></button></span></header>}
         {isManager(user)?<div className="manager-health-card"><button type="button" className="manager-health-open" onClick={()=>onDepartment(user.department)}><span><b>{user.department}</b><small className={`manager-health-state ${departmentHealthState.toLowerCase().replace(/\s+/g,"-")}`}>{departmentHealthState}</small></span><ChevronRight size={15}/></button><CompactDepartmentHealthChart curve={departmentHealthCurve} label={`${user.department} hourly delivery health: ${departmentHealthState}`} noTasks={!departmentTasks.length}/><button type="button" className="manager-health-action" onClick={()=>departmentReview[0]?onOpen(departmentReview[0].id):onModal("task")}><AlertTriangle size={16}/><span><small>Recommended next action</small><b>{departmentAction}</b></span><ChevronRight size={15}/></button></div>
-         :<div className="workspace-department-market-list">
+         :<div className="fn-list">
            {homeDepartmentRows.map((row,index)=>{
              const leaderName=row.department[1]&&row.department[1]!=="Unassigned"?row.department[1]:undefined;
              const manager=leaderName?undefined:team.find(person=>isManager(person)&&accountOf(person)==="Active"&&person.department===row.department[0]);

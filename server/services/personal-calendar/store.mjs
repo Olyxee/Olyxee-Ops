@@ -11,8 +11,12 @@ const COLUMNS = `id, kind, title, event_date::text AS date, start_time, end_time
 const shape = (row) => ({ id: row.id, kind: row.kind, title: row.title, date: row.date, startTime: row.start_time, endTime: row.end_time, location: row.location, detail: row.detail, reminderMinutes: row.reminder_minutes, completed: row.completed, completedAt: row.completed_at ? new Date(row.completed_at).toISOString() : null });
 
 /** The table is added by a migration. Until then the feature reports "not available" instead of failing. */
+const knownReady = new WeakSet();   // once the table exists it stays: skip the extra round-trip on every request
 export async function personalCalendarReady(db) {
-  return Boolean((await db.query("SELECT to_regclass('public.personal_calendar_events') IS NOT NULL AS ok")).rows[0].ok);
+  if (knownReady.has(db)) return true;
+  const ok = Boolean((await db.query("SELECT to_regclass('public.personal_calendar_events') IS NOT NULL AS ok")).rows[0].ok);
+  if (ok) knownReady.add(db);
+  return ok;
 }
 
 /** Events with a date in [from, to] (inclusive), oldest first. */
