@@ -24,7 +24,41 @@
 .org-when{text-align:right;white-space:nowrap}
 .org-proposal .btn{flex-shrink:0}
 .org-grant-form{padding:0 16px 14px}
+/* Top-down hierarchy: pure-CSS connectors drawn from the nested lists */
+.org-layout-toggle{display:flex;gap:6px}
+.org-hier-wrap{padding:8px 12px 20px;margin-bottom:16px;overflow:hidden}
+.org-hier{overflow-x:auto;padding:24px 16px 8px;text-align:center}
+.org-hier ul{display:flex;justify-content:center;list-style:none;margin:0;padding:24px 0 0;position:relative;width:max-content;min-width:100%}
+.org-hier>ul{padding-top:0}
+.org-hier li{position:relative;display:flex;flex-direction:column;align-items:center;padding:24px 10px 0}
+.org-hier>ul>li{padding-top:0}
+.org-hier li::before,.org-hier li::after{content:"";position:absolute;top:0;right:50%;width:50%;height:24px;border-top:2px solid #cdd5d1}
+.org-hier li::after{right:auto;left:50%;border-left:2px solid #cdd5d1}
+.org-hier li:only-child::before,.org-hier li:only-child::after{display:none}
+.org-hier li:first-child::before,.org-hier li:last-child::after{border:0 none}
+.org-hier li:last-child::before{border-right:2px solid #cdd5d1;border-radius:0 8px 0 0}
+.org-hier li:first-child::after{border-radius:8px 0 0 0}
+.org-hier>ul>li::before,.org-hier>ul>li::after{display:none}
+.org-hier ul ul::before{content:"";position:absolute;top:0;left:50%;height:24px;border-left:2px solid #cdd5d1}
+.org-card{display:flex;flex-direction:column;align-items:center;gap:3px;width:196px;padding:14px 12px 12px;border:1px solid #dfe4e1;border-radius:10px;background:#fff;box-shadow:0 1px 2px rgba(20,30,25,.05);position:relative;z-index:1}
+.org-card-root{width:224px;border-color:#7b8f86;box-shadow:0 2px 8px rgba(20,30,25,.1)}
+.org-card-intern{border-style:dashed;background:#fafbfa}
+.org-avatar{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:#e6efea;color:#2c4a3b;font-size:13px;font-weight:700;margin-bottom:4px}
+.org-card-root .org-avatar{width:46px;height:46px;font-size:15px;background:#2c4a3b;color:#fff}
+.org-card-name{font-size:13px}
+.org-card-title{font-size:12px;color:#4d5b55;line-height:1.3}
+.org-card-dept{font-size:11px;color:#7b8783}
+.org-card-badges{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;margin-top:4px}
+.org-card-action{margin-top:8px;font-size:11px;padding:4px 10px}
 @media (prefers-color-scheme:dark){
+  .org-hier li::before,.org-hier li::after,.org-hier ul ul::before{border-color:#43504a}
+  .org-hier li:last-child::before{border-right-color:#43504a}
+  .org-card{background:#1c2320;border-color:#33403a}
+  .org-card-intern{background:#19201d}
+  .org-card-root{border-color:#6f8a7d}
+  .org-avatar{background:#2a3a32;color:#cfe3d8}
+  .org-card-root .org-avatar{background:#cfe3d8;color:#16241d}
+  .org-card-title{color:#aab8b1}
   .org-tree ul ul{border-left-color:#3a4540}
   .org-row{border-bottom-color:#2f3a35}
   .org-leads{border-color:#3a4540}

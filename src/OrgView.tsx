@@ -296,19 +296,56 @@ function ChartTab({ chart, canChange, proposeOnly, onChangeRole, asOf, setAsOf, 
     </li>;
   };
   const unsupervised = Object.values(chart.nodes).filter(node => node.employmentType === "Intern" && !node.internSupervisor);
+  const [layout, setLayout] = useState<"tree" | "list">("tree");
+
+  // Top-down hierarchy: direct reports first, then supervised interns, all as children of the same person.
+  const card = (ref: string, trail: Set<string>): React.ReactNode => {
+    const node = chart.nodes[ref];
+    if (!node || trail.has(ref)) return null;
+    const next = new Set(trail).add(ref);
+    const children = [...new Set([...node.directReports, ...node.supervisedInterns])].filter(child => chart.nodes[child] && !next.has(child));
+    const intern = node.employmentType === "Intern";
+    const led = node.leadsDepartments.map(id => departmentName(chart, id));
+    const initials = node.name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase();
+    return <li key={ref}>
+      <div className={`org-card${intern ? " org-card-intern" : ""}${node.active ? "" : " org-inactive"}${trail.size === 0 ? " org-card-root" : ""}`}>
+        <span className="org-avatar" aria-hidden="true">{initials}</span>
+        <b className="org-card-name">{node.name}</b>
+        <span className="org-card-title">{node.title && node.title !== "Title not set" ? node.title : (intern ? "Intern" : "Title not set")}</span>
+        {node.department && <span className="org-card-dept">{node.department}</span>}
+        <span className="org-card-badges">
+          {intern && <span className="badge gray">Intern</span>}
+          {led.length > 0 && <span className="badge green">Leads {led.join(", ")}</span>}
+          {children.length > 0 && <span className="badge gray">{children.length} {children.length === 1 ? "report" : "reports"}</span>}
+          {node.functionalLeads.length > 0 && <span className="badge amber">Dotted line: {node.functionalLeads.map(item => nameOf(chart, item)).join(", ")}</span>}
+          {!node.active && <span className="badge red">{node.status}</span>}
+        </span>
+        {canChange && !historic && <button className="btn org-card-action" onClick={() => onChangeRole(ref)}>{proposeOnly ? "Propose change" : "Change role"}</button>}
+      </div>
+      {children.length > 0 && <ul>{children.map(child => card(child, next))}</ul>}
+    </li>;
+  };
   return <>
     <div className="filters">
       <label className="form-label org-inline">View as of <input className="input" type="date" value={asOf} max={new Date().toISOString().slice(0, 10)} onChange={event => setAsOf(event.target.value)} /></label>
       {asOf && <button className="btn" onClick={() => setAsOf("")}>Back to today</button>}
       <label className="org-check"><input type="checkbox" checked={alumni} onChange={event => setAlumni(event.target.checked)} /> Include completed internships</label>
+      <span className="org-layout-toggle" role="group" aria-label="Chart layout">
+        <button type="button" className={`btn${layout === "tree" ? " primary" : ""}`} aria-pressed={layout === "tree"} onClick={() => setLayout("tree")}>Hierarchy</button>
+        <button type="button" className={`btn${layout === "list" ? " primary" : ""}`} aria-pressed={layout === "list"} onClick={() => setLayout("list")}>List</button>
+      </span>
       <span className="muted org-count">{chart.counts.employees} employees · {chart.counts.interns} interns</span>
     </div>
     {historic && <div className="notice">Showing the organisation as it was on {new Date(chart.asOf!).toLocaleDateString()}. Changes can only be made to today’s structure.</div>}
     {chart.issues.length > 0 && <div className="panel org-issues"><button className="org-issues-head" onClick={() => setShowIssues(!showIssues)} aria-expanded={showIssues}><b>{chart.issues.length} item{chart.issues.length === 1 ? "" : "s"} need attention</b><span className="muted">{showIssues ? "Hide" : "Show"}</span></button>
       {showIssues && <ul>{chart.issues.map((issue, index) => <li key={`${issue.ref}-${index}`}>{issue.message}</li>)}</ul>}</div>}
-    <div className="panel org-tree"><ul>{chart.roots.map(ref => row(ref, 0, new Set()))}</ul>
-      {!chart.roots.length && <div className="empty"><strong>No organisation records yet</strong>Records appear here once the organisation data has been set up.</div>}
-    </div>
+    {layout === "tree"
+      ? <div className="panel org-hier-wrap"><div className="org-hier"><ul>{chart.roots.map(ref => card(ref, new Set()))}</ul></div>
+        {!chart.roots.length && <div className="empty"><strong>No organisation records yet</strong>Records appear here once the organisation data has been set up.</div>}
+      </div>
+      : <div className="panel org-tree"><ul>{chart.roots.map(ref => row(ref, 0, new Set()))}</ul>
+        {!chart.roots.length && <div className="empty"><strong>No organisation records yet</strong>Records appear here once the organisation data has been set up.</div>}
+      </div>}
     {unsupervised.length > 0 && <div className="panel org-tree"><div className="panel-head"><h2 className="panel-title">Interns without a supervisor <span>{unsupervised.length}</span></h2></div>
       <ul>{unsupervised.map(intern => <li key={intern.ref}><div className="org-row org-intern"><div className="org-person"><b>{intern.name}</b><span className="muted">{intern.title || "Intern"}</span></div>
         {canChange && !historic && <button className="btn" onClick={() => onChangeRole(intern.ref)}>{proposeOnly ? "Propose supervisor" : "Assign supervisor"}</button>}</div></li>)}</ul></div>}
