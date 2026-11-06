@@ -4,6 +4,7 @@ import {
   grantCapability, holds, listCapabilities, listHistory, listPositions, listProposals, previewChange,
   revokeCapability, withdrawProposal,
 } from "./store.mjs";
+import { createFunction, createInitiative, listInitiatives, updateFunction, updateInitiative } from "./structure.mjs";
 
 /**
  * Registers /api/org/*. Authority comes only from server-side capability grants (org_capabilities),
@@ -47,6 +48,18 @@ export function registerOrgRoutes(app, { db, loadPeople, requireAuth, requireAcc
   app.get("/api/org/positions", ...base, guard(async ({ response }) => response.json({ positions: await listPositions(db) }), { any: ANY_VIEW }));
   app.post("/api/org/positions", ...base, guard(async ({ request, response }) =>
     response.status(201).json({ position: await createPosition(db, request.body || {}) }), { any: ["org.approve"] }));
+
+  // Functions (departments), specialisations and cross-functional initiatives. Structure edits need org.approve.
+  app.post("/api/org/functions", ...base, guard(async ({ request, response, actor }) =>
+    response.status(201).json(await createFunction(db, { ...(request.body || {}), actor })), { any: ["org.approve"] }));
+  app.patch("/api/org/functions/:id", ...base, guard(async ({ request, response, actor }) =>
+    response.json(await updateFunction(db, { ...(request.body || {}), id: request.params.id, actor })), { any: ["org.approve"] }));
+  app.get("/api/org/initiatives", ...base, guard(async ({ request, response }) =>
+    response.json({ initiatives: await listInitiatives(db, { includeInactive: request.query.all === "1" }) }), { any: ANY_VIEW }));
+  app.post("/api/org/initiatives", ...base, guard(async ({ request, response, actor }) =>
+    response.status(201).json(await createInitiative(db, loadPeople, { ...(request.body || {}), actor })), { any: ["org.approve"] }));
+  app.patch("/api/org/initiatives/:id", ...base, guard(async ({ request, response, actor }) =>
+    response.json(await updateInitiative(db, loadPeople, { ...(request.body || {}), id: request.params.id, actor })), { any: ["org.approve"] }));
 
   app.post("/api/org/changes/preview", ...base, guard(async ({ request, response }) =>
     response.json(await previewChange(db, loadPeople, request.body?.input)), { any: ["org.approve", "org.propose"] }));

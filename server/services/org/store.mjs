@@ -123,7 +123,7 @@ async function readTables(db, asOf) {
     : `${alias}.effective_to IS NULL`);
   const params = when ? [when] : [];
   const [departments, assignments, relationships, leads, links, exclusions] = await Promise.all([
-    db.query("SELECT id, name, active FROM public.org_departments ORDER BY name"),
+    db.query("SELECT id, name, active, kind, description, legacy_keys, parent_id FROM public.org_departments ORDER BY name"),
     db.query(`SELECT a.person_ref, a.title, a.department_id, a.position_id FROM public.org_assignments a WHERE ${live("a")}`, params),
     db.query(`SELECT r.type, r.subject_ref, r.manager_ref FROM public.org_relationships r WHERE ${live("r")}`, params),
     db.query(`SELECT l.department_id, l.person_ref FROM public.org_department_leads l WHERE ${live("l")}`, params),

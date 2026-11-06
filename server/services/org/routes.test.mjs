@@ -77,6 +77,29 @@ test("a delegated, scoped capability works and can be revoked; the last approver
   } finally { w.close(); }
 });
 
+test("only approvers change functions and initiatives; viewers can read; Superadmin and titles grant nothing", async () => {
+  const w = await boot();
+  try {
+    const version = () => w.call("ceo", "GET", "/api/org/me").then((r) => r.body.version);
+    const body = async (extra) => ({ expectedVersion: await version(), ...extra });
+    assert.equal((await w.call("vp", "POST", "/api/org/functions", await body({ name: "Growth & Partnerships" }))).status, 403);
+    assert.equal((await w.call("tech", "POST", "/api/org/functions", await body({ name: "Growth & Partnerships" }))).status, 403);
+    assert.equal((await w.call("intern", "POST", "/api/org/functions", await body({ name: "Growth & Partnerships" }))).status, 403);
+    const created = await w.call("ceo", "POST", "/api/org/functions", await body({ name: "Growth & Partnerships" }));
+    assert.equal(created.status, 201);
+    const renamed = await w.call("ceo", "PATCH", `/api/org/functions/${created.body.id}`, await body({ name: "Growth" }));
+    assert.equal(renamed.status, 200);
+    assert.equal((await w.call("ceo", "PATCH", `/api/org/functions/${created.body.id}`, { name: "Stale", expectedVersion: 0 })).status, 409);
+    const initiative = await w.call("ceo", "POST", "/api/org/initiatives", await body({ name: "Orgni", ownerRef: "account-2" }));
+    assert.equal(initiative.status, 201);
+    assert.equal((await w.call("vp", "PATCH", `/api/org/initiatives/${initiative.body.id}`, await body({ ownerRef: "account-3" }))).status, 403);
+    const list = await w.call("vp", "GET", "/api/org/initiatives");                  // viewing is allowed
+    assert.equal(list.status, 200);
+    assert.equal(list.body.initiatives[0].ownerRef, "account-2");
+    assert.equal((await w.call("tech", "GET", "/api/org/initiatives")).status, 403);
+  } finally { w.close(); }
+});
+
 test("everything is blocked with a clear message when the module is disabled", async () => {
   const w = await boot({ enabled: false });
   try {

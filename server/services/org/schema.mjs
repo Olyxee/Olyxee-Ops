@@ -31,6 +31,20 @@ CREATE TABLE IF NOT EXISTS public.org_departments (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS org_departments_name_idx ON public.org_departments (lower(name)) WHERE active;
 
+-- Functions (the new name for departments). Same table and stable ids, so every existing reference keeps working.
+-- A function has no parent; a specialisation sits inside one function. legacy_keys are the old free-text
+-- department names this unit answers to, so tasks, people and objectives stored by name keep resolving after a rename.
+ALTER TABLE public.org_departments ADD COLUMN IF NOT EXISTS parent_id uuid REFERENCES public.org_departments(id);
+ALTER TABLE public.org_departments ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'function';
+ALTER TABLE public.org_departments ADD COLUMN IF NOT EXISTS description text NOT NULL DEFAULT '';
+ALTER TABLE public.org_departments ADD COLUMN IF NOT EXISTS legacy_keys text[] NOT NULL DEFAULT '{}';
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'org_departments_kind_check') THEN
+    ALTER TABLE public.org_departments ADD CONSTRAINT org_departments_kind_check
+      CHECK (kind IN ('function','specialisation') AND (kind = 'function') = (parent_id IS NULL) AND parent_id IS DISTINCT FROM id);
+  END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS public.org_positions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   title text NOT NULL,
@@ -96,6 +110,27 @@ CREATE TABLE IF NOT EXISTS public.org_department_leads (
   CHECK (effective_to IS NULL OR effective_to >= effective_from)
 );
 CREATE UNIQUE INDEX IF NOT EXISTS org_department_lead_current_idx ON public.org_department_leads (department_id) WHERE effective_to IS NULL;
+
+-- Products / initiatives (Orgni, Aiviate, Olyxee Logistics...). They run across functions; each has exactly one
+-- accountable owner at a time, kept as history.
+CREATE TABLE IF NOT EXISTS public.org_initiatives (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  description text NOT NULL DEFAULT '',
+  active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS org_initiatives_name_idx ON public.org_initiatives (lower(name)) WHERE active;
+CREATE TABLE IF NOT EXISTS public.org_initiative_owners (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  initiative_id uuid NOT NULL REFERENCES public.org_initiatives(id),
+  owner_ref text NOT NULL,
+  effective_from timestamptz NOT NULL DEFAULT now(),
+  effective_to timestamptz,
+  change_id uuid REFERENCES public.org_changes(id),
+  CHECK (effective_to IS NULL OR effective_to >= effective_from)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS org_initiative_owner_current_idx ON public.org_initiative_owners (initiative_id) WHERE effective_to IS NULL;
 
 CREATE TABLE IF NOT EXISTS public.org_identity_links (
   superseded_ref text PRIMARY KEY,
@@ -165,7 +200,7 @@ $$ LANGUAGE plpgsql;
 DO $$
 DECLARE t text;
 BEGIN
-  FOREACH t IN ARRAY ARRAY['org_assignments','org_relationships','org_department_leads','org_changes'] LOOP
+  FOREACH t IN ARRAY ARRAY['org_assignments','org_relationships','org_department_leads','org_initiative_owners','org_changes'] LOOP
     IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = t || '_guard') THEN
       EXECUTE format('CREATE TRIGGER %I BEFORE UPDATE OR DELETE ON public.%I FOR EACH ROW EXECUTE FUNCTION public.org_guard_history()', t || '_guard', t);
     END IF;
@@ -174,7 +209,7 @@ END $$;
 `;
 
 export const ORG_DROP_SQL = `
-DROP TABLE IF EXISTS public.org_proposals, public.org_capabilities, public.org_chart_exclusions,
+DROP TABLE IF EXISTS public.org_initiative_owners, public.org_initiatives, public.org_proposals, public.org_capabilities, public.org_chart_exclusions,
   public.org_identity_links, public.org_department_leads, public.org_relationships,
   public.org_assignments, public.org_changes, public.org_positions, public.org_departments, public.org_state CASCADE;
 DROP FUNCTION IF EXISTS public.org_guard_history();
