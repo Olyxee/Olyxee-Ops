@@ -46,7 +46,7 @@ const onlinePresence = new Map();
 const persistedPresence = new Map();
 const port = Number(process.env.PORT || 5000);
 const isProduction = process.env.NODE_ENV === "production";
-const orgEnabled = () => process.env.ORG_MODEL_ENABLED === "true";
+const orgEnabled = () => process.env.ORG_MODEL_ENABLED !== "false";
 
 const peoplePool = process.env.EXTERNAL_DATABASE_URL
   ? new pg.Pool({
