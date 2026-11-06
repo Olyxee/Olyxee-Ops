@@ -19,6 +19,29 @@ export async function personalCalendarReady(db) {
   return ok;
 }
 
+/** Has this account been given a personal calendar? (The CEO always has one; that check lives in routes.) */
+export async function hasPersonalCalendarAccess(db, userId) {
+  const table = (await db.query("SELECT to_regclass('public.personal_calendar_access') IS NOT NULL AS ok")).rows[0].ok;
+  if (!table) return false;
+  return (await db.query("SELECT 1 FROM public.personal_calendar_access WHERE user_id = $1", [userId])).rowCount > 0;
+}
+
+export async function grantPersonalCalendar(db, { userId, grantedBy }) {
+  if (!(await db.query("SELECT to_regclass('public.personal_calendar_access') IS NOT NULL AS ok")).rows[0].ok) {
+    throw new OrgError("The calendar update has not been applied yet.", 503, "not_ready");
+  }
+  const person = (await db.query("SELECT id, active FROM public.ops_users WHERE id::text = $1", [String(userId)])).rows[0];
+  if (!person?.active) throw new OrgError("That account is not available.", 404, "not_found");
+  await db.query("INSERT INTO public.personal_calendar_access (user_id, granted_by) VALUES ($1,$2) ON CONFLICT (user_id) DO NOTHING", [person.id, grantedBy]);
+  return { userId: person.id, granted: true };
+}
+
+/** Revoking hides the calendar; the person's saved events are kept in case access is restored. */
+export async function revokePersonalCalendar(db, { userId }) {
+  await db.query("DELETE FROM public.personal_calendar_access WHERE user_id::text = $1", [String(userId)]);
+  return { userId, granted: false };
+}
+
 /** Events with a date in [from, to] (inclusive), oldest first. */
 export async function listEvents(db, { ownerUserId, from, to }) {
   if (!isDate(from) || !isDate(to) || from > to) throw new OrgError("Choose a valid date range.");

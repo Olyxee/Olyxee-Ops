@@ -21,6 +21,7 @@ async function boot({ migrate = true } = {}) {
   await add("tech", "Superadmin");                           // a technical Superadmin without the CEO's authority
   await add("manager", "Manager", ["org.approve"]);          // approval authority alone is not enough
   await add("member", "Member");
+  await add("vp", "Manager");                                // the VP: gets a calendar only if the CEO grants one
   const app = express();
   app.use(express.json());
   const requireAuth = (request, response, next) => (request.headers["x-user"] ? next() : response.status(401).json({ error: "auth" }));
@@ -32,7 +33,7 @@ async function boot({ migrate = true } = {}) {
     const response = await fetch(base + path, { method, headers: { "content-type": "application/json", ...(as ? { "x-user": as } : {}) }, body: body ? JSON.stringify(body) : undefined });
     return { status: response.status, body: await response.json().catch(() => ({})) };
   };
-  return { ...w, call, close: () => server.close() };
+  return { ...w, accounts, call, close: () => server.close() };
 }
 const RANGE = "from=2026-11-01&to=2026-12-31";
 
@@ -119,5 +120,36 @@ test("before the migration the app keeps working: reads say 'not available', wri
     assert.equal(write.status, 503);
     assert.equal(write.body.code, "not_ready");
     assert.equal((await w.call("member", "GET", `/api/me/calendar?${RANGE}`)).status, 403);                                       // the gate comes first
+  } finally { w.close(); }
+});
+
+test("the CEO can give someone a calendar; it is private to them, and only the CEO can grant or revoke", async () => {
+  const w = await boot();
+  try {
+    const vpId = w.accounts.get("vp").id;
+    assert.deepEqual((await w.call("vp", "GET", "/api/me/calendar/access")).body, { enabled: false, canManage: false });
+    assert.equal((await w.call("vp", "GET", `/api/me/calendar?${RANGE}`)).status, 403);                            // not yet
+    assert.deepEqual((await w.call("ceo", "GET", "/api/me/calendar/access")).body, { enabled: true, canManage: true });
+
+    for (const who of ["vp", "manager", "member", "tech"]) assert.equal((await w.call(who, "PUT", `/api/me/calendar/access/${vpId}`)).status, 403, `${who} cannot grant`);
+    assert.equal((await w.call("ceo", "PUT", "/api/me/calendar/access/00000000-0000-0000-0000-000000000000")).status, 404);
+    assert.equal((await w.call("ceo", "PUT", `/api/me/calendar/access/${vpId}`)).status, 200);
+    assert.equal((await w.call("ceo", "PUT", `/api/me/calendar/access/${vpId}`)).status, 200);                      // granting twice is harmless
+
+    assert.deepEqual((await w.call("vp", "GET", "/api/me/calendar/access")).body, { enabled: true, canManage: false });
+    const mine = await w.call("vp", "POST", "/api/me/calendar/events", { title: "Engineering sync", date: "2026-11-12", kind: "meeting", startTime: "10:00" });
+    assert.equal(mine.status, 201);
+    await w.call("ceo", "POST", "/api/me/calendar/events", { title: "Board prep", date: "2026-11-12", kind: "meeting" });
+    assert.deepEqual((await w.call("vp", "GET", `/api/me/calendar?${RANGE}`)).body.events.map((e) => e.title), ["Engineering sync"]);   // only their own
+    assert.deepEqual((await w.call("ceo", "GET", `/api/me/calendar?${RANGE}`)).body.events.map((e) => e.title), ["Board prep"]);
+    assert.equal((await w.call("ceo", "PATCH", `/api/me/calendar/events/${mine.body.id}`, { title: "Hijack" })).status, 404);   // not even the CEO can touch it
+    assert.equal((await w.call("vp", "PUT", `/api/me/calendar/access/${vpId}`)).status, 403);                        // having a calendar is not authority over who else has one
+
+    assert.equal((await w.call("manager", "DELETE", `/api/me/calendar/access/${vpId}`)).status, 403);
+    assert.equal((await w.call("ceo", "DELETE", `/api/me/calendar/access/${vpId}`)).status, 200);
+    assert.equal((await w.call("vp", "GET", `/api/me/calendar?${RANGE}`)).status, 403);                              // access gone...
+    assert.equal((await w.db.query("SELECT count(*)::int n FROM public.personal_calendar_events WHERE owner_user_id = $1", [vpId])).rows[0].n, 1);   // ...but nothing is deleted
+    await w.call("ceo", "PUT", `/api/me/calendar/access/${vpId}`);
+    assert.equal((await w.call("vp", "GET", `/api/me/calendar?${RANGE}`)).body.events.length, 1);                    // and it all comes back
   } finally { w.close(); }
 });

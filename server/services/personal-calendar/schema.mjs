@@ -21,6 +21,13 @@ CREATE TABLE IF NOT EXISTS public.personal_calendar_events (
   CHECK (end_time IS NULL OR end_time >= start_time)
 );
 CREATE INDEX IF NOT EXISTS personal_calendar_owner_date_idx ON public.personal_calendar_events (owner_user_id, event_date);
+
+-- Who has a personal calendar besides the CEO. The CEO grants and revokes it; each person only ever sees their own events.
+CREATE TABLE IF NOT EXISTS public.personal_calendar_access (
+  user_id uuid PRIMARY KEY REFERENCES public.ops_users(id),
+  granted_by uuid REFERENCES public.ops_users(id),
+  granted_at timestamptz NOT NULL DEFAULT now()
+);
 `;
 
 export const PERSONAL_EVENT_KINDS = Object.freeze(["meeting", "important_date", "deadline", "follow_up", "reminder"]);

@@ -15,6 +15,24 @@ const REMINDERS = Object.keys(REMINDER_LABELS);
 const label = (kind: string) => (KIND_LABELS as Record<string, string>)[kind] || kind;
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
+/** Whether this account has a personal calendar (the CEO, or anyone the CEO has given one). The server decides. */
+export function usePersonalCalendarAccess(signedIn: boolean) {
+  const [enabled, setEnabled] = useState(false);
+  useEffect(() => {
+    if (!signedIn) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch("/api/me/calendar/access");
+        const body = await response.json().catch(() => ({}));
+        if (!cancelled) setEnabled(response.ok && Boolean(body.enabled));
+      } catch { if (!cancelled) setEnabled(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [signedIn]);
+  return enabled;
+}
+
 export function useCeoSchedule(flash: (message: string) => void) {
   const [events, setEvents] = useState<CeoEvent[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "unavailable" | "error">("loading");

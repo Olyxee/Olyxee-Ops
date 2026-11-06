@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Archive, ChartLine, Lightbulb, Compass, Layers, Rocket, ArrowDownRight, ArrowLeft, ArrowUpRight, Bell, BriefcaseBusiness, Building2, Check, ChevronRight, CircleHelp, ClipboardList, Clock3, Code2, FileCheck2, FileText, GitPullRequest, Image, LayoutDashboard, ListTodo, LogOut, Megaphone, Menu, MessageSquare, MoreVertical, Pencil, Plus, Search, Settings, ShieldCheck, Trash2, Upload, UserPlus, UserRound, Users, X } from "lucide-react";
+import { AlertTriangle, Archive, ChartLine, Database, Lightbulb, Compass, Layers, Rocket, ArrowDownRight, ArrowLeft, ArrowUpRight, Bell, BriefcaseBusiness, Building2, Check, ChevronRight, CircleHelp, ClipboardList, Clock3, Code2, FileCheck2, FileText, GitPullRequest, Image, LayoutDashboard, ListTodo, LogOut, Megaphone, Menu, MessageSquare, MoreVertical, Pencil, Plus, Search, Settings, ShieldCheck, Trash2, Upload, UserPlus, UserRound, Users, X } from "lucide-react";
 import { zipFiles } from "./zip-upload";
 import { OrgView, ChangeRoleModal, useOrgAccess, OrgAccess, useFunctions, FunctionInfo } from "./OrgView";
 import { AvatarPrompt } from "./AvatarPrompt";
-import { CeoSchedule } from "./CeoSchedule";
+import { CeoSchedule, usePersonalCalendarAccess } from "./CeoSchedule";
 import "./function-card.css";
 import "./profile-card.css";
 import { Audit, departments, seedProjects, seedTasks, seedAudit, seedNotices, seedWeeklyObjectives, seedStaffStatuses, Project, ProjectResource, Task, User, users, Notice, AccessRole, EmploymentType, AccountStatus, WeeklyObjective, WeeklyObjectiveResource, ObjectiveStatus, StaffStatus, Availability } from "./data";
@@ -11,6 +11,7 @@ import { OFFICIAL_DEPARTMENTS, UNASSIGNED_DEPARTMENT } from "../shared/departmen
 import { departmentDailyTrend } from "../shared/department-trend.mjs";
 import { functionDelivery, mapDepartmentNames } from "../shared/function-metrics.mjs";
 import { majorObjectives, objectiveTeamLeadId } from "../shared/objective-handoff.mjs";
+import { teamWeeklyPerformance } from "../shared/team-performance.mjs";
 import { departmentHourlyTrend } from "../shared/department-hourly-trend.mjs";
 import { objectiveWorkFor } from "../shared/objective-work.mjs";
 import { objectiveGroupsFor } from "../shared/objective-groups.mjs";
@@ -48,6 +49,7 @@ const departmentStyleRules:{test:RegExp;icon:typeof Building2;tone:string}[]=[
   {test:/data science|intelligence|analytic/i,icon:ChartLine,tone:"data"},
   {test:/growth|partner|sales|market/i,icon:Megaphone,tone:"sales"},
   {test:/research|r&d|ai/i,icon:Lightbulb,tone:"research"},
+  {test:/data/i,icon:Database,tone:"data"},
   {test:/technolog|engineer|software|platform|product/i,icon:Code2,tone:"engineering"},
 ];
 const spareDepartmentStyles:{icon:typeof Building2;tone:string}[]=[{icon:Compass,tone:"slate"},{icon:Rocket,tone:"rose"},{icon:Layers,tone:"indigo"}];
@@ -75,21 +77,23 @@ const taskDepartments=(task:Task)=>task.departmentIds?.length?task.departmentIds
 const taskAssignees=(task:Task)=>task.assigneeIds?.length?task.assigneeIds:(task.assignee?[task.assignee]:[]);
 const taskDepartmentLabel=(task:Task)=>{const names=taskDepartments(task);return names.length>2?`${names.slice(0,2).join(" · ")} · +${names.length-2}`:names.join(" · ")||"Unassigned"};
 type DepartmentMarketRow={department:[string,string,string];currentCompleted:number;previousCompleted:number;change:number};
-const departmentWeeklyPerformance=(departments:[string,string,string][],tasks:Task[],now:number):DepartmentMarketRow[]=>{
+const departmentWeeklyPerformance=(departments:[string,string,string][],tasks:Task[],now:number,options:{belongs?:(task:Task,department:[string,string,string])=>boolean;keepOrder?:boolean}={}):DepartmentMarketRow[]=>{
   const today=new Date(now);
   const weekStart=new Date(today.getFullYear(),today.getMonth(),today.getDate()-((today.getDay()+6)%7));
   const previousWeekStart=new Date(weekStart.getFullYear(),weekStart.getMonth(),weekStart.getDate()-7);
   const previousCutoff=new Date(today.getFullYear(),today.getMonth(),today.getDate()-7,today.getHours(),today.getMinutes(),today.getSeconds(),today.getMilliseconds());
-  const completedBetween=(department:string,start:number,end:number)=>tasks.filter(task=>{
-    if(task.status!=="Completed"||!taskDepartments(task).includes(department))return false;
+  const belongsTo=options.belongs||((task:Task,department:[string,string,string])=>taskDepartments(task).includes(department[0]));
+  const completedBetween=(department:[string,string,string],start:number,end:number)=>tasks.filter(task=>{
+    if(task.status!=="Completed"||!belongsTo(task,department))return false;
     const completedAt=task.completedAt?new Date(task.completedAt).getTime():NaN;
     return Number.isFinite(completedAt)&&completedAt>=start&&completedAt<=end;
   }).length;
   return departments.map(department=>{
-    const currentCompleted=completedBetween(department[0],weekStart.getTime(),now);
-    const previousCompleted=completedBetween(department[0],previousWeekStart.getTime(),previousCutoff.getTime());
+    const currentCompleted=completedBetween(department,weekStart.getTime(),now);
+    const previousCompleted=completedBetween(department,previousWeekStart.getTime(),previousCutoff.getTime());
     return{department,currentCompleted,previousCompleted,change:currentCompleted-previousCompleted};
   }).sort((a,b)=>{
+    if(options.keepOrder)return 0;
     if(a.change!==b.change)return b.change-a.change;
     if(a.currentCompleted!==b.currentCompleted)return b.currentCompleted-a.currentCompleted;
     return a.department[0].localeCompare(b.department[0]);
@@ -241,6 +245,7 @@ function WorkspaceApp(){
   const [databasePeople,setDatabasePeople]=useState<DatabasePerson[]|null>(null); const [databasePeopleError,setDatabasePeopleError]=useState("");
    const [tasksRaw,setTasks]=useState<Task[]>(seedTasks); const [projectsData,setProjectsData]=useStore<Project[]>("projects",seedProjects); const [audit,setAudit]=useStore<Audit[]>("audit",seedAudit); const [notices,setNotices]=useStore<Notice[]>("notices",seedNotices); const [objectives,setObjectives]=useStore<WeeklyObjective[]>("objectives",seedWeeklyObjectives); const [staffStatuses,setStaffStatuses]=useStore<StaffStatus[]>("staff-statuses",seedStaffStatuses); const [storedDepartments,setDepartmentsData]=useStore<[string,string,string][]>("departments",departments,false); const [teamRaw,setTeam]=useState<User[]>([]);
    const fx=useFunctions(Boolean(user),org.version);
+   const hasCalendar=usePersonalCalendarAccess(Boolean(user));
    const team=useMemo(()=>fx.ready?teamRaw.map(person=>{const next=fx.functionOf(person.department);return next===person.department?person:{...person,department:next as string}}):teamRaw,[teamRaw,fx.ready,fx.lookup]);
    const tasks=useMemo(()=>fx.ready?tasksRaw.map(task=>{const names=task.departmentIds?.length?task.departmentIds:task.department?[task.department]:[];if(!names.length)return task;const mapped=mapDepartmentNames(names,name=>fx.functionOf(name) as string);return{...task,department:mapped[0],departmentIds:mapped}}):tasksRaw,[tasksRaw,fx.ready,fx.lookup]);
    const departmentsData=useMemo<[string,string,string][]>(()=>fx.ready?fx.functions.map(fn=>[fn.name,fn.leader?.name||"Unassigned",fn.description||""] as [string,string,string]):storedDepartments,[fx.ready,fx.functions,storedDepartments]);
@@ -390,7 +395,7 @@ function WorkspaceApp(){
            <ProjectDetail user={active} project={selectedProject} tasks={intern?visibleTasks:tasks} objectives={objectives} team={team} onBack={()=>setProjectId(null)} onOpen={setTaskId} onProjectUpdated={updated=>setProjectsData(current=>current.map(project=>project.id===updated.id?updated:project))} onResourceAdded={resource=>setProjectsData(current=>current.map(project=>project.id===projectId?{...project,resources:[...project.resources,resource]}:project))} flash={flash}/>
          </div>:projectId?<div className="workspace-section">
            <BackButton className="workspace-back" onClick={()=>setProjectId(null)} label="Back to projects"/><div className="empty">This project is not available in your assigned work.</div>
-         </div>:visibleView==="Overview"||visibleView==="Home"?<UnifiedWorkspace ceoSchedule={accessOf(active)==="Superadmin"&&org.can("org.approve")} flash={flash} user={active} team={team} statuses={displayedStaffStatuses} tasks={visibleTasks} allTasks={tasks} projectsData={projectsData} departmentsData={availableDepartments} objectives={objectives} can={can} onOpen={setTaskId} onFeedback={(taskId,feedbackId)=>{setFeedbackSelection({taskId,feedbackId});window.scrollTo({top:0,behavior:"smooth"})}} onProject={setProjectId} onDepartment={openDepartment} onModal={setModal} onEditObjective={objective=>{setEditingObjective(objective);setModal("objective")}} onManage={person=>{setEditingPerson(person);setModal("person")}} onView={selectView} onObjective={openObjective}/>:<div className="workspace-section">
+         </div>:visibleView==="Overview"||visibleView==="Home"?<UnifiedWorkspace functions={fx.functions} ceoSchedule={hasCalendar} flash={flash} user={active} team={team} statuses={displayedStaffStatuses} tasks={visibleTasks} allTasks={tasks} projectsData={projectsData} departmentsData={availableDepartments} objectives={objectives} can={can} onOpen={setTaskId} onFeedback={(taskId,feedbackId)=>{setFeedbackSelection({taskId,feedbackId});window.scrollTo({top:0,behavior:"smooth"})}} onProject={setProjectId} onDepartment={openDepartment} onModal={setModal} onEditObjective={objective=>{setEditingObjective(objective);setModal("objective")}} onManage={person=>{setEditingPerson(person);setModal("person")}} onView={selectView} onObjective={openObjective}/>:<div className="workspace-section">
            {!(visibleView==="Weekly Review"&&objectiveId)&&<BackButton className="workspace-back" onClick={()=>selectView(intern?"Home":"Overview")} label={`Back to ${intern?"Home":"Overview"}`}/>}
            <ViewContent org={org} functions={fx.functions} refreshFunctions={fx.refresh} onChangeRole={setRoleChangeRef} view={visibleView} user={active} team={team} databasePeople={databasePeople} databasePeopleError={databasePeopleError} presenceLastSeen={presenceLastSeen} onlineUserIds={onlineUserIds} statuses={displayedStaffStatuses} tasks={visibleTasks} allTasks={tasks} projectsData={projectsData} departmentsData={availableDepartments} initialDepartment={departmentId} audit={audit} notices={notices.filter(n=>n.userId===active.id)} objectives={objectives} objectiveId={objectiveId} can={can} onOpen={setTaskId} onProject={setProjectId} onView={selectView} onObjective={openObjective} onEditObjective={objective=>{setEditingObjective(objective);setModal("objective")}} onModal={setModal} onManage={person=>{setPersonDepartment(undefined);setEditingPerson(person);setModal("person")}} onAddPerson={department=>{setEditingPerson(undefined);setPersonDepartment(department);setModal("person")}} onMovePerson={movePersonToDepartment} update={updateTask} setTasks={setTasks} setObjectives={setObjectives} setDepartmentsData={setDepartmentsData} log={log} flash={flash} onSettings={()=>setSettingsOpen(true)}/>
          </div>}
@@ -424,7 +429,7 @@ function ProfilePopover({person,status,open,onToggle,onSettings,onSwitch}:{perso
 function CompactDepartmentHealthChart({curve,label,noTasks=false}:{curve:DepartmentHealthPoint[];label:string;noTasks?:boolean}){
   return <DepartmentTrendChart curve={curve} label={label} noTasks={noTasks} compact/>;
 }
-function UnifiedWorkspace({ceoSchedule,flash,user,team,statuses,tasks,allTasks,projectsData,departmentsData,objectives,can,onOpen,onFeedback,onProject,onDepartment,onModal,onEditObjective,onManage,onView,onObjective}:{ceoSchedule:boolean;flash:(message:string)=>void;user:User;team:User[];statuses:StaffStatus[];tasks:Task[];allTasks:Task[];projectsData:Project[];departmentsData:[string,string,string][];objectives:WeeklyObjective[];can:(x:string)=>boolean;onOpen:(id:string)=>void;onFeedback:(taskId:string,feedbackId:string)=>void;onProject:(id:string)=>void;onDepartment:(department:string)=>void;onModal:(x:"task"|"person"|"blocker"|"project"|"objective"|"department"|null)=>void;onEditObjective:(objective:WeeklyObjective)=>void;onManage:(user:User)=>void;onView:(view:View)=>void;onObjective:(id:string)=>void}){
+function UnifiedWorkspace({functions,ceoSchedule,flash,user,team,statuses,tasks,allTasks,projectsData,departmentsData,objectives,can,onOpen,onFeedback,onProject,onDepartment,onModal,onEditObjective,onManage,onView,onObjective}:{functions:FunctionInfo[];ceoSchedule:boolean;flash:(message:string)=>void;user:User;team:User[];statuses:StaffStatus[];tasks:Task[];allTasks:Task[];projectsData:Project[];departmentsData:[string,string,string][];objectives:WeeklyObjective[];can:(x:string)=>boolean;onOpen:(id:string)=>void;onFeedback:(taskId:string,feedbackId:string)=>void;onProject:(id:string)=>void;onDepartment:(department:string)=>void;onModal:(x:"task"|"person"|"blocker"|"project"|"objective"|"department"|null)=>void;onEditObjective:(objective:WeeklyObjective)=>void;onManage:(user:User)=>void;onView:(view:View)=>void;onObjective:(id:string)=>void}){
    const [healthNow,setHealthNow]=useState(()=>Date.now());
    useEffect(()=>setHealthNow(Date.now()),[allTasks]);
    useEffect(()=>{const timer=window.setInterval(()=>setHealthNow(Date.now()),60_000);return()=>window.clearInterval(timer)},[]);
@@ -443,6 +448,11 @@ function UnifiedWorkspace({ceoSchedule,flash,user,team,statuses,tasks,allTasks,p
   const visibleDepartments=departmentsData.filter(department=>isAdmin(user)||department[0]===user.department);
    const departmentMarketRows=useMemo(()=>departmentWeeklyPerformance(visibleDepartments,allTasks,healthNow),[visibleDepartments,allTasks,healthNow]);
     const homeDepartmentRows=accessOf(user)==="Superadmin"?departmentMarketRows.slice(0,4):departmentMarketRows;
+   // A manager who leads a function with teams (e.g. a VP) sees how each team is doing, one row per team, in a fixed order.
+   const ledFunction=isManager(user)?functions.find(fn=>fn.leader?.ref===user.id&&fn.specialisations.length>0):undefined;
+   const teamRows=useMemo(()=>ledFunction?teamWeeklyPerformance(ledFunction.specialisations.map(spec=>({name:spec.name,leaderName:spec.leader?.name,leaderRef:spec.leader?.ref,memberRefs:spec.memberRefs,description:spec.description})),allTasks,healthNow) as DepartmentMarketRow[]:[],[ledFunction,allTasks,healthNow]);
+   const showTeams=teamRows.length>0;
+   const classicManager=isManager(user)&&!showTeams;
    const managerFeedback=tasks.flatMap(task=>(task.updates||[]).filter(isManagerFeedback).map(update=>({task,update}))).sort((a,b)=>new Date(b.update.createdAt).getTime()-new Date(a.update.createdAt).getTime());
   const departmentHead=isManager(user)&&user.department&&user.department!==UNASSIGNED_DEPARTMENT;
    const departmentTasks=allTasks.filter(task=>taskDepartments(task).includes(user.department)&&task.status!=="Cancelled");
@@ -484,22 +494,22 @@ function UnifiedWorkspace({ceoSchedule,flash,user,team,statuses,tasks,allTasks,p
      </div>
      {accessOf(user)!=="Member"&&<div className="workspace-stack workspace-stack-operations">
     <section id="workspace-people" className="workspace-card workspace-people workspace-managers"><div className="workspace-card-head"><div><span className="workspace-icon violet"><Users size={17}/></span><b>{isManager(user)?"Function people":directMode?"Direct reports":"Managers"}</b></div><span className="workspace-head-actions">{can("person")&&<button onClick={()=>onModal("person")}><UserPlus size={14}/> Add</button>}<button onClick={()=>onView("People")}>View all <ChevronRight size={13}/></button></span></div><div className="workspace-people-columns" aria-hidden="true"><span>{isManager(user)?"Team member":directMode?"Person":"Manager"}</span><span>{isManager(user)||directMode?"Role":"Function"}</span><span>Working hours</span></div><div className="workspace-list">{homePeople.map(person=>{const status=statuses.find(item=>item.userId===person.id);return <button key={person.id} onClick={()=>onManage(person)}><span className="workspace-person-row"><Avatar person={person} size={36}/><span><b>{person.name}</b>{!(isManager(user)||directMode)&&<small>{person.position||"Manager"}</small>}</span></span><span className="workspace-person-detail"><small>{isManager(user)||directMode?"Role":"Function"}</small><b>{isManager(user)||directMode?(person.position||employmentOf(person)):person.department}</b></span><WorkHoursPill status={status}/></button>})}{homePeople.length===0&&<div className="workspace-empty">{isManager(user)?"No function members available.":directMode?"No direct reports.":"No managers available."}</div>}</div></section>
-     <section id="workspace-departments" className={`workspace-card workspace-departments${isManager(user)?"":" fn-card"}`}>
-       {isManager(user)?<><div className="workspace-card-head">
+     <section id="workspace-departments" className={`workspace-card workspace-departments${classicManager?"":" fn-card"}`}>
+       {classicManager?<><div className="workspace-card-head">
           <div><span className={`workspace-icon teal${isManager(user)?` department-identity-icon ${departmentTone(user.department)}`:""}`}>{isManager(user)?<DepartmentIcon department={user.department} size={17}/>:<Building2 size={17}/>}</span><span><b>{isManager(user)?"Function health":accessOf(user)==="Superadmin"?(homeDepartmentRows.length?`Top ${homeDepartmentRows.length} functions`:"Functions"):"Functions"}</b>{!isManager(user)&&<small className="workspace-department-period">This week · compared with the same point last week</small>}</span></div>
          <span className="workspace-head-actions">{isAdmin(user)&&<button onClick={()=>onModal("department")}><Plus size={14}/> New</button>}<button onClick={()=>isManager(user)?onDepartment(user.department):onView("Functions")}>{isManager(user)?"View function":"View all"} <ChevronRight size={13}/></button></span>
        </div></>
-       :<header className="fn-head"><div><h2>{accessOf(user)==="Superadmin"&&homeDepartmentRows.length?`Top ${homeDepartmentRows.length} functions`:"Functions"}</h2><p>Completed this week, compared with the same point last week</p></div>
-         <span className="fn-head-actions">{isAdmin(user)&&<button type="button" className="fn-plus" aria-label="New function" onClick={()=>onModal("department")}><Plus size={18} strokeWidth={2.4}/></button>}<button type="button" className="fn-link" onClick={()=>onView("Functions")}>View all <ChevronRight size={14} strokeWidth={2.4}/></button></span></header>}
-        {isManager(user)?<div className="manager-health-card"><button type="button" className="manager-health-open" onClick={()=>onDepartment(user.department)}><span><b>{user.department}</b><small className={`manager-health-state ${departmentHealthState.toLowerCase().replace(/\s+/g,"-")}`}>{departmentHealthState}</small></span><ChevronRight size={15}/></button><CompactDepartmentHealthChart curve={departmentHealthCurve} label={`${user.department} hourly delivery health: ${departmentHealthState}`} noTasks={!departmentTasks.length}/><button type="button" className="manager-health-action" onClick={()=>departmentReview[0]?onOpen(departmentReview[0].id):onModal("task")}><AlertTriangle size={16}/><span><small>Recommended next action</small><b>{departmentAction}</b></span><ChevronRight size={15}/></button></div>
+       :<header className="fn-head"><div><h2>{showTeams?"Teams":accessOf(user)==="Superadmin"&&homeDepartmentRows.length?`Top ${homeDepartmentRows.length} functions`:"Functions"}</h2><p>Completed this week, compared with the same point last week</p></div>
+         <span className="fn-head-actions">{isAdmin(user)&&<button type="button" className="fn-plus" aria-label="New function" onClick={()=>onModal("department")}><Plus size={18} strokeWidth={2.4}/></button>}<button type="button" className="fn-link" onClick={()=>showTeams?onDepartment(ledFunction!.name):onView("Functions")}>View all <ChevronRight size={14} strokeWidth={2.4}/></button></span></header>}
+        {classicManager?<div className="manager-health-card"><button type="button" className="manager-health-open" onClick={()=>onDepartment(user.department)}><span><b>{user.department}</b><small className={`manager-health-state ${departmentHealthState.toLowerCase().replace(/\s+/g,"-")}`}>{departmentHealthState}</small></span><ChevronRight size={15}/></button><CompactDepartmentHealthChart curve={departmentHealthCurve} label={`${user.department} hourly delivery health: ${departmentHealthState}`} noTasks={!departmentTasks.length}/><button type="button" className="manager-health-action" onClick={()=>departmentReview[0]?onOpen(departmentReview[0].id):onModal("task")}><AlertTriangle size={16}/><span><small>Recommended next action</small><b>{departmentAction}</b></span><ChevronRight size={15}/></button></div>
          :<div className="fn-list">
-           {homeDepartmentRows.map((row,index)=>{
+           {(showTeams?teamRows:homeDepartmentRows).map((row,index)=>{
              const leaderName=row.department[1]&&row.department[1]!=="Unassigned"?row.department[1]:undefined;
              const manager=leaderName?undefined:team.find(person=>isManager(person)&&accountOf(person)==="Active"&&person.department===row.department[0]);
              const managerName=leaderName||manager?.name||"Not assigned";
-             return <DepartmentMarketItem key={row.department[0]} row={row} rank={index+1} managerName={managerName} onOpen={onDepartment}/>;
+             return <DepartmentMarketItem key={row.department[0]} row={row} rank={index+1} managerName={managerName} onOpen={showTeams?()=>onDepartment(ledFunction!.name):onDepartment}/>;
            })}
-           {!homeDepartmentRows.length&&<div className="workspace-empty">No functions to rank.</div>}
+           {!showTeams&&!homeDepartmentRows.length&&<div className="workspace-empty">No functions to rank.</div>}
          </div>}
      </section>
     </div>}

@@ -38,21 +38,21 @@ const FUNCTIONS = [
 ];
 // Specialisations inside Technology & Engineering. `from` re-uses an existing row; otherwise a new one is created.
 const SPECIALISATIONS = [
-  { from: "Research & Development (R&D)", name: "Research & Development (R&D)", legacy: ["Research & Development (R&D)"], order: 11,
+  { from: "Research & Development (R&D)", name: "AI Research & Development", legacy: ["Research & Development (R&D)"], order: 11,
     description: "AI research, prototyping and applied model development.", leader: "emmanuel.stakio@olyxee.com" },
   { name: "Data Engineering", legacy: [], order: 12, description: "Data platforms, pipelines and data security.", leader: "mosa.maseko@olyxee.com" },
-  { from: "Software Engineering", name: "Product Engineering", legacy: [], order: 13, description: "Product and platform software engineering and quality.", leader: "zaid.muhammad.dev@gmail.com" },
+  { name: "Software Engineering", legacy: [], order: 13, description: "Product and platform software engineering and quality.", leader: "zaid.muhammad.dev@gmail.com" },
 ];
 const PARENT = "Technology & Engineering";
 // Who sits where. Titles and relationships are left exactly as they are.
 const PLACEMENT = {
   "alisha.fatima@olyxee.com": PARENT,
-  "emmanuel.stakio@olyxee.com": "Research & Development (R&D)",
-  "munibashami07@gmail.com": "Research & Development (R&D)",
+  "emmanuel.stakio@olyxee.com": "AI Research & Development",
+  "munibashami07@gmail.com": "AI Research & Development",
   "mosa.maseko@olyxee.com": "Data Engineering",
   "hlakotaketji@gmail.com": "Data Engineering",
-  "zaid.muhammad.dev@gmail.com": "Product Engineering",
-  "jaymotsweni@gmail.com": "Product Engineering",
+  "zaid.muhammad.dev@gmail.com": "Software Engineering",
+  "jaymotsweni@gmail.com": "Software Engineering",
   "thokozani.dlomo@olyxee.com": "Data Science & Intelligence",
   "abdullahsiddiqui1590@gmail.com": "Growth & Partnerships",
 };
