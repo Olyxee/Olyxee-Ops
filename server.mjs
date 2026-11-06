@@ -29,6 +29,13 @@ import {
   redeemAccountSetupToken,
   upsertAccountForSetup,
 } from "./server/services/accounts/account-setup.mjs";
+import { registerOrgRoutes } from "./server/services/org/routes.mjs";
+import { fromPgPool } from "./server/services/org/store.mjs";
+import { createPeopleLoader } from "./server/services/org/people-source.mjs";
+import { recordNewPerson, endPersonOrg, currentResponsibilities } from "./server/services/org/lifecycle.mjs";
+import { createOrgNotifier } from "./server/services/org/notify.mjs";
+import { LEGACY_HIDDEN_INTERN_NAMES } from "./shared/legacy-hidden.mjs";
+import { applyOrgOverlay, loadOrgOverlayData } from "./server/services/org/overlay.mjs";
 import {
   FeedbackResponseError,
   persistFeedbackResponse,
@@ -39,6 +46,7 @@ const onlinePresence = new Map();
 const persistedPresence = new Map();
 const port = Number(process.env.PORT || 5000);
 const isProduction = process.env.NODE_ENV === "production";
+const orgEnabled = () => process.env.ORG_MODEL_ENABLED === "true";
 
 const peoplePool = process.env.EXTERNAL_DATABASE_URL
   ? new pg.Pool({
@@ -371,6 +379,32 @@ app.get("/api/staff-summary", requireAuth, requireAccount, async (_request, resp
   }
 });
 
+const orgDb = appPool ? fromPgPool(appPool) : null;
+const loadOrgPeople = peoplePool ? createPeopleLoader(peoplePool) : null;
+if (orgDb && loadOrgPeople) {
+  registerOrgRoutes(app, {
+    db: orgDb,
+    loadPeople: loadOrgPeople,
+    requireAuth,
+    requireAccount,
+    isEnabled: orgEnabled,
+    notify: createOrgNotifier({ appPool, loadPeople: loadOrgPeople, appUrl: `${String(process.env.OPS_APP_URL || "").replace(/\/+$/, "")}/` }),
+  });
+}
+
+async function recordOrgForNewPerson(request, ref, details) {
+  if (!orgEnabled() || !orgDb) return;
+  try {
+    await recordNewPerson(orgDb, {
+      actor: { userId: request.appAccount.id, name: request.appAccount.display_name || request.appAccount.email },
+      ref,
+      ...details,
+    });
+  } catch (error) {
+    console.error("Organisation record for new person failed:", error instanceof Error ? error.message : "Unknown error");
+  }
+}
+
 app.get("/api/people", requireAuth, requireAccount, async (request, response) => {
   if (!peoplePool) {
     return response.status(503).json({ error: "Database connection is not configured." });
@@ -499,11 +533,15 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
     });
 
     response.set("Cache-Control", "private, max-age=30");
-    const hiddenLegacyInternNames = new Set(["alisha fatima", "mosa maseko", "neo letswalo"]);
-    const people = [...managers, ...interns].filter((person) => (
-      person.employmentType !== "Intern"
-      || !hiddenLegacyInternNames.has(String(person.name || "").trim().toLowerCase())
-    ));
+    const hiddenLegacyInternNames = new Set(LEGACY_HIDDEN_INTERN_NAMES);
+    const combined = [...managers, ...interns];
+    // With the org model on, visibility and reporting come from data (identity links, exclusions, org tables), not names.
+    const people = orgEnabled() && orgDb
+      ? applyOrgOverlay(combined, await loadOrgOverlayData(orgDb))
+      : combined.filter((person) => (
+        person.employmentType !== "Intern"
+        || !hiddenLegacyInternNames.has(String(person.name || "").trim().toLowerCase())
+      ));
     const role = request.appAccount.app_role;
     const ownEmail = String(request.appAccount.email).toLowerCase();
     const current = people.find((person) => String(person.email).toLowerCase() === ownEmail);
@@ -602,6 +640,11 @@ app.post("/api/people", requireAuth, requireAccount, async (request, response) =
         VALUES ($1, $2, $3, $3, $4, $5, $6, $7)
         RETURNING id
       `, [email, name, accessRole === "Manager", accountStatus === "Active", request.appAccount.email, reportsToAccountId, department]);
+      await recordOrgForNewPerson(request, `account-${result.rows[0].id}`, {
+        title: position || undefined,
+        departmentName: department && department !== UNASSIGNED_DEPARTMENT ? department : null,
+        reportsTo: /^account-\d+$/.test(reportsTo) ? reportsTo : null,
+      });
       return response.status(201).json({ ok: true, id: `account-${result.rows[0].id}` });
     }
 
@@ -655,6 +698,11 @@ app.post("/api/people", requireAuth, requireAccount, async (request, response) =
       supervisorEmail,
       supervisorAccountId,
     ]);
+    await recordOrgForNewPerson(request, `intern-${result.rows[0].id}`, {
+      title: position,
+      departmentName: internDepartment && internDepartment !== UNASSIGNED_DEPARTMENT ? internDepartment : null,
+      internSupervisor: `account-${supervisorAccountId}`,
+    });
     return response.status(201).json({ ok: true, id: `intern-${result.rows[0].id}` });
   } catch (error) {
     console.error("Person creation failed:", error instanceof Error ? error.message : "Unknown error");
@@ -664,6 +712,7 @@ app.post("/api/people", requireAuth, requireAccount, async (request, response) =
 
 app.patch("/api/people/:id/department", requireAuth, requireAccount, async (request, response) => {
   if (request.appAccount.app_role !== "Superadmin") return response.status(403).json({ error: "Only Superadmins can assign people to departments." });
+  if (orgEnabled()) return response.status(409).json({ error: "Departments are managed through Change Role in the organisation module.", code: "use_org" });
   if (!peoplePool) return response.status(503).json({ error: "People database is not configured." });
   const match = /^(intern|account)-(\d+)$/.exec(request.params.id);
   const department = validateDepartment(request.body.department, { allowUnassigned: false });
@@ -717,10 +766,12 @@ app.patch("/api/people/:id", requireAuth, requireAccount, async (request, respon
   const accountStatus = String(request.body.accountStatus || "");
   const reportsTo = String(request.body.reportsTo || "");
   if (!name || !email) return response.status(400).json({ error: "Name and email are required." });
-  if (kind === "intern" && !department) {
+  // With the org model on, title, department and reporting change only through /api/org (Change Role).
+  const orgManaged = orgEnabled();
+  if (kind === "intern" && !department && !orgManaged) {
     return response.status(400).json({ error: "Choose an official department or Unassigned." });
   }
-  if (kind === "intern" && !position) {
+  if (kind === "intern" && !position && !orgManaged) {
     return response.status(400).json({ error: "Add the Intern's role or job title." });
   }
 
@@ -731,6 +782,16 @@ app.patch("/api/people/:id", requireAuth, requireAccount, async (request, respon
       }
       if (!["Manager", "Member"].includes(accessRole)) {
         return response.status(400).json({ error: "Employee access role must be Manager or Member." });
+      }
+      if (orgManaged) {
+        const identityOnly = await peoplePool.query(`
+          UPDATE public.workspace_accounts
+          SET display_name = $1, email = $2, manage_interns = $3, manage_projects = $3, active = $4, updated_at = now()
+          WHERE id = $5
+          RETURNING id
+        `, [name, email, accessRole === "Manager", accountStatus === "Active", id]);
+        if (!identityOnly.rowCount) return response.status(404).json({ error: "Employee account not found." });
+        return response.json({ ok: true });
       }
       if (!department) {
         return response.status(400).json({ error: "Choose an official department or Unassigned." });
@@ -784,6 +845,24 @@ app.patch("/api/people/:id", requireAuth, requireAccount, async (request, respon
         RETURNING id
       `, [name, email, accessRole === "Manager", accountStatus === "Active", department, reportsToAccountId, id]);
       if (!result.rowCount) return response.status(404).json({ error: "Employee account not found." });
+      return response.json({ ok: true });
+    }
+
+    if (orgManaged && appRole === "Manager") {
+      const manager = await peoplePool.query("SELECT id FROM public.workspace_accounts WHERE lower(email) = lower($1) LIMIT 1", [request.appAccount.email]);
+      const supervises = manager.rows[0] && await appPool.query(
+        `SELECT 1 FROM public.org_relationships WHERE type = 'intern_supervisor' AND subject_ref = $1 AND manager_ref = $2 AND effective_to IS NULL`,
+        [`intern-${id}`, `account-${manager.rows[0].id}`],
+      );
+      if (!supervises?.rowCount) return response.status(403).json({ error: "You can only manage your direct reports." });
+    }
+    if (orgManaged) {
+      const identityOnly = await peoplePool.query(`
+        UPDATE public.interns SET full_name = $1, email = $2, employment_status = $3, updated_at = now()
+        WHERE id = $4 AND archived_at IS NULL
+        RETURNING id
+      `, [name, email, accountStatus === "Active" ? "Active" : "Inactive", id]);
+      if (!identityOnly.rowCount) return response.status(404).json({ error: "Intern record not found." });
       return response.json({ ok: true });
     }
 
@@ -896,6 +975,13 @@ app.delete("/api/people/:id", requireAuth, requireAccount, async (request, respo
       }
     }
 
+    if (orgEnabled() && orgDb) {
+      const duties = await currentResponsibilities(orgDb, `${kind}-${id}`);
+      if (duties.directReports.length || duties.supervisedInterns.length || duties.functionalReports.length || duties.departmentsLed.length) {
+        return response.status(409).json({ error: "Reassign this person\u2019s reports, interns and leadership before deleting them.", code: "has_responsibilities" });
+      }
+    }
+
     if (email) {
       await appPool.query(`
         DELETE FROM public.ops_users
@@ -915,6 +1001,10 @@ app.delete("/api/people/:id", requireAuth, requireAccount, async (request, respo
           RETURNING id
         `, [id]);
     if (!deleted.rowCount) return response.status(404).json({ error: "Person not found." });
+    if (orgEnabled() && orgDb) {
+      await endPersonOrg(orgDb, { actor: { userId: request.appAccount.id, name: request.appAccount.display_name || request.appAccount.email }, ref: `${kind}-${id}` })
+        .catch((error) => console.error("Organisation record close failed:", error instanceof Error ? error.message : "Unknown error"));
+    }
     return response.json({ ok: true });
   } catch (error) {
     console.error("Person deletion failed:", error instanceof Error ? error.message : "Unknown error");
