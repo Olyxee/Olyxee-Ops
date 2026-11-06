@@ -36,3 +36,16 @@ test("a person with reports, interns or leadership cannot be removed until reass
   assert.equal(rows.length, 1);                 // history kept
   assert.ok(rows[0].effective_to);              // but closed
 });
+
+test("a new person is placed in a function by its current name or by the older name records use", async () => {
+  const { createFunction } = await import("./structure.mjs");
+  const { getVersion } = await import("./store.mjs");
+  const w = await makeDb();
+  const userId = await w.user("ceo", "Manager");
+  const actor = { userId, name: "ceo" };
+  const tech = await createFunction(w.db, { actor, expectedVersion: await getVersion(w.db), name: "Technology & Engineering", legacyKeys: ["Engineering"] });
+  await recordNewPerson(w.db, { actor, ref: "account-4", title: "Dev", departmentName: "Engineering" });                     // the key stored on old records
+  await recordNewPerson(w.db, { actor, ref: "intern-1", title: "Intern", departmentName: "Technology & Engineering" });       // the new name
+  const rows = (await w.db.query("SELECT person_ref, department_id FROM public.org_assignments WHERE effective_to IS NULL ORDER BY person_ref")).rows;
+  assert.deepEqual(rows.map((row) => row.department_id), [tech.id, tech.id]);
+});

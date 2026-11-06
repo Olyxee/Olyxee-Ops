@@ -10,7 +10,11 @@ export async function recordNewPerson(db, { actor, ref, title, departmentName = 
     const existing = await tx.query("SELECT 1 FROM public.org_assignments WHERE person_ref = $1 AND effective_to IS NULL", [ref]);
     if (existing.rowCount) return { created: false };
     const department = departmentName
-      ? (await tx.query("SELECT id FROM public.org_departments WHERE lower(name) = lower($1) AND active", [departmentName])).rows[0]?.id ?? null
+      // A function answers to its own name and to the older names records were stored under (legacy_keys).
+      ? (await tx.query(
+        `SELECT id FROM public.org_departments
+         WHERE active AND (lower(name) = lower($1) OR EXISTS (SELECT 1 FROM unnest(legacy_keys) key WHERE lower(key) = lower($1)))
+         ORDER BY (lower(name) = lower($1)) DESC, (parent_id IS NULL) DESC LIMIT 1`, [departmentName])).rows[0]?.id ?? null
       : null;
     const state = await tx.query("UPDATE public.org_state SET version = version + 1, updated_at = now() WHERE id = 1 RETURNING version");
     const after = { title, departmentId: department, reportsTo, internSupervisor };
