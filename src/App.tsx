@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Archive, ArrowDownRight, ArrowLeft, ArrowUpRight, Bell, BriefcaseBusiness, Building2, Check, ChevronRight, CircleHelp, ClipboardList, Clock3, Code2, FileCheck2, FileText, FlaskConical, GitPullRequest, Image, LayoutDashboard, ListTodo, LogOut, Megaphone, Menu, MessageSquare, MoreVertical, Pencil, Plus, Search, Settings, ShieldCheck, Trash2, Upload, UserPlus, UserRound, Users, X } from "lucide-react";
+import { AlertTriangle, Archive, BrainCircuit, Compass, Layers, Rocket, ArrowDownRight, ArrowLeft, ArrowUpRight, Bell, BriefcaseBusiness, Building2, Check, ChevronRight, CircleHelp, ClipboardList, Clock3, Code2, FileCheck2, FileText, FlaskConical, GitPullRequest, Image, LayoutDashboard, ListTodo, LogOut, Megaphone, Menu, MessageSquare, MoreVertical, Pencil, Plus, Search, Settings, ShieldCheck, Trash2, Upload, UserPlus, UserRound, Users, X } from "lucide-react";
 import { zipFiles } from "./zip-upload";
 import { OrgView, ChangeRoleModal, useOrgAccess, OrgAccess, useFunctions, FunctionInfo } from "./OrgView";
 import { AvatarPrompt } from "./AvatarPrompt";
@@ -32,20 +32,33 @@ const accountOf=(person:User):AccountStatus=>person.accountStatus||(person.activ
 const isAdmin=(person:User)=>["Superadmin","Admin"].includes(accessOf(person));
 const isManager=(person:User)=>accessOf(person)==="Manager";
 const manages=(manager:User,person:User)=>person.orgManaged?person.reportsTo===manager.id:Boolean(manager.department)&&person.department===manager.department;
-const departmentIcons:Record<string,typeof Building2>={
-  "Engineering":Code2,
-  "Research & Development (R&D)":FlaskConical,
-  "Data & Security":ShieldCheck,
-  "Sales & Marketing":Megaphone,
+// Icon and colour for a function. The four original departments keep their look; other names follow their meaning;
+// anything else (a function added later) gets a stable icon and colour of its own so it never looks like another one.
+const legacyDepartmentStyle:Record<string,{icon:typeof Building2;tone:string}>={
+  "Engineering":{icon:Code2,tone:"engineering"},
+  "Research & Development (R&D)":{icon:FlaskConical,tone:"research"},
+  "Data & Security":{icon:ShieldCheck,tone:"data"},
+  "Sales & Marketing":{icon:Megaphone,tone:"sales"},
 };
-const departmentTone=(department?:string)=>`department-tone-${({
-  "Engineering":"engineering",
-  "Research & Development (R&D)":"research",
-  "Data & Security":"data",
-  "Sales & Marketing":"sales",
-} as Record<string,string>)[department||""]||"unassigned"}`;
+const departmentStyleRules:{test:RegExp;icon:typeof Building2;tone:string}[]=[
+  {test:/data science|intelligence|analytic/i,icon:BrainCircuit,tone:"data"},
+  {test:/growth|partner|sales|market/i,icon:Megaphone,tone:"sales"},
+  {test:/research|r&d|ai/i,icon:FlaskConical,tone:"research"},
+  {test:/technolog|engineer|software|platform|product/i,icon:Code2,tone:"engineering"},
+];
+const spareDepartmentStyles:{icon:typeof Building2;tone:string}[]=[{icon:Compass,tone:"slate"},{icon:Rocket,tone:"rose"},{icon:Layers,tone:"indigo"}];
+const departmentStyle=(department?:string):{icon:typeof Building2;tone:string}=>{
+  const name=(department||"").trim();
+  if(!name||name==="Unassigned")return{icon:Building2,tone:"unassigned"};
+  if(legacyDepartmentStyle[name])return legacyDepartmentStyle[name];
+  const rule=departmentStyleRules.find(item=>item.test.test(name));
+  if(rule)return{icon:rule.icon,tone:rule.tone};
+  let hash=0;for(const character of name)hash=(hash*31+character.charCodeAt(0))>>>0;
+  return spareDepartmentStyles[hash%spareDepartmentStyles.length];
+};
+const departmentTone=(department?:string)=>`department-tone-${departmentStyle(department).tone}`;
 function DepartmentIcon({department,size=20}:{department?:string;size?:number}){
-  const Icon=departmentIcons[department||""]||Building2;
+  const Icon=departmentStyle(department).icon;
   return <Icon size={size} strokeWidth={1.85} aria-hidden="true"/>;
 }
 const emptyUser:User={id:"",name:"",email:"",employmentType:"Employee",accessRole:"Member",accountStatus:"Pending",department:"",active:false};
@@ -638,7 +651,9 @@ function UnifiedWorkspace({user,team,statuses,tasks,allTasks,projectsData,depart
         const visibleDepartments=p.departmentsData.filter(d=>isAdmin(user)||d[0]===user.department);
        const departmentEditor=departmentModalOpen&&p.org.can("org.approve")&&<DepartmentModal key={editingDepartment?.[0]||"new"} managers={directory.filter(person=>employmentOf(person)==="Employee"&&accountOf(person)==="Active")} existing={p.departmentsData} initial={editingDepartment||undefined} onClose={()=>{setDepartmentModalOpen(false);setEditingDepartment(null)}} onSave={saveDepartment}/>;
        const departmentTasks=(name:string)=>p.allTasks.filter(task=>taskDepartments(task).includes(name)&&task.status!=="Cancelled");
-       const departmentPeople=(name:string)=>directory.filter(person=>person.department===name);
+       // Administrators see a function's leadership layer: leaders and the core team, not interns, unless the intern leads a unit or reports directly to the viewer.
+       const leaderRefs=new Set(p.functions.flatMap(fn=>[fn.leader?.ref,...fn.specialisations.map(spec=>spec.leader?.ref)]).filter((ref):ref is string=>Boolean(ref)));
+       const departmentPeople=(name:string)=>directory.filter(person=>person.department===name&&(!isAdmin(user)||employmentOf(person)!=="Intern"||leaderRefs.has(person.id)||person.reportsTo===user.id));
      if(selectedDepartment){
        const department=visibleDepartments.find(d=>d[0]===selectedDepartment);
         if(!department)return <div className="empty"><strong>Function not found</strong><button className="btn" onClick={()=>setSelectedDepartment(null)}>Back to functions</button></div>;

@@ -1673,6 +1673,9 @@ body .department-tone-engineering { --department-bg: linear-gradient(145deg,#61a
 body .department-tone-research { --department-bg: linear-gradient(145deg,#aa82df,#8055c1); --department-shadow: 0 3px 8px rgba(128,85,193,.2); }
 body .department-tone-data { --department-bg: linear-gradient(145deg,#4dbdaa,#238973); --department-shadow: 0 3px 8px rgba(35,137,115,.2); }
 body .department-tone-sales { --department-bg: linear-gradient(145deg,#f5b16e,#e3883a); --department-shadow: 0 3px 8px rgba(227,136,58,.2); }
+body .department-tone-slate { --department-bg: linear-gradient(145deg,#8fa0ae,#5d7081); --department-shadow: 0 3px 8px rgba(93,112,129,.2); }
+body .department-tone-rose { --department-bg: linear-gradient(145deg,#ef93a4,#d1566f); --department-shadow: 0 3px 8px rgba(209,86,111,.2); }
+body .department-tone-indigo { --department-bg: linear-gradient(145deg,#8f98ea,#5560c9); --department-shadow: 0 3px 8px rgba(85,96,201,.2); }
 body .department-market-icon.department-identity-icon { width: 32px; height: 32px; border-radius: 10px; background: var(--department-bg); color: #fff; }
 body .workspace-department-market-row { grid-template-columns: 27px 32px minmax(0,1fr) 28px 14px; }
 body .workspace-icon.teal.department-identity-icon { background: var(--department-bg) !important; color: #fff !important; }
