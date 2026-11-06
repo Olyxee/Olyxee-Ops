@@ -12,6 +12,7 @@ const EMAIL_TYPES = new Set([
   "task.overdue",
   "internship.ending_soon",
   "weekly_review.ready",
+  "org.role_changed",
 ]);
 
 const validEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
