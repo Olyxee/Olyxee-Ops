@@ -69,7 +69,7 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_request, file, callback) => {
-    const allowed = file.mimetype.startsWith("image/") || ["application/pdf", "text/plain"].includes(file.mimetype);
+    const allowed = file.mimetype.startsWith("image/") || ["application/pdf", "text/plain", "application/zip", "application/x-zip-compressed"].includes(file.mimetype);
     callback(allowed ? null : new Error("Unsupported file type."), allowed);
   },
 });
@@ -2678,8 +2678,8 @@ app.patch("/api/projects/:id", requireAuth, requireAccount, async (request, resp
 });
 
 app.post("/api/projects/:id/resources", requireAuth, requireAccount, async (request, response) => {
-  if (!["Admin", "Superadmin"].includes(request.appAccount.app_role)) {
-    return response.status(403).json({ error: "Only administrators can upload project resources." });
+  if (!["Admin", "Superadmin", "Manager"].includes(request.appAccount.app_role)) {
+    return response.status(403).json({ error: "Only administrators and managers can upload project resources." });
   }
   const { name, kind, url } = request.body || {};
   if (!name || !["document", "image"].includes(kind) || !url) return response.status(400).json({ error: "A valid uploaded resource is required." });
@@ -2701,6 +2701,9 @@ app.post("/api/assets", requireAuth, requireAccount, upload.single("file"), asyn
   if (!request.file) return response.status(400).json({ error: "A file is required." });
   const kind = String(request.body.kind || "");
   if (!["profile", "project_logo", "document", "image"].includes(kind)) return response.status(400).json({ error: "Invalid asset kind." });
+  if (/zip/.test(request.file.mimetype) && request.file.buffer.subarray(0, 2).toString("latin1") !== "PK") {
+    return response.status(400).json({ error: "That file is not a valid zip archive." });
+  }
   const extension = request.file.originalname.includes(".") ? `.${request.file.originalname.split(".").pop().replace(/[^a-z0-9]/gi, "").toLowerCase()}` : "";
   const objectKey = `olyxee/${request.appAccount.id}/${crypto.randomUUID()}${extension}`;
   let objectStorage;
