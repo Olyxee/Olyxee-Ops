@@ -99,6 +99,15 @@ export function useFunctions(signedIn: boolean, version: number) {
     } catch { /* the app keeps working with the stored department list */ }
   }, []);
   useEffect(() => { if (signedIn) void refresh(); }, [signedIn, version, refresh]);
+  // Keep names, leaders and members current in a page that stays open: refresh when the tab regains focus and every minute.
+  useEffect(() => {
+    if (!signedIn) return;
+    const onVisible = () => { if (document.visibilityState === "visible") void refresh(); };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    const timer = window.setInterval(onVisible, 60_000);
+    return () => { document.removeEventListener("visibilitychange", onVisible); window.removeEventListener("focus", onVisible); window.clearInterval(timer); };
+  }, [signedIn, refresh]);
   const lookup = useMemo(() => {
     const map = new Map<string, string>();
     for (const fn of functions) {
