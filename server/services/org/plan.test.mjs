@@ -73,3 +73,27 @@ test("replacing a department lead closes the incumbent and removing keeps the pe
   assert.deepEqual(remove.after.leadOf, []);
   assert.equal(remove.ops.assignment, null); // the employee and their title are untouched
 });
+
+test("an active intern-record person can supervise other interns, but never in a loop", () => {
+  const people = new Map(PEOPLE.map((p) => [p.ref, p]));
+  people.set("intern-3", { ref: "intern-3", name: "Kay Senior", employmentType: "Intern", active: true, status: "Active" });
+  const base = snapshot({ people, supervisors: new Map([["intern-3", "account-3"]]) });
+  const plan = planChange(base, normalizeChange({ subjectRef: "intern-1", internSupervisor: "intern-3" }));
+  assert.deepEqual(plan.ops.openRelationships, [{ type: "intern_supervisor", subjectRef: "intern-1", managerRef: "intern-3" }]);
+  assert.equal(plan.after.reportsTo, undefined);                                  // supervision is not line management
+  rejects(() => planChange(base, normalizeChange({ subjectRef: "intern-1", internSupervisor: "intern-1" })), "cycle");
+  const looped = snapshot({ people, supervisors: new Map([["intern-1", "intern-3"], ["intern-3", "account-3"]]) });
+  rejects(() => planChange(looped, normalizeChange({ subjectRef: "intern-3", internSupervisor: "intern-1" })), "cycle");
+  rejects(() => planChange(base, normalizeChange({ subjectRef: "intern-1", internSupervisor: "intern-2" })), "inactive");
+});
+
+test("a senior person recorded as an intern can report to a manager instead of being supervised, never both", () => {
+  // intern-1 is currently supervised: a reporting line alone is refused, but swapping in one change is allowed
+  rejects(() => planChange(snapshot(), normalizeChange({ subjectRef: "intern-1", reportsTo: "account-2" })), "ineligible");
+  const swap = planChange(snapshot(), normalizeChange({ subjectRef: "intern-1", reportsTo: "account-2", internSupervisor: null }));
+  assert.deepEqual(swap.ops.openRelationships, [{ type: "reports_to", subjectRef: "intern-1", managerRef: "account-2" }]);
+  assert.deepEqual(swap.ops.closeRelationships, [{ type: "intern_supervisor", subjectRef: "intern-1", managerRef: "account-3" }]);
+  // and once they report to someone, adding a supervisor is refused
+  const lined = snapshot({ supervisors: new Map(), reportsTo: new Map([["intern-1", "account-2"], ["account-2", "account-1"]]) });
+  rejects(() => planChange(lined, normalizeChange({ subjectRef: "intern-1", internSupervisor: "account-3" })), "ineligible");
+});

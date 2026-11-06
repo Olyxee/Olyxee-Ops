@@ -117,7 +117,12 @@ export function planChange(snapshot, change) {
 
   // Organisational reporting line (employees only; interns are supervised, not line-managed)
   if (change.reportsTo !== undefined) {
-    if (!isEmployee(subjectRef)) throw new OrgError("Interns are assigned a supervisor, not a reporting manager.", 409, "ineligible");
+    // Interns are normally supervised, not line-managed. A senior person still recorded as an intern may instead
+    // report to a manager, but only in place of (never alongside) an internship supervisor.
+    const supervisorAfter = change.internSupervisor !== undefined ? change.internSupervisor : snapshot.supervisors.get(subjectRef) ?? null;
+    if (!isEmployee(subjectRef) && change.reportsTo !== null && supervisorAfter) {
+      throw new OrgError("Interns are assigned a supervisor, not a reporting manager.", 409, "ineligible");
+    }
     const current = snapshot.reportsTo.get(subjectRef) ?? null;
     if (change.reportsTo !== current) {
       if (change.reportsTo !== null) {
@@ -137,9 +142,24 @@ export function planChange(snapshot, change) {
   // Internship supervision (separate from line management)
   if (change.internSupervisor !== undefined) {
     if (!isIntern(subjectRef)) throw new OrgError("Only interns have an internship supervisor.", 409, "ineligible");
+    const reportsAfter = change.reportsTo !== undefined ? change.reportsTo : snapshot.reportsTo.get(subjectRef) ?? null;
+    if (change.internSupervisor !== null && reportsAfter) {
+      throw new OrgError("This person reports to a manager. Remove that reporting line before assigning an internship supervisor.", 409, "ineligible");
+    }
     const current = snapshot.supervisors.get(subjectRef) ?? null;
     if (change.internSupervisor !== current) {
-      if (change.internSupervisor !== null) requireActiveEmployee(change.internSupervisor, "The supervisor");
+      if (change.internSupervisor !== null) {
+        // Any active person can supervise: a senior engineer who is still recorded as an intern may lead other interns.
+        // Supervision grants no system permission; it only places the intern under someone in the chart.
+        const supervisor = snapshot.people.get(change.internSupervisor);
+        if (!supervisor) throw new OrgError("The supervisor could not be found.", 404, "not_found");
+        if (!supervisor.active) throw new OrgError("The supervisor is not active.", 409, "inactive");
+        if (change.internSupervisor === subjectRef) throw new OrgError("A person cannot supervise themselves.", 409, "cycle");
+        for (let cursor = change.internSupervisor, hops = 0; cursor && hops < 50; hops += 1) {
+          cursor = snapshot.supervisors.get(cursor) ?? snapshot.reportsTo.get(cursor) ?? null;
+          if (cursor === subjectRef) throw new OrgError(`${personLabel(snapshot, change.internSupervisor)} is already supervised (directly or indirectly) by ${personLabel(snapshot, subjectRef)}, so this would create a loop.`, 409, "cycle");
+        }
+      }
       before.internSupervisor = current;
       after.internSupervisor = change.internSupervisor;
       if (current) ops.closeRelationships.push({ type: "intern_supervisor", subjectRef, managerRef: current });
