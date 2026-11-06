@@ -38,7 +38,7 @@ const FUNCTIONS = [
 ];
 // Specialisations inside Technology & Engineering. `from` re-uses an existing row; otherwise a new one is created.
 const SPECIALISATIONS = [
-  { name: "AI Research & Development", legacy: ["Research & Development (R&D)"], order: 11,
+  { name: "AI Research & Development", parent: "Research & Development (R&D)", legacy: ["Research & Development (R&D)"], order: 11,
     description: "AI research, prototyping and applied model development.", leader: "emmanuel.stakio@olyxee.com" },
   { name: "Data Engineering", legacy: [], order: 12, description: "Data platforms, pipelines and data security.", leader: "mosa.maseko@olyxee.com" },
   { name: "Software Engineering", legacy: [], order: 13, description: "Product and platform software engineering and quality.", leader: "zaid.muhammad.dev@gmail.com" },
@@ -81,7 +81,8 @@ for (const fn of FUNCTIONS) {
 }
 for (const spec of SPECIALISATIONS) {
   const found = spec.from ? row(spec.from) || row(spec.name) : row(spec.name);
-  lines.push(found ? `${found.name === spec.name ? "keep" : `convert department "${found.name}" →`} specialisation "${spec.name}" inside ${PARENT}` : `create specialisation "${spec.name}" inside ${PARENT}`);
+  const inside = spec.parent || PARENT;
+  lines.push(found ? `${found.name === spec.name ? "keep" : `convert department "${found.name}" →`} specialisation "${spec.name}" inside ${inside}` : `create specialisation "${spec.name}" inside ${inside}`);
 }
 for (const [email, unit] of Object.entries(PLACEMENT)) {
   const person = byEmail(email);

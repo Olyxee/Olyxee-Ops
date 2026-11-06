@@ -24,10 +24,10 @@ export async function applyFunctionsMigration(db, loadPeople, actor, config, { l
   for (const spec of specialisations) {
     const found = await findUnit(spec.from || spec.name, spec.name);
     if (found) {
-      await updateFunction(db, { actor, expectedVersion: await version(), id: found.id, name: spec.name, description: spec.description, legacyKeys: spec.legacy, sortOrder: spec.order, parentId: unitIds[parent], reason: REASON }).catch(ignoreNoChange);
+      await updateFunction(db, { actor, expectedVersion: await version(), id: found.id, name: spec.name, description: spec.description, legacyKeys: spec.legacy, sortOrder: spec.order, parentId: unitIds[spec.parent || parent], reason: REASON }).catch(ignoreNoChange);
       unitIds[spec.name] = found.id;
     } else {
-      const created = await createFunction(db, { actor, expectedVersion: await version(), name: spec.name, parentId: unitIds[parent], description: spec.description, legacyKeys: spec.legacy, reason: REASON });
+      const created = await createFunction(db, { actor, expectedVersion: await version(), name: spec.name, parentId: unitIds[spec.parent || parent], description: spec.description, legacyKeys: spec.legacy, reason: REASON });
       await db.query("UPDATE public.org_departments SET sort_order = $2 WHERE id = $1", [created.id, spec.order]);
       unitIds[spec.name] = created.id;
     }

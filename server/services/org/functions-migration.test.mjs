@@ -136,3 +136,15 @@ test("leadership is replaced through the same workflow and the view follows imme
   const history = (await w.db.query("SELECT count(*)::int n FROM public.org_department_leads WHERE department_id = $1", [tech])).rows[0].n;
   assert.equal(history, 2);                                                                       // the previous leader stays in the record
 });
+
+test("a team can be placed inside a different function than the default parent", async () => {
+  const w = await legacyWorld();
+  const config = { ...CONFIG, specialisations: CONFIG.specialisations.map((spec) => (spec.name === "AI Research & Development" ? { ...spec, parent: "Data Science & Intelligence" } : spec)) };
+  await applyFunctionsMigration(w.db, loadPeople, w.actor, config);
+  const view = buildFunctionsView(await getChart(w.db, loadPeople));
+  const science = view.functions.find((fn) => fn.name === "Data Science & Intelligence");
+  const tech = view.functions.find((fn) => fn.name === "Technology & Engineering");
+  assert.deepEqual(science.specialisations.map((spec) => spec.name), ["AI Research & Development"]);
+  assert.equal(tech.specialisations.some((spec) => spec.name === "AI Research & Development"), false);
+  assert.ok(science.memberRefs.includes("account-2") && science.memberRefs.includes("intern-14"));    // the team's people roll up into the new function
+});
