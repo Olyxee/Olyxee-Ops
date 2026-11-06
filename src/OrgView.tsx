@@ -423,19 +423,22 @@ function ChartTab({ avatars, chart, canChange, proposeOnly, onChangeRole, asOf, 
     const led = node.leadsDepartments.map(id => departmentName(chart, id));
     const initials = node.name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase();
     return <li key={ref}>
-      <div className={`org-card${intern ? " org-card-intern" : ""}${node.active ? "" : " org-inactive"}${trail.size === 0 ? " org-card-root" : ""}`}>
-        {avatars[ref] ? <img className="org-avatar org-avatar-photo" src={avatars[ref]} alt={`${node.name}'s profile`} /> : <span className="org-avatar" aria-hidden="true">{initials}</span>}
+      <div className={`org-card${intern ? " org-card-intern" : ""}${node.active ? "" : " org-inactive"}${trail.size === 0 ? " org-card-root" : ""}`} tabIndex={0} aria-label={`${node.name}, ${node.title && node.title !== "Title not set" ? node.title : intern ? "Intern" : "no title"}`}>
+        {avatars[ref] ? <img className="org-avatar org-avatar-photo" src={avatars[ref]} alt="" /> : <span className="org-avatar" aria-hidden="true">{initials}</span>}
         <b className="org-card-name">{node.name}</b>
         <span className="org-card-title">{node.title && node.title !== "Title not set" ? node.title : (intern ? "Intern" : "Title not set")}</span>
-        {node.department && <span className="org-card-dept">{node.department}</span>}
-        <span className="org-card-badges">
-          {intern && <span className="badge gray">Intern</span>}
-          {led.length > 0 && <span className="badge green">Leads {led.join(", ")}</span>}
-          {children.length > 0 && <span className="badge gray">{children.length} {children.length === 1 ? "report" : "reports"}</span>}
-          {node.functionalLeads.length > 0 && <span className="badge amber">Dotted line: {node.functionalLeads.map(item => nameOf(chart, item)).join(", ")}</span>}
-          {!node.active && <span className="badge red">{node.status}</span>}
-        </span>
-        {canChange && !historic && <button className="btn org-card-action" onClick={() => onChangeRole(ref)}>{proposeOnly ? "Propose change" : "Change role"}</button>}
+        {/* Everything else appears on hover or keyboard focus, so the chart itself stays clean. */}
+        <div className="org-card-more">
+          {node.department && <span className="org-card-dept">{node.department}</span>}
+          <span className="org-card-badges">
+            {intern && <span className="badge gray">Intern</span>}
+            {led.length > 0 && <span className="badge green">Leads {led.join(", ")}</span>}
+            {children.length > 0 && <span className="badge gray">{children.length} {children.length === 1 ? "report" : "reports"}</span>}
+            {node.functionalLeads.length > 0 && <span className="badge amber">Dotted line: {node.functionalLeads.map(item => nameOf(chart, item)).join(", ")}</span>}
+            {!node.active && <span className="badge red">{node.status}</span>}
+          </span>
+          {canChange && !historic && <button className="btn org-card-action" onClick={() => onChangeRole(ref)}>{proposeOnly ? "Propose change" : "Change role"}</button>}
+        </div>
       </div>
       {children.length > 0 && <ul>{children.map(child => card(child, next))}</ul>}
     </li>;

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Archive, BrainCircuit, Compass, Layers, Rocket, ArrowDownRight, ArrowLeft, ArrowUpRight, Bell, BriefcaseBusiness, Building2, Check, ChevronRight, CircleHelp, ClipboardList, Clock3, Code2, FileCheck2, FileText, FlaskConical, GitPullRequest, Image, LayoutDashboard, ListTodo, LogOut, Megaphone, Menu, MessageSquare, MoreVertical, Pencil, Plus, Search, Settings, ShieldCheck, Trash2, Upload, UserPlus, UserRound, Users, X } from "lucide-react";
+import { AlertTriangle, Archive, Atom, BrainCircuit, Compass, Layers, Rocket, ArrowDownRight, ArrowLeft, ArrowUpRight, Bell, BriefcaseBusiness, Building2, Check, ChevronRight, CircleHelp, ClipboardList, Clock3, Code2, FileCheck2, FileText, GitPullRequest, Image, LayoutDashboard, ListTodo, LogOut, Megaphone, Menu, MessageSquare, MoreVertical, Pencil, Plus, Search, Settings, ShieldCheck, Trash2, Upload, UserPlus, UserRound, Users, X } from "lucide-react";
 import { zipFiles } from "./zip-upload";
 import { OrgView, ChangeRoleModal, useOrgAccess, OrgAccess, useFunctions, FunctionInfo } from "./OrgView";
 import { AvatarPrompt } from "./AvatarPrompt";
@@ -36,14 +36,14 @@ const manages=(manager:User,person:User)=>person.orgManaged?person.reportsTo===m
 // anything else (a function added later) gets a stable icon and colour of its own so it never looks like another one.
 const legacyDepartmentStyle:Record<string,{icon:typeof Building2;tone:string}>={
   "Engineering":{icon:Code2,tone:"engineering"},
-  "Research & Development (R&D)":{icon:FlaskConical,tone:"research"},
+  "Research & Development (R&D)":{icon:Atom,tone:"research"},
   "Data & Security":{icon:ShieldCheck,tone:"data"},
   "Sales & Marketing":{icon:Megaphone,tone:"sales"},
 };
 const departmentStyleRules:{test:RegExp;icon:typeof Building2;tone:string}[]=[
   {test:/data science|intelligence|analytic/i,icon:BrainCircuit,tone:"data"},
   {test:/growth|partner|sales|market/i,icon:Megaphone,tone:"sales"},
-  {test:/research|r&d|ai/i,icon:FlaskConical,tone:"research"},
+  {test:/research|r&d|ai/i,icon:Atom,tone:"research"},
   {test:/technolog|engineer|software|platform|product/i,icon:Code2,tone:"engineering"},
 ];
 const spareDepartmentStyles:{icon:typeof Building2;tone:string}[]=[{icon:Compass,tone:"slate"},{icon:Rocket,tone:"rose"},{icon:Layers,tone:"indigo"}];
