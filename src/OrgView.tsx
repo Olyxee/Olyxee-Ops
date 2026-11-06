@@ -250,11 +250,30 @@ export function OrgView({ org, onChangeRole, flash, avatars = {} }: { org: OrgAc
     <div className="page-head"><div><div className="eyebrow">Company structure</div><h1 className="title">Organisation</h1><p className="subtitle">Built live from Olyxee’s records. Titles, reporting lines and permissions are managed separately.</p></div></div>
     <div className="project-task-filters org-tabs" role="tablist">{tabs.map(item => <button key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "selected" : ""} onClick={() => setTab(item.id)}>{item.label}</button>)}</div>
     {error && <div className="panel"><div className="empty"><strong>Organisation unavailable</strong>{error}</div></div>}
+    {tab === "chart" && !chart && !error && <ChartSkeleton />}
     {tab === "chart" && chart && <ChartTab avatars={avatars} chart={chart} canChange={canChange} proposeOnly={!org.can("org.approve")} onChangeRole={onChangeRole}
       asOf={asOf} setAsOf={setAsOf} alumni={alumni} setAlumni={setAlumni} showIssues={showIssues} setShowIssues={setShowIssues} />}
     {tab === "proposals" && <ProposalsTab org={org} chart={chart} flash={flash} onChanged={() => { reload(); void org.refresh(); }} />}
     {tab === "history" && <HistoryTab chart={chart} />}
     {tab === "access" && <AccessTab chart={chart} flash={flash} />}
+  </div>;
+}
+
+/** Placeholder shaped like the hierarchy, so people know the chart is on its way. */
+function ChartSkeleton() {
+  const card = (key: string, root = false) => <div key={key} className={`org-card org-skel-card${root ? " org-card-root" : ""}`}>
+    <span className="org-skel org-skel-avatar" /><span className="org-skel org-skel-line w60" /><span className="org-skel org-skel-line w80" /><span className="org-skel org-skel-line w40" />
+  </div>;
+  return <div className="panel org-hier-wrap" role="status" aria-live="polite" aria-busy="true">
+    <span className="sr-only">Loading the organisation chart…</span>
+    <div className="org-skel-tree" aria-hidden="true">
+      <div className="org-skel-row">{card("root", true)}</div>
+      <span className="org-skel-link" />
+      <div className="org-skel-row">{["a", "b", "c"].map(key => card(`l2-${key}`))}</div>
+      <span className="org-skel-link" />
+      <div className="org-skel-row">{["d", "e", "f"].map(key => card(`l3-${key}`))}</div>
+    </div>
+    <p className="muted org-skel-note">Loading the organisation chart…</p>
   </div>;
 }
 

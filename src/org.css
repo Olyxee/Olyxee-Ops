@@ -46,6 +46,20 @@
 .org-avatar{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:#e6efea;color:#2c4a3b;font-size:13px;font-weight:700;margin-bottom:4px}
 .org-card-root .org-avatar{width:46px;height:46px;font-size:15px;background:#2c4a3b;color:#fff}
 .org-avatar-photo{object-fit:cover;background:#e6efea}
+/* Loading skeleton */
+.org-skel-tree{display:flex;flex-direction:column;align-items:center;padding:24px 16px 8px;overflow-x:auto}
+.org-skel-row{display:flex;gap:20px;justify-content:center}
+.org-skel-link{width:2px;height:24px;background:#cdd5d1}
+.org-skel-card{align-items:center}
+.org-skel{display:block;border-radius:6px;background:linear-gradient(90deg,#e8edea 25%,#f3f6f4 50%,#e8edea 75%);background-size:200% 100%;animation:org-shimmer 1.3s ease-in-out infinite}
+.org-skel-avatar{width:38px;height:38px;border-radius:50%;margin-bottom:6px}
+.org-skel-line{height:10px;margin-top:6px}
+.org-skel-line.w80{width:80%}.org-skel-line.w60{width:60%}.org-skel-line.w40{width:40%}
+.org-skel-note{text-align:center;font-size:12px;margin:12px 0 0}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@keyframes org-shimmer{to{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.org-skel{animation:none}}
+@media (max-width:640px){.org-skel-row .org-card:nth-child(n+2){display:none}}
 .avatar-prompt{width:min(440px,100%);text-align:center}
 .avatar-prompt-preview{width:128px;height:128px;border-radius:50%;margin:8px auto 14px;display:grid;place-items:center;background:#e6efea;color:#2c4a3b;overflow:hidden}
 .avatar-prompt-preview img{width:100%;height:100%;object-fit:cover}
@@ -62,6 +76,8 @@
   .org-card-root{border-color:#6f8a7d}
   .org-avatar{background:#2a3a32;color:#cfe3d8}
   .org-card-root .org-avatar{background:#cfe3d8;color:#16241d}
+  .org-skel{background:linear-gradient(90deg,#27322d 25%,#313f38 50%,#27322d 75%);background-size:200% 100%}
+  .org-skel-link{background:#43504a}
   .org-card-title{color:#aab8b1}
   .org-tree ul ul{border-left-color:#3a4540}
   .org-row{border-bottom-color:#2f3a35}
