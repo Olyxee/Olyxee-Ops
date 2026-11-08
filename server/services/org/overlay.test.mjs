@@ -21,3 +21,22 @@ test("a function leader sees their function's people, including its teams and di
   const cross = [...people, { id: "intern-9", department: "Growth & Partnerships", reportsTo: "account-1" }];
   assert.ok(ids(visiblePeopleForManager(cross, people[0], nameGroups)).includes("intern-9"));
 });
+
+test("only someone who leads a whole function sees the full directory; a team lead or anyone else does not", async () => {
+  const { makeDb } = await import("./fixtures.mjs");
+  const { createFunction } = await import("./structure.mjs");
+  const { applyChange, getVersion } = await import("./store.mjs");
+  const { loadPeople } = await import("./fixtures.mjs");
+  const { leadsTopLevelFunction } = await import("./overlay.mjs");
+  const w = await makeDb();
+  const userId = await w.user("ceo", "Manager");
+  const actor = { userId, name: "ceo" };
+  const fn = await createFunction(w.db, { actor, expectedVersion: await getVersion(w.db), name: "Product Engineering" });
+  const team = await createFunction(w.db, { actor, expectedVersion: await getVersion(w.db), name: "Data Engineering", parentId: fn.id });
+  await applyChange(w.db, loadPeople, { actor, expectedVersion: await getVersion(w.db), input: { subjectRef: "account-2", title: "VP", departmentId: fn.id, leadOfAdd: [fn.id] } });
+  await applyChange(w.db, loadPeople, { actor, expectedVersion: await getVersion(w.db), input: { subjectRef: "account-3", title: "Lead", departmentId: team.id, leadOfAdd: [team.id] } });
+  assert.equal(await leadsTopLevelFunction(w.db, "account-2"), true);       // the function's leader
+  assert.equal(await leadsTopLevelFunction(w.db, "account-3"), false);      // leads only a team inside it
+  assert.equal(await leadsTopLevelFunction(w.db, "account-4"), false);      // leads nothing
+  assert.equal(await leadsTopLevelFunction(w.db, null), false);
+});

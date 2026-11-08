@@ -36,7 +36,7 @@ import { createPeopleLoader } from "./server/services/org/people-source.mjs";
 import { recordNewPerson, endPersonOrg, currentResponsibilities } from "./server/services/org/lifecycle.mjs";
 import { createOrgNotifier } from "./server/services/org/notify.mjs";
 import { LEGACY_HIDDEN_INTERN_NAMES } from "./shared/legacy-hidden.mjs";
-import { applyOrgOverlay, loadOrgOverlayData, visiblePeopleForManager } from "./server/services/org/overlay.mjs";
+import { applyOrgOverlay, leadsTopLevelFunction, loadOrgOverlayData, visiblePeopleForManager } from "./server/services/org/overlay.mjs";
 import { departmentInList as departmentInGroupList, loadFunctionKeys } from "./server/services/org/function-keys.mjs";
 import {
   FeedbackResponseError,
@@ -575,7 +575,10 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
     const role = request.appAccount.app_role;
     const ownEmail = String(request.appAccount.email).toLowerCase();
     const current = people.find((person) => String(person.email).toLowerCase() === ownEmail);
-    const visiblePeople = ["Superadmin", "Admin"].includes(role)
+    // The CEO and administrators see everyone; so does anyone who leads a whole function (for example a VP or a Head of a function).
+    const seesEveryone = ["Superadmin", "Admin"].includes(role)
+      || (role === "Manager" && orgEnabled() && orgDb && current ? await leadsTopLevelFunction(orgDb, current.id) : false);
+    const visiblePeople = seesEveryone
       ? people
       : role === "Manager"
         ? (orgEnabled() ? visiblePeopleForManager(people, current, functionNameGroups) : people.filter((person) => person.department === current?.department))

@@ -1,0 +1,9 @@
+/* "Out of office" availability: a calm amber, distinct from Available (green), Busy (red) and Offline (grey). */
+.availability.out-of-office { border-color: #f1d9a8; background: #fff6e2; color: #96590a; }
+.availability.out-of-office i, .availability-dot.out-of-office { background: #e8a33d; box-shadow: 0 0 0 3px rgba(232, 163, 61, .16); }
+.home-working-hours.ooo { color: #96590a; font-weight: 600; white-space: nowrap; }
+.settings-hint { display: block; margin-top: 6px; color: #7b8783; font-size: 11.5px; line-height: 1.4; }
+@media (prefers-color-scheme: dark) {
+  .availability.out-of-office { border-color: #6b4a14; background: #3a2c10; color: #f0c473; }
+  .home-working-hours.ooo { color: #f0c473; }
+}
