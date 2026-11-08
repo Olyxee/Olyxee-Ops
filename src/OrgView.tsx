@@ -37,7 +37,7 @@ export function useOrgAccess(signedIn: boolean): OrgAccess {
   }, []);
   useEffect(() => { if (signedIn) void refresh(); }, [signedIn, refresh]);
   const can = (capability: string) => state.capabilities.some(item => item.capability === capability);
-  const canView = state.enabled && ["org.view_all", "org.propose", "org.approve", "org.delegate"].some(can);
+  const canView = state.enabled;   // the structure is visible to everyone; editing is gated by capabilities
   return { ...state, can, canView, refresh };
 }
 
@@ -324,7 +324,7 @@ export function OrgView({ org, onChangeRole, flash, avatars = {} }: { org: OrgAc
     {tabs.length > 1 && <div className="project-task-filters org-tabs" role="tablist">{tabs.map(item => <button key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "selected" : ""} onClick={() => setTab(item.id)}>{item.label}</button>)}</div>}
     {error && <div className="panel"><div className="empty"><strong>Organisation unavailable</strong>{error}</div></div>}
     {tab === "chart" && !chart && !error && <ChartSkeleton />}
-    {tab === "chart" && chart && <ChartTab avatars={avatars} chart={chart} canChange={canChange} proposeOnly={!org.can("org.approve")} onChangeRole={onChangeRole}
+    {tab === "chart" && chart && <ChartTab avatars={avatars} chart={chart} canChange={canChange} canSeeAlumni={["org.view_all", "org.propose", "org.approve", "org.delegate"].some(org.can)} proposeOnly={!org.can("org.approve")} onChangeRole={onChangeRole}
       asOf={asOf} setAsOf={setAsOf} alumni={alumni} setAlumni={setAlumni} showIssues={showIssues} setShowIssues={setShowIssues} />}
     {tab === "proposals" && <ProposalsTab org={org} chart={chart} flash={flash} onChanged={() => { reload(); void org.refresh(); }} />}
     {tab === "history" && <HistoryTab chart={chart} />}
@@ -350,8 +350,8 @@ function ChartSkeleton() {
   </div>;
 }
 
-function ChartTab({ avatars, chart, canChange, proposeOnly, onChangeRole, asOf, setAsOf, alumni, setAlumni, showIssues, setShowIssues }: {
-  avatars: Record<string, string>; chart: Chart; canChange: boolean; proposeOnly: boolean; onChangeRole: (ref: string) => void; asOf: string; setAsOf: (value: string) => void;
+function ChartTab({ avatars, chart, canChange, canSeeAlumni, proposeOnly, onChangeRole, asOf, setAsOf, alumni, setAlumni, showIssues, setShowIssues }: {
+  avatars: Record<string, string>; chart: Chart; canChange: boolean; canSeeAlumni: boolean; proposeOnly: boolean; onChangeRole: (ref: string) => void; asOf: string; setAsOf: (value: string) => void;
   alumni: boolean; setAlumni: (value: boolean) => void; showIssues: boolean; setShowIssues: (value: boolean) => void;
 }) {
   const historic = Boolean(chart.asOf);
@@ -482,7 +482,7 @@ function ChartTab({ avatars, chart, canChange, proposeOnly, onChangeRole, asOf, 
     <div className="filters">
       <label className="form-label org-inline">View as of <input className="input" type="date" value={asOf} max={new Date().toISOString().slice(0, 10)} onChange={event => setAsOf(event.target.value)} /></label>
       {asOf && <button className="btn" onClick={() => setAsOf("")}>Back to today</button>}
-      <label className="org-check"><input type="checkbox" checked={alumni} onChange={event => setAlumni(event.target.checked)} /> Include completed internships</label>
+      {canSeeAlumni && <label className="org-check"><input type="checkbox" checked={alumni} onChange={event => setAlumni(event.target.checked)} /> Include completed internships</label>}
       <span className="org-layout-toggle" role="group" aria-label="Chart layout">
         <button type="button" className={`btn${layout === "tree" ? " primary" : ""}`} aria-pressed={layout === "tree"} onClick={() => setLayout("tree")}>Hierarchy</button>
         <button type="button" className={`btn${layout === "list" ? " primary" : ""}`} aria-pressed={layout === "list"} onClick={() => setLayout("list")}>List</button>

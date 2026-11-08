@@ -1,23 +1,7 @@
 import { useRef, useState } from "react";
 import { Upload, UserRound } from "lucide-react";
 import "./org.css";
-
-// Same square crop + compression as the profile settings page, so every photo has the same shape and size.
-async function toProfileImage(file: File): Promise<string> {
-  if (!file.type.startsWith("image/")) throw new Error("Choose an image file");
-  if (file.size > 8 * 1024 * 1024) throw new Error("Profile image must be smaller than 8 MB");
-  const source = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(reader.error); reader.readAsDataURL(file); });
-  const image = await new Promise<HTMLImageElement>((resolve, reject) => { const element = new window.Image(); element.onload = () => resolve(element); element.onerror = () => reject(new Error("Could not read this image")); element.src = source; });
-  const side = Math.min(image.naturalWidth, image.naturalHeight);
-  const canvas = document.createElement("canvas");
-  canvas.width = 320; canvas.height = 320;
-  const context = canvas.getContext("2d");
-  if (!context) throw new Error("Could not process this image");
-  context.drawImage(image, (image.naturalWidth - side) / 2, (image.naturalHeight - side) / 2, side, side, 0, 0, 320, 320);
-  const result = canvas.toDataURL("image/jpeg", 0.78);
-  if (result.length > 450000) throw new Error("This image could not be compressed enough. Choose a smaller image.");
-  return result;
-}
+import { PhotoEditor, checkPhotoFile } from "./PhotoEditor";
 
 /**
  * Blocking prompt shown to anyone signed in without a profile picture. It cannot be dismissed: the
@@ -30,10 +14,12 @@ export function AvatarPrompt({ name, onSaved }: { name: string; onSaved: (avatar
   const [error, setError] = useState("");
   const input = useRef<HTMLInputElement>(null);
 
-  const choose = async (file?: File) => {
+  const [picked, setPicked] = useState<File | null>(null);
+  const choose = (file?: File) => {
     if (!file) return;
-    setBusy(true); setError("");
-    try { setImage(await toProfileImage(file)); } catch (problem) { setError(problem instanceof Error ? problem.message : "Could not process this image"); } finally { setBusy(false); }
+    const problem = checkPhotoFile(file);
+    if (problem) { setError(problem); return; }
+    setError(""); setPicked(file);
   };
   const save = async () => {
     if (!image) return;
@@ -47,13 +33,15 @@ export function AvatarPrompt({ name, onSaved }: { name: string; onSaved: (avatar
   };
 
   return <div className="modal-back" role="presentation">
+    {picked && <PhotoEditor file={picked} name={name} onCancel={() => setPicked(null)} onApply={result => { setImage(result); setPicked(null); }} />}
     <div className="modal avatar-prompt" role="dialog" aria-modal="true" aria-label="Add your profile picture">
       <div className="modal-head"><b>Add your profile picture</b></div>
       <div className="modal-body">
         <div className="avatar-prompt-preview">{image ? <img src={image} alt="Your profile preview" /> : <UserRound size={56} strokeWidth={1.5} />}</div>
         <p className="muted">{name ? `${name}, ` : ""}the team needs to see who they are working with. Please add a clear photo of your face to continue.</p>
         {error && <div className="notice" role="alert">{error}</div>}
-        <input ref={input} type="file" accept="image/*" hidden onChange={event => { void choose(event.target.files?.[0]); event.target.value = ""; }} />
+        <input ref={input} type="file" accept="image/*" hidden onChange={event => { choose(event.target.files?.[0]); event.target.value = ""; }} />
+        {image && <button type="button" className="btn" onClick={() => input.current?.click()} disabled={busy}>Reframe</button>}
         <button type="button" className="btn" onClick={() => input.current?.click()} disabled={busy}><Upload size={14} /> {image ? "Choose a different photo" : "Choose a photo"}</button>
       </div>
       <div className="modal-foot"><button type="button" className="btn primary" onClick={() => void save()} disabled={!image || busy}>{busy ? "Saving…" : "Save and continue"}</button></div>

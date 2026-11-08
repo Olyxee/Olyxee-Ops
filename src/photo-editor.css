@@ -1,0 +1,34 @@
+/* Profile photo framing. Sits above the avatar prompt and the settings dialog. */
+.photo-editor-back { z-index: 1200; }
+.photo-editor { width: min(640px, 100%); }
+.photo-editor-grid { display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: start; }
+.photo-editor-stage-wrap { display: grid; gap: 12px; justify-items: center; }
+.photo-editor-stage { position: relative; overflow: hidden; border-radius: 18px; background: #101614; cursor: grab; touch-action: none; user-select: none; outline-offset: 3px; }
+.photo-editor-stage:active { cursor: grabbing; }
+.photo-editor-stage img { position: absolute; left: 50%; top: 50%; max-width: none; pointer-events: none; will-change: transform; }
+/* Dim everything outside the circle so the framing matches the round avatars. */
+.photo-editor-mask { position: absolute; inset: 0; pointer-events: none; border-radius: 18px;
+  background: radial-gradient(circle at center, transparent 0, transparent calc(50% - 1px), rgba(255, 255, 255, .9) calc(50% - 1px), rgba(255, 255, 255, .9) 50%, rgba(8, 12, 10, .58) 50%); }
+.photo-editor-wait { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: 13px; }
+.photo-editor-zoom { display: flex; align-items: center; gap: 8px; width: 100%; }
+.photo-editor-zoom input[type=range] { flex: 1; min-width: 0; accent-color: #2c7a57; }
+.photo-editor-zoom .btn { padding: 6px 8px; }
+.photo-editor-previews { display: grid; gap: 14px; align-content: start; }
+.photo-editor-label { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #6b7a73; }
+.photo-editor-preview-card { display: grid; justify-items: center; gap: 6px; padding: 18px 12px; border: 1px solid #e3e9e6; border-radius: 16px; background: #fafcfb; text-align: center; }
+.photo-editor-preview-card small, .photo-editor-preview-row small { color: #6b7a73; font-size: 11.5px; }
+.photo-editor-preview-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.photo-preview { display: inline-grid; place-items: center; border-radius: 50%; overflow: hidden; background: #e6efea; color: #2c4a3b; font-weight: 700; flex: 0 0 auto; }
+.photo-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-preview.large { width: 96px; height: 96px; font-size: 28px; box-shadow: 0 6px 18px rgba(20, 40, 30, .16); }
+.photo-preview.medium { width: 40px; height: 40px; font-size: 14px; }
+.photo-preview.small { width: 28px; height: 28px; font-size: 11px; }
+.photo-edit-hint { color: #6b7a73; font-size: 12px; }
+@media (max-width: 620px) {
+  .photo-editor-grid { grid-template-columns: 1fr; }
+}
+@media (prefers-color-scheme: dark) {
+  .photo-editor-preview-card { background: #17201c; border-color: #2a3731; }
+  .photo-editor-label, .photo-editor-preview-card small, .photo-editor-preview-row small, .photo-edit-hint { color: #9fb0a8; }
+  .photo-preview { background: #223029; color: #cfe3d8; }
+}

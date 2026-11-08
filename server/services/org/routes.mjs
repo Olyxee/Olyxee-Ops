@@ -36,11 +36,14 @@ export function registerOrgRoutes(app, { db, loadPeople, requireAuth, requireAcc
     response.json({ enabled: isEnabled(), capabilities, version: await getVersion(db) });
   }, { enabledOnly: false }));
 
-  app.get("/api/org/chart", ...base, guard(async ({ request, response }) => {
+  // Everyone signed in may see the structure: names, titles, functions and reporting lines (no contact details).
+  // Completed internships and editing stay with people who hold an organisation capability.
+  app.get("/api/org/chart", ...base, guard(async ({ request, response, capabilities }) => {
     const asOf = request.query.asOf ? new Date(String(request.query.asOf)) : null;
     if (asOf && Number.isNaN(asOf.getTime())) throw new OrgError("asOf must be a valid date.");
-    response.json(await getChart(db, loadPeople, { asOf, includeAlumni: request.query.alumni === "1" }));
-  }, { any: ANY_VIEW }));
+    const privileged = ANY_VIEW.some((capability) => holds(capabilities, capability));
+    response.json(await getChart(db, loadPeople, { asOf, includeAlumni: privileged && request.query.alumni === "1" }));
+  }, { any: [] }));
 
   app.get("/api/org/history", ...base, guard(async ({ request, response }) => {
     response.json({ history: await listHistory(db, { personRef: request.query.person ? String(request.query.person) : null, limit: request.query.limit }) });

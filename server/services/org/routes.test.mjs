@@ -38,8 +38,10 @@ test("authorisation matrix: view, propose, approve, delegate are separate and Su
   const w = await boot();
   try {
     assert.equal((await w.call(null, "GET", "/api/org/chart")).status, 401);
-    assert.equal((await w.call("tech", "GET", "/api/org/chart")).status, 403);           // technical Superadmin: no org authority
-    assert.equal((await w.call("intern", "GET", "/api/org/chart")).status, 403);
+    assert.equal((await w.call("tech", "GET", "/api/org/chart")).status, 200);           // everyone signed in can see the structure...
+    assert.equal((await w.call("intern", "GET", "/api/org/chart")).status, 200);
+    assert.equal((await w.call("intern", "GET", "/api/org/history")).status, 403);       // ...but history and editing stay with capability holders
+    assert.equal((await w.call("intern", "POST", "/api/org/changes/preview", { subjectRef: "account-4", title: "X" })).status, 403);
     assert.equal((await w.call("vp", "GET", "/api/org/chart")).status, 200);
     const version = (await w.call("vp", "GET", "/api/org/me")).body.version;
     const input = { subjectRef: "account-4", title: "Senior Dev" };
