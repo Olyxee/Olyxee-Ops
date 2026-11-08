@@ -54,3 +54,9 @@
   .project-sheet-list { border-color: #26312c; }
   .project-sheet-list li + li { border-color: #212b26; }
 }
+.project-page-secondary { display: inline-flex; align-items: center; gap: 7px; border: 0; cursor: pointer; padding: 10px 16px; border-radius: 999px; background: #eef2f0; color: #25322c; font: inherit; font-size: 14px; font-weight: 600; }
+.project-page-secondary:hover { background: #e3e9e6; }
+.project-edit-logo { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; }
+.project-edit-logo > div { display: flex; gap: 8px; flex-wrap: wrap; }
+.project-sheet-delete { margin-right: auto; }
+@media (prefers-color-scheme: dark) { .project-page-secondary { background: #212b26; color: #d5e2db; } }

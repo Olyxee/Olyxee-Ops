@@ -2794,6 +2794,19 @@ app.patch("/api/projects/:id", requireAuth, requireAccount, async (request, resp
   }
   const functionsView = () => (orgDb && loadOrgPeople ? getChart(orgDb, loadOrgPeople).then(buildFunctionsView) : { functions: [] });
   if (role === "Superadmin") {
+    const newName = typeof request.body.name === "string" ? request.body.name.trim().slice(0, 160) : null;
+    if (newName !== null && !newName) return response.status(400).json({ error: "Enter a project name." });
+    if (typeof request.body.description === "string") project.description = request.body.description.trim().slice(0, 1000) || "Project workspace";
+    if (newName && newName !== project.name) {
+      if (projects.some((item) => item.id !== project.id && String(item.name).trim().toLowerCase() === newName.toLowerCase())) {
+        return response.status(409).json({ error: "A project with this name already exists." });
+      }
+      // Tasks refer to their project by name, so they follow the rename.
+      await appPool.query("UPDATE public.tasks SET project = $1 WHERE project = $2", [newName, project.name]);
+      project.name = newName;
+    }
+  }
+  if (role === "Superadmin") {
     // The CEO assigns teams. Individual people stay possible for older projects but are not the normal path.
     if (Array.isArray(request.body.teamIds)) project.teamIds = validTeamIds(await functionsView(), request.body.teamIds);
     project.assigneeIds = Array.isArray(request.body.assigneeIds) ? [...new Set(request.body.assigneeIds.map(String))] : project.assigneeIds;
@@ -2826,6 +2839,31 @@ app.patch("/api/projects/:id", requireAuth, requireAccount, async (request, resp
     WHERE state_key = 'projects'
   `, [JSON.stringify(projects), request.appAccount.id]);
   return response.json({ project });
+});
+
+app.delete("/api/projects/:id", requireAuth, requireAccount, async (request, response) => {
+  if (request.appAccount.app_role !== "Superadmin") return response.status(403).json({ error: "Only the Superadmin can delete a project." });
+  const client = await appPool.connect();
+  try {
+    await client.query("BEGIN");
+    const current = await client.query("SELECT state_value FROM workspace_state WHERE state_key = 'projects' FOR UPDATE");
+    const projects = Array.isArray(current.rows[0]?.state_value) ? current.rows[0].state_value : [];
+    const project = projects.find((item) => item.id === request.params.id);
+    if (!project) { await client.query("ROLLBACK"); return response.status(404).json({ error: "Project not found." }); }
+    await client.query(
+      "UPDATE workspace_state SET state_value = $1::jsonb, updated_by = $2, updated_at = now() WHERE state_key = 'projects'",
+      [JSON.stringify(projects.filter((item) => item.id !== project.id)), request.appAccount.id],
+    );
+    const tasks = await client.query("SELECT count(*)::int AS count FROM public.tasks WHERE project = $1", [project.name]);
+    await client.query("COMMIT");
+    return response.json({ ok: true, deleted: project.name, tasksKept: tasks.rows[0].count });
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    console.error("Project deletion failed:", error instanceof Error ? error.message : "Unknown error");
+    return response.status(500).json({ error: "Could not delete this project." });
+  } finally {
+    client.release();
+  }
 });
 
 app.post("/api/projects/:id/resources", requireAuth, requireAccount, async (request, response) => {
