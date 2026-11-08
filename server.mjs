@@ -36,7 +36,7 @@ import { createPeopleLoader } from "./server/services/org/people-source.mjs";
 import { recordNewPerson, endPersonOrg, currentResponsibilities } from "./server/services/org/lifecycle.mjs";
 import { createOrgNotifier } from "./server/services/org/notify.mjs";
 import { LEGACY_HIDDEN_INTERN_NAMES } from "./shared/legacy-hidden.mjs";
-import { applyOrgOverlay, loadOrgOverlayData } from "./server/services/org/overlay.mjs";
+import { applyOrgOverlay, loadOrgOverlayData, visiblePeopleForManager } from "./server/services/org/overlay.mjs";
 import { departmentInList as departmentInGroupList, loadFunctionKeys } from "./server/services/org/function-keys.mjs";
 import {
   FeedbackResponseError,
@@ -193,9 +193,18 @@ async function getAppAccount(userId) {
   return result.rows[0];
 }
 
+// DEVELOPMENT ONLY: see the app as another person, to check what they will see. Off unless DEV_VIEW_AS_EMAIL is set, never active
+// in production or on Vercel, only for a signed-in Superadmin, and strictly read-only (every change is refused).
+const devViewAsEmail = !isProduction && !process.env.VERCEL ? String(process.env.DEV_VIEW_AS_EMAIL || "").trim().toLowerCase() : "";
 const requireAccount = async (request, response, next) => {
   try {
-    request.appAccount = await getAppAccount(request.session.userId);
+    const own = await getAppAccount(request.session.userId);
+    if (devViewAsEmail && own.app_role === "Superadmin" && String(own.email).toLowerCase() !== devViewAsEmail) {
+      if (!["GET", "HEAD", "OPTIONS"].includes(request.method)) return response.status(403).json({ error: `You are viewing the app as ${devViewAsEmail}. This view is read-only.` });
+      const other = (await appPool.query("SELECT id FROM public.ops_users WHERE lower(email) = $1 AND active", [devViewAsEmail])).rows[0];
+      if (other) { request.appAccount = await getAppAccount(other.id); return next(); }
+    }
+    request.appAccount = own;
     return next();
   } catch (error) {
     return response.status(error.statusCode || 503).json({ error: error.message || "Account unavailable." });
@@ -569,7 +578,7 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
     const visiblePeople = ["Superadmin", "Admin"].includes(role)
       ? people
       : role === "Manager"
-        ? people.filter((person) => person.department === current?.department)
+        ? (orgEnabled() ? visiblePeopleForManager(people, current, functionNameGroups) : people.filter((person) => person.department === current?.department))
         : people.filter((person) => person.id === current?.id);
     return response.json({ connected: true, source: "Supabase", people: visiblePeople });
   } catch (error) {

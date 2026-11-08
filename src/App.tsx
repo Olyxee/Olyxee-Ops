@@ -48,8 +48,8 @@ const legacyDepartmentStyle:Record<string,{icon:typeof Building2;tone:string}>={
 const departmentStyleRules:{test:RegExp;icon:typeof Building2;tone:string}[]=[
   {test:/data science|intelligence|analytic/i,icon:ChartLine,tone:"data"},
   {test:/growth|partner|sales|market/i,icon:Megaphone,tone:"sales"},
-  {test:/research|r&d|ai/i,icon:Lightbulb,tone:"research"},
-  {test:/data/i,icon:Database,tone:"data"},
+  {test:/research|r&d|\bai\b/i,icon:Lightbulb,tone:"research"},
+  {test:/\bdata\b/i,icon:Database,tone:"data"},
   {test:/technolog|engineer|software|platform|product/i,icon:Code2,tone:"engineering"},
 ];
 const spareDepartmentStyles:{icon:typeof Building2;tone:string}[]=[{icon:Compass,tone:"slate"},{icon:Rocket,tone:"rose"},{icon:Layers,tone:"indigo"}];
@@ -468,7 +468,7 @@ function UnifiedWorkspace({functions,ceoSchedule,flash,user,team,statuses,tasks,
      const departmentHealthState=!departmentTasks.length?"No activity":departmentHealth>=68?"On track":departmentHealth>=44?"Needs attention":"At risk";
     const departmentAction=departmentReview[0]?`Review “${departmentReview[0].title}” and leave feedback now.`:departmentGoalTasks.find(task=>task.status==="Blocked")?`Resolve the blocker on “${departmentGoalTasks.find(task=>task.status==="Blocked")?.title}”.`:departmentOpen===0?`Create the next priority task for ${user.department}.`:`Review active work or create a focused task to lift ${user.department} delivery.`;
   const jobTitle=user.position||(departmentHead?`${user.department} Head`:isManager(user)?"Team Manager":accessOf(user)==="Superadmin"?"Operations Lead":accessOf(user)==="Admin"?"Operations Administrator":`${employmentOf(user)} team member`);
-  const welcomeTitle=departmentHead?`${dayGreeting()}, ${user.department} Head.`:`${dayGreeting()}, ${user.name.split(" ")[0]}.`;
+  const welcomeTitle=`${dayGreeting()}, ${user.name.split(" ")[0]}.`;
   const intern=employmentOf(user)==="Intern";
   return <div className={`workspace-board ${intern?"workspace-board-member":""}`}>
     <div className="workspace-stack workspace-stack-summary">

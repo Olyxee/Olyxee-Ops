@@ -1,6 +1,20 @@
 import { UNASSIGNED_DEPARTMENT } from "../../../shared/departments.mjs";
 import { UNSET_TITLE } from "./schema.mjs";
 
+/**
+ * Who a manager can see in the people list: themselves, the people who report to them or whom they supervise, and everyone
+ * in their function, including its teams (nameGroups maps any function or team name to its top-level function).
+ */
+export function visiblePeopleForManager(people, current, nameGroups = new Map()) {
+  if (!current) return [];
+  const group = (department) => (department ? nameGroups.get(String(department).toLowerCase()) || String(department).toLowerCase() : "");
+  const mine = group(current.department);
+  return people.filter((person) => person.id === current.id
+    || person.department === current.department
+    || person.reportsTo === current.id
+    || (mine && group(person.department) === mine));
+}
+
 /** Reads the current org tables once; /api/people merges them into the people it already builds. */
 export async function loadOrgOverlayData(db) {
   const [departments, assignments, relationships, links, exclusions, classifications] = await Promise.all([
