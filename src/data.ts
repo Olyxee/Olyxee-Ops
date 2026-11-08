@@ -19,7 +19,7 @@ export type WeeklyObjectiveResource={id:string;name:string;kind:"document"|"imag
 export type WeeklyObjective={id:string;title:string;description:string;managerId:string;teamLeadId?:string;projectIds?:string[];priority:"Critical"|"High"|"Medium"|"Low";dueDate:string;status:ObjectiveStatus;createdBy:string;createdDate:string;resources?:WeeklyObjectiveResource[];blockerMessage?:string;blockedAt?:string;completedAt?:string};
 export type Access={id:string;requester:string;department:string;resourceType:string;system:string;relatedTask:string;reason:string;status:"Pending"|"Approved"|"Rejected";date:string};
 export type ProjectResource={id:string;name:string;kind:"document"|"image";url?:string};
-export type Project={id:string;name:string;description:string;githubUrl:string;assigneeIds:string[];resources:ProjectResource[];active:boolean;status:"Active"|"Archived";logoUrl?:string};
+export type Project={id:string;name:string;description:string;githubUrl:string;assigneeIds:string[];resources:ProjectResource[];active:boolean;status:"Active"|"Archived";logoUrl?:string;teamIds?:string[]};
 
 export const users:User[]=[];
 export const seedStaffStatuses:StaffStatus[]=[];

@@ -112,3 +112,9 @@
   .org-cover-tag.interim{background:#14263f;color:#9cc2ff;border-color:#27456f}
   .org-cover-tag.away{background:#3a2c10;color:#f0c473;border-color:#6b4a14}
 }
+
+/* "Organisation chart" button: label on the left, an orange icon pinned to the right end. */
+.org-chart-button{display:inline-flex;align-items:center;justify-content:space-between;gap:14px;min-width:190px;padding:8px 8px 8px 16px;border-radius:999px;font-weight:600}
+.org-chart-button-icon{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#fff1e0;color:#e8710a;margin-left:auto;transition:transform .18s ease,background .18s ease}
+.org-chart-button:hover .org-chart-button-icon{transform:translateX(2px);background:#ffe3c2}
+@media (prefers-color-scheme: dark){.org-chart-button-icon{background:#3a2410;color:#ffa24d}.org-chart-button:hover .org-chart-button-icon{background:#4a2e14}}

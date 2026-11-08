@@ -30,7 +30,9 @@ import {
   upsertAccountForSetup,
 } from "./server/services/accounts/account-setup.mjs";
 import { registerOrgRoutes } from "./server/services/org/routes.mjs";
-import { fromPgPool } from "./server/services/org/store.mjs";
+import { fromPgPool, getChart } from "./server/services/org/store.mjs";
+import { buildFunctionsView } from "./server/services/org/functions-view.mjs";
+import { assignableByLeader, validTeamIds } from "./shared/project-teams.mjs";
 import { registerPersonalCalendarRoutes } from "./server/services/personal-calendar/routes.mjs";
 import { createPeopleLoader } from "./server/services/org/people-source.mjs";
 import { recordNewPerson, endPersonOrg, currentResponsibilities } from "./server/services/org/lifecycle.mjs";
@@ -2776,7 +2778,7 @@ app.patch("/api/projects/:id", requireAuth, requireAccount, async (request, resp
   const githubUrl = String(request.body.githubUrl || "").trim();
   const logoUrl = typeof request.body.logoUrl === "string" ? request.body.logoUrl : undefined;
   if (role !== "Manager") {
-    if (!/^https?:\/\/(www\.)?github\.com\/.+/i.test(githubUrl)) return response.status(400).json({ error: "Enter a valid GitHub repository URL." });
+    if (githubUrl && !/^https?:\/\/(www\.)?github\.com\/.+/i.test(githubUrl)) return response.status(400).json({ error: "Enter a valid GitHub repository URL." });
     if (logoUrl !== undefined && logoUrl.length > 500000) return response.status(400).json({ error: "Project logo is too large." });
     if (logoUrl && !logoUrl.startsWith("data:image/") && !logoUrl.startsWith("/api/assets/")) {
       return response.status(400).json({ error: "Project logo must be an uploaded image." });
@@ -2787,29 +2789,35 @@ app.patch("/api/projects/:id", requireAuth, requireAccount, async (request, resp
   const project = projects.find((item) => item.id === request.params.id);
   if (!project) return response.status(404).json({ error: "Project not found." });
   if (role !== "Manager") {
-    project.githubUrl = githubUrl;
+    if (githubUrl) project.githubUrl = githubUrl;
     if (logoUrl !== undefined) project.logoUrl = logoUrl || undefined;
   }
+  const functionsView = () => (orgDb && loadOrgPeople ? getChart(orgDb, loadOrgPeople).then(buildFunctionsView) : { functions: [] });
   if (role === "Superadmin") {
+    // The CEO assigns teams. Individual people stay possible for older projects but are not the normal path.
+    if (Array.isArray(request.body.teamIds)) project.teamIds = validTeamIds(await functionsView(), request.body.teamIds);
     project.assigneeIds = Array.isArray(request.body.assigneeIds) ? [...new Set(request.body.assigneeIds.map(String))] : project.assigneeIds;
   } else if (role === "Manager") {
     const identity = await getTaskContext(request);
     const managerInternIds = identity.reportIds.filter((id) => /^intern-\d+$/.test(id));
+    // A leader of a team the CEO assigned to this project may add or remove people from that team.
+    const teamPeople = assignableByLeader(await functionsView(), project, identity.externalId);
+    const managed = new Set([...managerInternIds, ...teamPeople]);
     const currentIds = Array.isArray(project.assigneeIds) ? project.assigneeIds.map(String) : [];
     const requestedIds = Array.isArray(request.body.assigneeIds) ? [...new Set(request.body.assigneeIds.map(String))] : currentIds;
-    const invalidIds = requestedIds.filter((id) => !currentIds.includes(id) && !managerInternIds.includes(id));
+    const invalidIds = requestedIds.filter((id) => !currentIds.includes(id) && !managed.has(id));
     if (invalidIds.length) {
-      return response.status(403).json({ error: "Managers can only add interns who report to them." });
+      return response.status(403).json({ error: "You can only add people from your own team or interns who report to you." });
     }
-    const requestedManagerInternIds = requestedIds.filter((id) => managerInternIds.includes(id));
-    const newlyAssignedIds = requestedManagerInternIds.filter((id) => !currentIds.includes(id));
+    const requestedManaged = requestedIds.filter((id) => managed.has(id));
+    const newlyAssignedIds = requestedManaged.filter((id) => !currentIds.includes(id));
     const activeChecks = await Promise.all(newlyAssignedIds.map((id) => isAssignablePerson(id)));
     if (activeChecks.some((active) => !active)) {
-      return response.status(400).json({ error: "Choose an active intern." });
+      return response.status(400).json({ error: "Choose an active person." });
     }
     project.assigneeIds = [
-      ...currentIds.filter((id) => !managerInternIds.includes(id)),
-      ...requestedManagerInternIds,
+      ...currentIds.filter((id) => !managed.has(id)),
+      ...requestedManaged,
     ];
   }
   await appPool.query(`

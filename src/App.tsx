@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Archive, ChartLine, Database, Lightbulb, Compass, Layers, Rocket, ArrowDownRight, ArrowLeft, ArrowUpRight, Bell, BriefcaseBusiness, Building2, Check, ChevronRight, CircleHelp, ClipboardList, Clock3, Code2, FileCheck2, FileText, GitPullRequest, Image, LayoutDashboard, ListTodo, LogOut, Megaphone, Menu, MessageSquare, MoreVertical, Pencil, Plus, Search, Settings, ShieldCheck, Trash2, Upload, UserPlus, UserRound, Users, X } from "lucide-react";
+import { Network, AlertTriangle, Archive, ChartLine, Database, Lightbulb, Compass, Layers, Rocket, ArrowDownRight, ArrowLeft, ArrowUpRight, Bell, BriefcaseBusiness, Building2, Check, ChevronRight, CircleHelp, ClipboardList, Clock3, Code2, FileCheck2, FileText, GitPullRequest, Image, LayoutDashboard, ListTodo, LogOut, Megaphone, Menu, MessageSquare, MoreVertical, Pencil, Plus, Search, Settings, ShieldCheck, Trash2, Upload, UserPlus, UserRound, Users, X } from "lucide-react";
 import { zipFiles } from "./zip-upload";
 import { OrgView, ChangeRoleModal, useOrgAccess, OrgAccess, useFunctions, FunctionInfo } from "./OrgView";
 import { AvatarPrompt } from "./AvatarPrompt";
 import { PhotoEditor, checkPhotoFile } from "./PhotoEditor";
+import "./project-page.css";
 import { CeoSchedule, usePersonalCalendarAccess } from "./CeoSchedule";
 import "./function-card.css";
 import "./profile-card.css";
@@ -395,7 +396,7 @@ function WorkspaceApp(){
          </div>:selected?<div className="workspace-section">
            <TaskDetail key={selected.id} task={selected} user={active} team={team} projectsData={projectsData} can={can} update={updateTask} refresh={loadTasks} flash={flash} deleteTask={deleteTask} onBack={()=>setTaskId(null)}/>
          </div>:selectedProject?<div className="workspace-section">
-           <ProjectDetail user={active} project={selectedProject} tasks={intern?visibleTasks:tasks} objectives={objectives} team={team} onBack={()=>setProjectId(null)} onOpen={setTaskId} onProjectUpdated={updated=>setProjectsData(current=>current.map(project=>project.id===updated.id?updated:project))} onResourceAdded={resource=>setProjectsData(current=>current.map(project=>project.id===projectId?{...project,resources:[...project.resources,resource]}:project))} flash={flash}/>
+           <ProjectDetail functions={fx.functions} user={active} project={selectedProject} tasks={intern?visibleTasks:tasks} objectives={objectives} team={team} onBack={()=>setProjectId(null)} onOpen={setTaskId} onProjectUpdated={updated=>setProjectsData(current=>current.map(project=>project.id===updated.id?updated:project))} onResourceAdded={resource=>setProjectsData(current=>current.map(project=>project.id===projectId?{...project,resources:[...project.resources,resource]}:project))} flash={flash}/>
          </div>:projectId?<div className="workspace-section">
            <BackButton className="workspace-back" onClick={()=>setProjectId(null)} label="Back to projects"/><div className="empty">This project is not available in your assigned work.</div>
          </div>:visibleView==="Overview"||visibleView==="Home"?<UnifiedWorkspace functions={fx.functions} ceoSchedule={hasCalendar} flash={flash} user={active} team={team} statuses={displayedStaffStatuses} tasks={visibleTasks} allTasks={tasks} projectsData={projectsData} departmentsData={availableDepartments} objectives={objectives} can={can} onOpen={setTaskId} onFeedback={(taskId,feedbackId)=>{setFeedbackSelection({taskId,feedbackId});window.scrollTo({top:0,behavior:"smooth"})}} onProject={setProjectId} onDepartment={openDepartment} onModal={setModal} onEditObjective={objective=>{setEditingObjective(objective);setModal("objective")}} onManage={person=>{setEditingPerson(person);setModal("person")}} onView={selectView} onObjective={openObjective}/>:<div className="workspace-section">
@@ -648,7 +649,7 @@ function UnifiedWorkspace({functions,ceoSchedule,flash,user,team,statuses,tasks,
           const directory=directorySource.filter(person=>canSeeEveryone||(isManager(user)?manages(user,person):person.reportsTo===user.id));
        const employees=directory.filter(person=>employmentOf(person)==="Employee"); const interns=directory.filter(person=>employmentOf(person)==="Intern");
        const people=directory.filter(person=>peopleFilter==="All"||employmentOf(person)===peopleFilter);
-          return <><Header eyebrow="Team directory" title="People" subtitle="People, access, and recent activity." action={<>{p.org.canView&&<button className="btn" onClick={()=>p.onView("Organisation")}>Organisation chart</button>}{p.can("person")&&<button className="btn primary" onClick={()=>p.onModal("person")}><UserPlus size={14}/> Add {isManager(user)?"staff member":"person"}</button>}</>}/>
+          return <><Header eyebrow="Team directory" title="People" subtitle="People, access, and recent activity." action={<>{p.org.canView&&<button className="btn org-chart-button" onClick={()=>p.onView("Organisation")}><span>Organisation chart</span><span className="org-chart-button-icon" aria-hidden="true"><Network size={15}/></span></button>}{p.can("person")&&<button className="btn primary" onClick={()=>p.onModal("person")}><UserPlus size={14}/> Add {isManager(user)?"staff member":"person"}</button>}</>}/>
        {canSeeEveryone?<><div className="people-summary people-segments" role="group" aria-label="Filter people">
          <button type="button" className={peopleFilter==="All"?"active":""} aria-pressed={peopleFilter==="All"} onClick={()=>setPeopleFilter("All")}>Everyone <strong>{p.databasePeople?directory.length:"—"}</strong></button>
          <button type="button" className={peopleFilter==="Employee"?"active":""} aria-pressed={peopleFilter==="Employee"} onClick={()=>setPeopleFilter("Employee")}>Employees <strong>{p.databasePeople?employees.length:"—"}</strong></button>
@@ -763,71 +764,88 @@ function ManagerDepartmentDetail({user,department,tasks,objectives,team,onBack,o
 
 function TaskList({tasks,onOpen,team}:any){const [q,setQ]=useState("");const [status,setStatus]=useState("All");const [department,setDepartment]=useState("All");const [priority,setPriority]=useState("All");const [assignee,setAssignee]=useState("All");const people=(team||[]).filter((person:User)=>tasks.some((task:Task)=>taskAssignees(task).includes(person.id)));const departmentsList:string[]=[...new Set<string>(tasks.flatMap((task:Task)=>taskDepartments(task)))];const filtered=tasks.filter((t:Task)=>(status==="All"||t.status===status)&&(department==="All"||taskDepartments(t).includes(department))&&(priority==="All"||t.priority===priority)&&(assignee==="All"||taskAssignees(t).includes(assignee))&&`${t.title} ${t.project} ${t.code||t.id} ${taskDepartmentLabel(t)}`.toLowerCase().includes(q.toLowerCase()));return <><div className="filters"><div className="input search inline"><Search size={14}/><input style={{border:0,outline:0,width:"100%"}} placeholder="Search tasks" value={q} onChange={e=>setQ(e.target.value)}/></div><select className="select" value={department} onChange={e=>setDepartment(e.target.value)}><option value="All">All functions</option>{departmentsList.map(name=><option key={name}>{name}</option>)}</select><select className="select" value={assignee} onChange={e=>setAssignee(e.target.value)}><option value="All">All assignees</option>{people.map((person:User)=><option key={person.id} value={person.id}>{person.name}</option>)}</select><select className="select" value={priority} onChange={e=>setPriority(e.target.value)}><option value="All">All priorities</option>{["Critical","Urgent","High","Normal","Medium","Low"].map(value=><option key={value}>{value}</option>)}</select><select className="select" value={status} onChange={e=>setStatus(e.target.value)}><option value="All">All statuses</option>{["Not Started","In Progress","Blocked","Submitted for Review","Changes Requested","Completed","Cancelled"].map(s=><option key={s}>{s}</option>)}</select></div><div className="panel table-wrap"><table className="table"><thead><tr><th>Task</th><th>Project</th><th>Functions</th><th>Owner</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody>{filtered.map((t:Task)=><tr className={`task-table-row${overdueClass(t)}`} key={t.id} tabIndex={0} role="button" aria-label={`Open ${t.title}`} onClick={()=>onOpen(t.id)} onKeyDown={event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();onOpen(t.id)}}}><td><b>{t.title}</b><br/><span className="muted">{t.code||t.id} · {t.priority} priority</span></td><td>{t.project}</td><td>{taskDepartmentLabel(t)}{t.taskLeadId&&<><br/><span className="muted">Lead: {team?.find((person:User)=>person.id===t.taskLeadId)?.name||"Assigned"}</span></>}</td><td>{taskAssignees(t).map(id=>team?.find((u:User)=>u.id===id)?.name).filter(Boolean).join(", ")||"Unassigned"}</td><td>{t.due}</td><td><OverdueBadge task={t}/> <Status s={t.status}/></td><td><button className="btn" onClick={event=>{event.stopPropagation();onOpen(t.id)}}>View details</button></td></tr>)}</tbody></table>{!filtered.length&&<div className="empty"><strong>No matching tasks</strong>Try a different search.</div>}</div></>}
 
-function ProjectDetail({user,project,tasks,objectives,team,onBack,onOpen,onProjectUpdated,onResourceAdded,flash}:{user:User;project:Project;tasks:Task[];objectives:WeeklyObjective[];team:User[];onBack:()=>void;onOpen:(id:string)=>void;onProjectUpdated:(project:Project)=>void;onResourceAdded:(resource:ProjectResource)=>void;flash:(message:string)=>void}){
-  const [uploading,setUploading]=useState(false);
-  const [editing,setEditing]=useState(false);
-  const [taskFilter,setTaskFilter]=useState<"All"|"Needs attention"|"Active"|"Completed">("All");
-  const [githubUrl,setGithubUrl]=useState(project.githubUrl);
-  const [logoUrl,setLogoUrl]=useState(project.logoUrl||"");
-  const [processingLogo,setProcessingLogo]=useState(false);
-  const currentAssigneeIds=project.assigneeIds.filter(id=>team.some(person=>person.id===id&&isCurrentTeamMember(person)));
-  const [assigneeIds,setAssigneeIds]=useState(currentAssigneeIds);
+function ProjectDetail({user,project,tasks,objectives,team,functions,onBack,onOpen,onProjectUpdated,flash}:{user:User;project:Project;tasks:Task[];objectives:WeeklyObjective[];team:User[];functions:FunctionInfo[];onBack:()=>void;onOpen:(id:string)=>void;onProjectUpdated:(project:Project)=>void;onResourceAdded?:(resource:ProjectResource)=>void;flash:(message:string)=>void}){
+  const [sheet,setSheet]=useState<null|"teams"|"people">(null);
   const [saving,setSaving]=useState(false);
-  const projectTasks=tasks.filter(task=>task.project===project.name);
-   const currentDay=new Date();
-   const today=`${currentDay.getFullYear()}-${String(currentDay.getMonth()+1).padStart(2,"0")}-${String(currentDay.getDate()).padStart(2,"0")}`;
-   const nextWeek=new Date(`${today}T00:00:00`); nextWeek.setDate(nextWeek.getDate()+7);
-   const isActiveTask=(task:Task)=>!["Completed","Cancelled"].includes(task.status);
-   const needsAttention=(task:Task)=>isActiveTask(task)&&(["Blocked","Changes Requested"].includes(task.status)||Boolean(task.due&&task.due<today));
-   const completedProjectTasks=projectTasks.filter(task=>task.status==="Completed").length;
-   const activeProjectTasks=projectTasks.filter(isActiveTask).length;
-   const attentionTasks=projectTasks.filter(needsAttention).sort((a,b)=>Number(["Blocked","Changes Requested"].includes(b.status))-Number(["Blocked","Changes Requested"].includes(a.status))||a.due.localeCompare(b.due));
-   const upcomingTasks=projectTasks.filter(task=>isActiveTask(task)&&task.due>=today&&new Date(`${task.due}T00:00:00`)<=nextWeek).length;
-   const completionTotal=projectTasks.filter(task=>task.status!=="Cancelled").length;
-   const completionPercent=completionTotal?Math.round(completedProjectTasks/completionTotal*100):0;
-   const orderedTasks=[...projectTasks].sort((a,b)=>Number(needsAttention(b))-Number(needsAttention(a))||Number(a.status==="Completed"||a.status==="Cancelled")-Number(b.status==="Completed"||b.status==="Cancelled")||a.due.localeCompare(b.due));
-   const shownTasks=orderedTasks.filter(task=>taskFilter==="All"||taskFilter==="Needs attention"&&needsAttention(task)||taskFilter==="Active"&&isActiveTask(task)||taskFilter==="Completed"&&task.status==="Completed");
-  const manager=isManager(user);
-  const canManageProject=isAdmin(user)||manager;
-  const assignable=(manager?team.filter(person=>employmentOf(person)==="Intern"&&manages(user,person)&&person.active!==false):team.filter(isCurrentTeamMember)).sort((a,b)=>a.name.localeCompare(b.name));
-  const projectDepartments=[...new Set([
-    ...projectTasks.flatMap(task=>taskDepartments(task)),
-    ...currentAssigneeIds.map(id=>team.find(person=>person.id===id)?.department).filter(Boolean) as string[],
-  ])].filter(Boolean).sort();
-  const departmentManagerIds=team.filter(person=>isManager(person)&&projectDepartments.includes(person.department)).map(person=>person.id);
+  const teamIds=project.teamIds||[];
+  const [pickedTeams,setPickedTeams]=useState<string[]>(teamIds);
+  const [pickedPeople,setPickedPeople]=useState<string[]>([]);
+  const projectTeams=functions.filter(fn=>teamIds.includes(fn.id));
+  const unitsOf=(fn:FunctionInfo)=>[fn,...fn.specialisations];
+  // Teams this person leads that the CEO has put on the project: they choose the people from those teams.
+  const ledTeams=projectTeams.filter(fn=>unitsOf(fn).some(unit=>unit.leader?.ref===user.id));
+  const teamPeopleRefs=new Set(ledTeams.flatMap(fn=>unitsOf(fn).flatMap(unit=>unit.memberRefs)));
+  teamPeopleRefs.delete(user.id);
+  const teamPeople=team.filter(person=>teamPeopleRefs.has(person.id)&&person.active!==false).sort((a,b)=>a.name.localeCompare(b.name));
+  const isCeo=accessOf(user)==="Superadmin";
+  const canAssignPeople=!isCeo&&isManager(user)&&teamPeople.length>0;
+  const personName=(id?:string)=>team.find(person=>person.id===id)?.name||"Unassigned";
   const projectName=project.name.toLowerCase();
-  const weekStart=new Date(); weekStart.setHours(0,0,0,0); weekStart.setDate(weekStart.getDate()-((weekStart.getDay()+6)%7));
-  const weekEnd=new Date(weekStart); weekEnd.setDate(weekStart.getDate()+6);
-  const weekStartDate=weekStart.toISOString().slice(0,10);
-  const weekEndDate=weekEnd.toISOString().slice(0,10);
-  const weeklyObjectives=objectives.filter(objective=>{
-    const text=`${objective.title} ${objective.description}`.toLowerCase();
-    const explicitlyLinked=objective.projectIds?.includes(project.id);
-    const legacyInferred=!objective.projectIds?.length&&(departmentManagerIds.includes(objective.managerId)||text.includes(projectName));
-    return objective.dueDate>=weekStartDate&&objective.dueDate<=weekEndDate&&(explicitlyLinked||legacyInferred);
-  }).sort((a,b)=>objectivePriorityRank[a.priority]-objectivePriorityRank[b.priority]||a.dueDate.localeCompare(b.dueDate));
-  const readProjectLogo=async(file?:File)=>{if(!file)return;if(!file.type.startsWith("image/")){flash("Choose an image file");return}if(file.size>8*1024*1024){flash("Project logo must be smaller than 8 MB");return}setProcessingLogo(true);try{const source=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(reader.error);reader.readAsDataURL(file)});const image=await new Promise<HTMLImageElement>((resolve,reject)=>{const element=new window.Image();element.onload=()=>resolve(element);element.onerror=reject;element.src=source});const side=Math.min(image.naturalWidth,image.naturalHeight);const canvas=document.createElement("canvas");canvas.width=320;canvas.height=320;const context=canvas.getContext("2d");if(!context)throw new Error("Could not process this logo");context.clearRect(0,0,320,320);context.drawImage(image,(image.naturalWidth-side)/2,(image.naturalHeight-side)/2,side,side,0,0,320,320);const compressed=canvas.toDataURL("image/webp",.86);if(compressed.length>450000)throw new Error("This logo could not be compressed enough. Choose a smaller image.");setLogoUrl(compressed);flash("Logo ready. Save changes to apply it.");}catch(error){flash(error instanceof Error?error.message:"Could not process project logo")}finally{setProcessingLogo(false)}};
-  const addResource=async(files?:File[])=>{if(!files?.length||!(isAdmin(user)||isManager(user)))return;setUploading(true);try{const kind="document";const {archive,url}=await uploadZipped(files);const response=await fetch(`/api/projects/${encodeURIComponent(project.id)}/resources`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:archive.name,kind,url})});const payload=await response.json();if(!response.ok)throw new Error(payload.error||"Could not add this resource.");onResourceAdded(payload.resource);flash("Resource uploaded");}catch(error){flash(error instanceof Error?error.message:"Resource upload failed");}finally{setUploading(false);}};
-  const saveProject=async()=>{setSaving(true);try{const response=await fetch(`/api/projects/${encodeURIComponent(project.id)}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({githubUrl,assigneeIds,logoUrl})});const payload=await response.json();if(!response.ok)throw new Error(payload.error||"Could not update this project.");onProjectUpdated(payload.project);setEditing(false);flash("Project updated");}catch(error){flash(error instanceof Error?error.message:"Project update failed");}finally{setSaving(false);}};
-    return <div className="project-detail project-detail-clear project-detail-simplified">
-    <BackButton onClick={onBack} label="Back to projects"/>
-    <header className="project-detail-head project-detail-hero">
-        <div className="project-heading"><ProjectLogo project={project} size={52}/><div><div className="project-hero-meta"><span className="project-detail-kicker">Project</span><span className={`project-state ${project.status.toLowerCase()}`}><i/>{project.status}</span></div><h1 className="title">{project.name}</h1>{project.description&&<p className="subtitle">{project.description}</p>}{projectDepartments.length>0&&<p className="project-detail-departments">{projectDepartments.join(" · ")}</p>}</div></div>
-       <div className="inline">{canManageProject&&<button className="btn" onClick={()=>setEditing(value=>!value)}><Settings size={14}/> {manager?"Manage interns":"Edit project"}</button>}{project.githubUrl&&<a className="btn github-button" href={project.githubUrl} target="_blank" rel="noreferrer"><Github size={15}/> Open GitHub</a>}</div>
-       <div className="project-delivery-overview">
-          <div className="project-detail-summary" aria-label="Project task summary"><span><strong>{activeProjectTasks}</strong> active</span><span className={attentionTasks.length?"project-count-alert":""}><strong>{attentionTasks.length}</strong> need attention</span><span><strong>{upcomingTasks}</strong> due in 7 days</span><span><strong>{completedProjectTasks}</strong> completed</span></div>
-         <div className="project-delivery-progress"><div><span>Task completion</span><strong>{completionPercent}%</strong></div><div className="project-delivery-track" role="progressbar" aria-label="Project task completion" aria-valuenow={completionPercent} aria-valuemin={0} aria-valuemax={100}><span style={{width:`${completionPercent}%`}}/></div><small>{completedProjectTasks} of {completionTotal} {completionTotal===1?"task":"tasks"} complete</small></div>
-       </div>
+  const projectDepartments=[...new Set(projectTeams.flatMap(fn=>unitsOf(fn).map(unit=>unit.name)))];
+  const linkedObjectives=objectives.filter(objective=>{
+    if(objective.projectIds?.includes(project.id))return true;
+    return !objective.projectIds?.length&&`${objective.title} ${objective.description}`.toLowerCase().includes(projectName);
+  }).sort((a,b)=>Number(a.status==="Complete")-Number(b.status==="Complete")||objectivePriorityRank[a.priority]-objectivePriorityRank[b.priority]||a.dueDate.localeCompare(b.dueDate));
+  const projectTasks=tasks.filter(task=>task.project===project.name);
+  const blockedTasks=projectTasks.filter(task=>task.status==="Blocked");
+  const blockedObjectives=linkedObjectives.filter(objective=>objective.status==="Blocked");
+  const blockerCount=blockedTasks.length+blockedObjectives.length;
+  const contributors=[...new Set([...project.assigneeIds,...projectTasks.flatMap(task=>taskAssignees(task))])].map(id=>team.find(person=>person.id===id)).filter((person):person is User=>Boolean(person)&&person!.active!==false).map(person=>{
+    const mine=projectTasks.filter(task=>taskAssignees(task).includes(person.id)&&task.status!=="Cancelled");
+    const done=mine.filter(task=>task.status==="Completed").length;
+    return {person,total:mine.length,done,blocked:mine.filter(task=>task.status==="Blocked").length};
+  }).sort((a,b)=>b.done-a.done||b.total-a.total||a.person.name.localeCompare(b.person.name));
+  const openTeams=()=>{setPickedTeams(teamIds);setSheet("teams")};
+  const openPeople=()=>{setPickedPeople(project.assigneeIds.filter(id=>teamPeopleRefs.has(id)));setSheet("people")};
+  const save=async(body:Record<string,unknown>)=>{setSaving(true);try{const response=await fetch(`/api/projects/${encodeURIComponent(project.id)}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const payload=await response.json();if(!response.ok)throw new Error(payload.error||"Could not update this project.");onProjectUpdated(payload.project);setSheet(null);flash("Project updated")}catch(error){flash(error instanceof Error?error.message:"Project update failed")}finally{setSaving(false)}};
+  const toggle=(list:string[],id:string)=>list.includes(id)?list.filter(item=>item!==id):[...list,id];
+  return <div className="project-page">
+    <BackButton onClick={onBack} label="Projects"/>
+    <header className="project-page-hero">
+      <ProjectLogo project={project} size={64}/>
+      <div className="project-page-title">
+        <h1>{project.name}</h1>
+        {project.description&&<p>{project.description}</p>}
+        <div className="project-page-teams">{projectTeams.length?projectTeams.map(fn=><span key={fn.id}>{fn.name}</span>):<em>{isCeo?"No teams assigned yet":"Waiting for the CEO to assign a team"}</em>}</div>
+      </div>
+      <div className="project-page-actions">
+        {isCeo&&<button type="button" className="project-page-primary" onClick={openTeams}><Users size={15}/> {teamIds.length?"Change teams":"Assign teams"}</button>}
+        {canAssignPeople&&<button type="button" className="project-page-primary" onClick={openPeople}><Users size={15}/> Assign people</button>}
+        {project.githubUrl&&<a className="project-page-icon" href={project.githubUrl} target="_blank" rel="noreferrer" aria-label="Open GitHub repository" title="Open GitHub repository"><Github size={17}/></a>}
+      </div>
     </header>
-    {editing&&<section className="panel detail-section project-edit-panel"><div className="panel-head"><div><b>{manager?"Project interns":"Project settings"}</b><div className="row-meta">{manager?"Add or remove interns who report to you.":`Update the project logo, repository access${accessOf(user)==="Superadmin"?", and assigned people":""}.`}</div></div><button className="btn primary" disabled={saving||processingLogo||(!manager&&!/^https?:\/\/(www\.)?github\.com\/.+/i.test(githubUrl))} onClick={saveProject}>{saving?"Saving…":"Save changes"}</button></div>{!manager&&<><label className="form-label">Project logo<div className="inline">{logoUrl?<img className="project-logo-preview" src={logoUrl} alt="Project logo preview"/>:<ProjectLogo project={{...project,logoUrl:undefined}} size={54}/>}<label className="btn">{processingLogo?"Processing…":"Choose logo"}<input type="file" hidden accept="image/*" disabled={processingLogo} onChange={event=>{void readProjectLogo(event.target.files?.[0]);event.currentTarget.value=""}}/></label>{logoUrl&&<button type="button" className="btn" disabled={processingLogo} onClick={()=>setLogoUrl("")}>Remove logo</button>}</div></label><label className="form-label">GitHub repository URL<input className="input" value={githubUrl} onChange={event=>setGithubUrl(event.target.value)} placeholder="https://github.com/olyxee/repository"/></label></>}{(accessOf(user)==="Superadmin"||manager)&&<div className="form-label project-assignee-picker">{manager?"Your interns":"Assigned people"}<div className="project-assignee-grid">{assignable.map(person=><label key={person.id}><input type="checkbox" checked={assigneeIds.includes(person.id)} onChange={event=>setAssigneeIds(current=>event.target.checked?[...current,person.id]:current.filter(id=>id!==person.id))}/><Avatar person={person} size={28}/><span><b>{person.name}</b><small>{person.position||person.department}</small></span></label>)}{manager&&!assignable.length&&<div className="row-meta">No active interns report to you.</div>}</div></div>}</section>}
-     <div className="project-detail-grid">
-         <section className="panel project-delivery-panel"><div className="panel-head project-task-heading"><h2 className="panel-title">Tasks <span>{projectTasks.length}</span></h2></div>{attentionTasks.length>0&&<section className="project-attention" aria-labelledby="project-attention-title"><div className="project-attention-heading"><h3 id="project-attention-title">Needs attention <span>{attentionTasks.length}</span></h3>{attentionTasks.length>3&&<button type="button" onClick={()=>setTaskFilter("Needs attention")}>Show all <ChevronRight size={14}/></button>}</div><div className="project-attention-list">{attentionTasks.slice(0,3).map(task=><button type="button" key={task.id} onClick={()=>onOpen(task.id)}><span className="project-attention-mark" aria-hidden="true"/><span className="project-attention-copy"><strong>{task.title}</strong><small>{task.status==="Blocked"?"Blocked":task.status==="Changes Requested"?"Changes requested":"Overdue"} · {taskDepartmentLabel(task)} · Due {task.due}</small></span><ChevronRight size={15} aria-hidden="true"/></button>)}</div></section>}<div className="project-task-filters" aria-label="Filter project tasks">{([["All",projectTasks.length],["Needs attention",attentionTasks.length],["Active",activeProjectTasks],["Completed",completedProjectTasks]] as const).map(([filter,count])=><button type="button" key={filter} className={taskFilter===filter?"selected":""} aria-pressed={taskFilter===filter} onClick={()=>setTaskFilter(filter)}>{filter}<span>{count}</span></button>)}</div><div className="list">{shownTasks.map(task=><button type="button" className={`row project-task-row project-task-${task.status.toLowerCase().replace(/\s+/g,"-")}${overdueClass(task)}`} key={task.id} onClick={()=>onOpen(task.id)}><div className="row-main"><div className="row-title">{task.title}</div><div className="row-meta">{taskDepartmentLabel(task)} · {taskAssignees(task).map(id=>team.find(person=>person.id===id)?.name).filter(Boolean).join(", ")||"Unassigned"} · {["Critical","Urgent"].includes(task.priority)?`${task.priority} priority · `:""}{isActiveTask(task)&&task.due<today?"Overdue · ":"Due "}{task.due}</div></div><OverdueBadge task={task}/><Status s={task.status}/><ChevronRight size={14}/></button>)}{!shownTasks.length&&<div className="empty"><strong>{!projectTasks.length?"No tasks yet":`No ${taskFilter.toLowerCase()} tasks`}</strong>{!projectTasks.length?"Tasks connected to this project will appear here.":"Try another filter to see more project work."}</div>}</div></section>
-      <aside className="project-side">
-        <section className="panel detail-section"><div className="project-side-heading"><h3>Assigned people</h3><small>{currentAssigneeIds.length}</small></div>{currentAssigneeIds.map(id=>{const person=team.find(item=>item.id===id);return <div className="project-person" key={id}><Avatar person={person}/><div><b>{person?.name||id}</b><div className="row-meta">{person?.position||employmentOf(person||emptyUser)} · {person?.department||"—"}</div></div></div>})}{!currentAssigneeIds.length&&<div className="row-meta">No people assigned.</div>}</section>
-        {(project.resources.length>0||isAdmin(user)||isManager(user))&&<section className="panel detail-section"><div className="panel-head"><h3>Resources</h3>{(isAdmin(user)||isManager(user))&&<label className="btn"><Upload size={14}/>{uploading?"Zipping & uploading…":"Upload (zipped)"}<input type="file" multiple hidden disabled={uploading} onChange={event=>{void addResource(Array.from(event.target.files||[]));event.currentTarget.value=""}}/></label>}</div>{project.resources.length?project.resources.map(resource=><a className="resource-row" key={resource.id} href={resource.url||undefined} target={resource.url?"_blank":undefined} rel="noreferrer">{resource.kind==="image"?<Image size={14}/>:<FileText size={14}/>}<span>{resource.name}</span></a>):<div className="row-meta">No resources uploaded.</div>}</section>}
-      </aside>
-    </div>
-    {weeklyObjectives.length>0&&<details className="project-secondary-objectives"><summary>Weekly objectives <span>{weeklyObjectives.length}</span></summary><div className="list">{weeklyObjectives.map(objective=><div className="row" key={objective.id}><div className="row-main"><div className="row-title">{objective.title}</div><div className="row-meta">{team.find(person=>person.id===objective.managerId)?.name||"Function manager"} · Due {objective.dueDate}</div></div><Status s={objective.status}/></div>)}</div></details>}
+
+    <section className="project-page-card" aria-labelledby="pp-objectives">
+      <div className="project-page-card-head"><h2 id="pp-objectives">Objectives</h2><span>{linkedObjectives.length}</span></div>
+      {linkedObjectives.length?<ul className="project-page-list">{linkedObjectives.map(objective=><li key={objective.id}><div><b>{objective.title}</b><small>{personName(objective.teamLeadId||objective.managerId)} · Due {shortDay(objective.dueDate)}</small></div><Status s={objective.status}/></li>)}</ul>:<p className="project-page-empty">No objectives are linked to this project yet.</p>}
+    </section>
+
+    <section className="project-page-card" aria-labelledby="pp-blockers">
+      <div className="project-page-card-head"><h2 id="pp-blockers">Blockers</h2><span className={blockerCount?"alert":""}>{blockerCount}</span></div>
+      {blockerCount?<ul className="project-page-list">
+        {blockedObjectives.map(objective=><li key={objective.id}><div><b>{objective.title}</b><small>{objective.blockerMessage||"Blocked"} · Objective · {personName(objective.teamLeadId||objective.managerId)}</small></div></li>)}
+        {blockedTasks.map(task=><li key={task.id}><button type="button" onClick={()=>onOpen(task.id)}><div><b>{task.title}</b><small>{task.blocker?.reason||task.blockerReason||"Blocked"} · Task · {taskAssignees(task).map(personName).join(", ")||"Unassigned"}</small></div><ChevronRight size={15} aria-hidden="true"/></button></li>)}
+      </ul>:<p className="project-page-empty clear"><Check size={15}/> Nothing is blocking this project.</p>}
+    </section>
+
+    <section className="project-page-card" aria-labelledby="pp-people">
+      <div className="project-page-card-head"><h2 id="pp-people">People contributions</h2><span>{contributors.length}</span></div>
+      {contributors.length?<ul className="project-page-list people">{contributors.map(({person,total,done,blocked})=><li key={person.id}>
+        <Avatar person={person} size={40}/>
+        <div className="project-page-person"><b>{person.name}</b><small>{person.position||employmentOf(person)} · {person.department||"No team"}</small>
+          <div className="project-page-bar" role="progressbar" aria-label={`${person.name}: ${done} of ${total} tasks done`} aria-valuenow={total?Math.round(done/total*100):0} aria-valuemin={0} aria-valuemax={100}><span style={{width:`${total?done/total*100:0}%`}}/></div></div>
+        <div className="project-page-count"><strong>{done}</strong><small>of {total} {total===1?"task":"tasks"}{blocked?` · ${blocked} blocked`:""}</small></div>
+      </li>)}</ul>:<p className="project-page-empty">{teamIds.length?"The team leader hasn’t assigned anyone yet.":"People appear once a team is assigned."}</p>}
+    </section>
+
+    {sheet==="teams"&&<Modal className="project-sheet" title="Assign teams" onClose={()=>setSheet(null)} footer={<><button className="btn" onClick={()=>setSheet(null)}>Cancel</button><button className="btn primary" disabled={saving} onClick={()=>save({teamIds:pickedTeams})}>{saving?"Saving…":"Save"}</button></>}>
+      <p className="project-sheet-note">Teams own the work. Each team’s leader chooses who from their team joins.</p>
+      <ul className="project-sheet-list">{functions.map(fn=><li key={fn.id}><label><input type="checkbox" checked={pickedTeams.includes(fn.id)} onChange={()=>setPickedTeams(list=>toggle(list,fn.id))}/><span><b>{fn.name}</b><small>{fn.leader?`Led by ${fn.leader.name}`:"No leader yet"}</small></span></label></li>)}</ul>
+    </Modal>}
+    {sheet==="people"&&<Modal className="project-sheet" title="Assign people" onClose={()=>setSheet(null)} footer={<><button className="btn" onClick={()=>setSheet(null)}>Cancel</button><button className="btn primary" disabled={saving} onClick={()=>save({assigneeIds:[...project.assigneeIds.filter(id=>!teamPeopleRefs.has(id)),...pickedPeople]})}>{saving?"Saving…":"Save"}</button></>}>
+      <p className="project-sheet-note">Choose who from {ledTeams.map(fn=>fn.name).join(", ")} works on {project.name}.</p>
+      <ul className="project-sheet-list">{teamPeople.map(person=><li key={person.id}><label><input type="checkbox" checked={pickedPeople.includes(person.id)} onChange={()=>setPickedPeople(list=>toggle(list,person.id))}/><Avatar person={person} size={32}/><span><b>{person.name}</b><small>{person.position||employmentOf(person)}</small></span></label></li>)}</ul>
+    </Modal>}
   </div>;
 }
   function TaskDetail({task,user,team,projectsData,can,update,refresh,flash,deleteTask,onBack}:{task:Task;user:User;team:User[];projectsData:Project[];can:(x:string)=>boolean;update:(id:string,p:Partial<Task>)=>Promise<void>;refresh:()=>Promise<void>;flash:(message:string)=>void;deleteTask:(task:Task)=>Promise<void>;onBack:()=>void}){
