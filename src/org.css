@@ -102,3 +102,13 @@
   .org-person{min-width:140px}
   .org-when{text-align:left;white-space:normal}
 }
+
+/* Temporary cover: a small always-visible tag so the chart shows who is standing in and who is away. */
+.org-cover-tag{display:inline-block;margin-top:5px;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:600;line-height:1.4;white-space:nowrap}
+.org-cover-tag.interim{background:#e8f1ff;color:#1a56b0;border:1px solid #c6dafc}
+.org-cover-tag.away{background:#fff6e2;color:#96590a;border:1px solid #f1d9a8}
+.org-card:has(.org-cover-tag.away){opacity:.92;border-style:dashed}
+@media (prefers-color-scheme: dark){
+  .org-cover-tag.interim{background:#14263f;color:#9cc2ff;border-color:#27456f}
+  .org-cover-tag.away{background:#3a2c10;color:#f0c473;border-color:#6b4a14}
+}

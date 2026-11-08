@@ -11,6 +11,7 @@ type OrgNode = {
   ref: string; name: string; employmentType: string; active: boolean; status: string; title: string | null;
   departmentId: string | null; department: string | null; reportsTo: string | null; internSupervisor: string | null;
   functionalLeads: string[]; directReports: string[]; supervisedInterns: string[]; functionalReports: string[]; leadsDepartments: string[];
+  covering?: { ref: string; since: string; note: string }; coveredBy?: { ref: string; since: string; note: string };
 };
 type Chart = {
   nodes: Record<string, OrgNode>; roots: string[]; departments: { id: string; name: string }[];
@@ -366,6 +367,8 @@ function ChartTab({ avatars, chart, canChange, proposeOnly, onChangeRole, asOf, 
           <span className="muted">{node.title || "No title"}{node.department ? ` · ${node.department}` : ""}</span>
         </div>
         <div className="org-badges">
+          {node.covering && <span className="badge amber">Interim, covering {nameOf(chart, node.covering.ref)}</span>}
+          {node.coveredBy && <span className="badge amber">Out of office, covered by {nameOf(chart, node.coveredBy.ref)}</span>}
           {led.length > 0 && <span className="badge green">Leads {led.join(", ")}</span>}
           {node.supervisedInterns.length > 0 && <span className="badge gray">Supervises {node.supervisedInterns.length}</span>}
           {node.functionalLeads.length > 0 && <span className="badge amber">Dotted line: {node.functionalLeads.map(item => nameOf(chart, item)).join(", ")}</span>}
@@ -456,11 +459,14 @@ function ChartTab({ avatars, chart, canChange, proposeOnly, onChangeRole, asOf, 
         {avatars[ref] ? <img className="org-avatar org-avatar-photo" src={avatars[ref]} alt="" /> : <span className="org-avatar" aria-hidden="true">{initials}</span>}
         <b className="org-card-name">{node.name}</b>
         <span className="org-card-title">{node.title && node.title !== "Title not set" ? node.title : (intern ? "Intern" : "Title not set")}</span>
+        {node.covering && <span className="org-cover-tag interim" title={`Covering for ${nameOf(chart, node.covering.ref)}`}>Interim · covering {nameOf(chart, node.covering.ref).split(" ")[0]}</span>}
+        {node.coveredBy && <span className="org-cover-tag away" title={`${nameOf(chart, node.coveredBy.ref)} is covering`}>Out of office</span>}
         {/* Everything else appears on hover or keyboard focus, so the chart itself stays clean. */}
         <div className="org-card-more">
           {node.department && <span className="org-card-dept">{node.department}</span>}
           <span className="org-card-badges">
             {intern && <span className="badge gray">Intern</span>}
+            {node.coveredBy && <span className="badge amber">Covered by {nameOf(chart, node.coveredBy.ref)}</span>}
             {led.length > 0 && <span className="badge green">Leads {led.join(", ")}</span>}
             {children.length > 0 && <span className="badge gray">{children.length} {children.length === 1 ? "report" : "reports"}</span>}
             {node.functionalLeads.length > 0 && <span className="badge amber">Dotted line: {node.functionalLeads.map(item => nameOf(chart, item)).join(", ")}</span>}

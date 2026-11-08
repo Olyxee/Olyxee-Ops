@@ -147,9 +147,27 @@ export async function loadClassifiedPeople(db, loadPeople) {
   return people.map((person) => (override.has(person.ref) ? { ...person, employmentType: override.get(person.ref) } : person));
 }
 
+/** Marks who is covering for whom (and who is away). Quietly does nothing before the cover table exists. */
+async function annotateCover(db, chart, asOf) {
+  const when = asOf ? new Date(asOf).toISOString() : null;
+  const rows = await db.query(
+    `SELECT covering_ref, covered_ref, note, started_at FROM public.org_cover
+     WHERE ${when ? "started_at <= $1 AND (ended_at IS NULL OR ended_at > $1)" : "ended_at IS NULL"}`,
+    when ? [when] : [],
+  ).then((result) => result.rows, () => []);
+  for (const row of rows) {
+    const covering = chart.nodes[row.covering_ref];
+    const covered = chart.nodes[row.covered_ref];
+    if (covering) covering.covering = { ref: row.covered_ref, since: iso(row.started_at), note: row.note };
+    if (covered) covered.coveredBy = { ref: row.covering_ref, since: iso(row.started_at), note: row.note };
+  }
+}
+
 export async function getChart(db, loadPeople, { asOf = null, includeAlumni = false } = {}) {
   const [people, tables, version] = await Promise.all([loadClassifiedPeople(db, loadPeople), readTables(db, asOf), getVersion(db)]);
-  return { ...buildChart({ people, ...tables }, { includeAlumni }), version, asOf: asOf ? new Date(asOf).toISOString() : null };
+  const chart = buildChart({ people, ...tables }, { includeAlumni });
+  await annotateCover(db, chart, asOf);
+  return { ...chart, version, asOf: asOf ? new Date(asOf).toISOString() : null };
 }
 
 async function loadSnapshot(tx, loadPeople) {

@@ -151,6 +151,23 @@ CREATE TABLE IF NOT EXISTS public.org_identity_links (
   CHECK (superseded_ref <> canonical_ref)
 );
 
+-- Temporary cover: one person stands in for another who is away. Additive; the covered person's own record is kept.
+-- "restore" remembers exactly what was handed over, so ending the cover can hand it back.
+CREATE TABLE IF NOT EXISTS public.org_cover (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  covering_ref text NOT NULL,
+  covered_ref text NOT NULL,
+  note text NOT NULL DEFAULT '',
+  restore jsonb NOT NULL DEFAULT '{}'::jsonb,
+  started_by uuid REFERENCES public.ops_users(id),
+  started_at timestamptz NOT NULL DEFAULT now(),
+  ended_by uuid REFERENCES public.ops_users(id),
+  ended_at timestamptz,
+  CHECK (covering_ref <> covered_ref)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS org_cover_active_covering ON public.org_cover (covering_ref) WHERE ended_at IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS org_cover_active_covered ON public.org_cover (covered_ref) WHERE ended_at IS NULL;
+
 CREATE TABLE IF NOT EXISTS public.org_chart_exclusions (
   person_ref text PRIMARY KEY,
   reason text NOT NULL,
@@ -219,7 +236,7 @@ END $$;
 `;
 
 export const ORG_DROP_SQL = `
-DROP TABLE IF EXISTS public.org_person_classification, public.org_initiative_owners, public.org_initiatives, public.org_proposals, public.org_capabilities, public.org_chart_exclusions,
+DROP TABLE IF EXISTS public.org_cover, public.org_person_classification, public.org_initiative_owners, public.org_initiatives, public.org_proposals, public.org_capabilities, public.org_chart_exclusions,
   public.org_identity_links, public.org_department_leads, public.org_relationships,
   public.org_assignments, public.org_changes, public.org_positions, public.org_departments, public.org_state CASCADE;
 DROP FUNCTION IF EXISTS public.org_guard_history();
