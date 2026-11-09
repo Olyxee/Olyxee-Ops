@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assignableByLeader, leadsTeamOnProject, peopleLedBy, teamMemberRefs, teamsLedBy, validTeamIds } from "./project-teams.mjs";
+import { objectiveOwnersFor, assignableByLeader, leadsTeamOnProject, peopleLedBy, teamMemberRefs, teamsLedBy, validTeamIds } from "./project-teams.mjs";
 
 const view = { functions: [
   { id: "f1", name: "Product Engineering", leader: { ref: "account-2" }, memberRefs: ["account-2", "account-3", "account-4", "intern-1"],
@@ -36,4 +36,9 @@ test("a specialisation leader sees the project and the people they lead", () => 
   assert.equal(leadsTeamOnProject(view, { teamIds: ["f1"] }, "account-3"), true);
   assert.equal(leadsTeamOnProject(view, { teamIds: ["f2"] }, "account-3"), false);
   assert.deepEqual([...peopleLedBy(view, "account-3")].sort(), ["account-3", "intern-1"]);
+});
+
+test("a function leader can give objectives to the leaders of its teams; a team leader only to themselves", () => {
+  assert.deepEqual([...objectiveOwnersFor(view, "account-2")].sort(), ["account-2", "account-3"]);
+  assert.deepEqual([...objectiveOwnersFor(view, "account-3")], ["account-3"]);
 });

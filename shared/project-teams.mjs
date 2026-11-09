@@ -48,3 +48,16 @@ export function validTeamIds(view, teamIds) {
   const known = new Set(view.functions.map((fn) => fn.id));
   return [...new Set((Array.isArray(teamIds) ? teamIds : []).map(String))].filter((id) => known.has(id));
 }
+
+/**
+ * Who a manager may hand a weekly objective to: themselves and the leaders of the teams inside any whole function they lead.
+ * (Someone who leads only one team can assign to themselves.)
+ */
+export function objectiveOwnersFor(view, ref) {
+  const owners = new Set([ref]);
+  for (const fn of view.functions) {
+    if (fn.leader?.ref !== ref) continue;
+    for (const unit of unitsOf(fn)) if (unit.leader?.ref) owners.add(unit.leader.ref);
+  }
+  return owners;
+}

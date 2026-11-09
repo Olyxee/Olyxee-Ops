@@ -32,7 +32,7 @@ import {
 import { registerOrgRoutes } from "./server/services/org/routes.mjs";
 import { fromPgPool, getChart } from "./server/services/org/store.mjs";
 import { buildFunctionsView } from "./server/services/org/functions-view.mjs";
-import { assignableByLeader, leadsTeamOnProject, peopleLedBy, validTeamIds } from "./shared/project-teams.mjs";
+import { assignableByLeader, leadsTeamOnProject, objectiveOwnersFor, peopleLedBy, validTeamIds } from "./shared/project-teams.mjs";
 import { registerPersonalCalendarRoutes } from "./server/services/personal-calendar/routes.mjs";
 import { createPeopleLoader } from "./server/services/org/people-source.mjs";
 import { recordNewPerson, endPersonOrg, currentResponsibilities } from "./server/services/org/lifecycle.mjs";
@@ -2516,7 +2516,10 @@ app.get("/api/state/:key", requireAuth, requireAccount, async (request, response
       value = Array.isArray(value) ? value.filter((status) => status.userId === identity.externalId) : [];
     } else if (request.params.key === "departments") {
       value = Array.isArray(value) ? value.filter((department) => department[0] === identity.department) : [];
-    } else if (["audit", "objectives"].includes(request.params.key)) {
+    } else if (request.params.key === "objectives") {
+      // Read-only: the objectives handed to this person (for example a team lead with a Member login).
+      value = Array.isArray(value) ? value.filter((objective) => objective.managerId === identity.externalId || objective.teamLeadId === identity.externalId) : [];
+    } else if (request.params.key === "audit") {
       value = [];
     }
   }
@@ -2586,25 +2589,27 @@ app.put("/api/state/:key", requireAuth, requireAccount, async (request, response
     const externalPerson = await resolveExternalPerson(request.appAccount.email);
     const managerId = externalPerson?.external_id;
     if (!managerId) return response.status(403).json({ error: "Your Manager profile could not be resolved." });
+    // A manager owns their own objectives and may hand them to the leaders of the teams inside a function they lead.
+    const owners = objectiveOwnersFor(await liveFunctionsView().catch(() => ({ functions: [] })), managerId);
     const current = await appPool.query("SELECT state_value FROM workspace_state WHERE state_key = 'objectives'");
     const currentObjectives = Array.isArray(current.rows[0]?.state_value) ? current.rows[0].state_value : [];
     const currentById = new Map(currentObjectives.map((objective) => [objective.id, objective]));
     const incomingById = new Map(request.body.value.map((objective) => [objective.id, objective]));
     const changedOtherManagerObjective = currentObjectives.some((objective) =>
-      objective.managerId !== managerId
+      !owners.has(objective.managerId)
       && JSON.stringify(incomingById.get(objective.id)) !== JSON.stringify(objective)
     );
     const invalidNewObjective = request.body.value.some((objective) =>
-      !currentById.has(objective.id) && objective.managerId !== managerId
+      !currentById.has(objective.id) && !owners.has(objective.managerId)
     );
     const invalidReassignment = request.body.value.some((objective) =>
-      currentById.get(objective.id)?.managerId === managerId && objective.managerId !== managerId
+      owners.has(currentById.get(objective.id)?.managerId) && !owners.has(objective.managerId)
     );
     if (changedOtherManagerObjective || invalidNewObjective || invalidReassignment) {
       return response.status(403).json({ error: "Managers can create and update only their own weekly objectives." });
     }
     const invalidBlockedTransition = request.body.value.some((objective) =>
-      objective.managerId === managerId
+      owners.has(objective.managerId)
       && objective.status === "Blocked"
       && currentById.get(objective.id)?.status !== "Blocked"
       && !String(objective.blockerMessage || "").trim()
