@@ -39,4 +39,7 @@ test("only someone who leads a whole function sees the full directory; a team le
   assert.equal(await leadsTopLevelFunction(w.db, "account-3"), false);      // leads only a team inside it
   assert.equal(await leadsTopLevelFunction(w.db, "account-4"), false);      // leads nothing
   assert.equal(await leadsTopLevelFunction(w.db, null), false);
+  const { leadsAnyFunctionOrTeam } = await import("./overlay.mjs");
+  assert.equal(await leadsAnyFunctionOrTeam(w.db, "account-3"), true);       // a team lead counts
+  assert.equal(await leadsAnyFunctionOrTeam(w.db, "account-4"), false);
 });

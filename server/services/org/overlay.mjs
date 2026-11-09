@@ -2,6 +2,15 @@ import { UNASSIGNED_DEPARTMENT } from "../../../shared/departments.mjs";
 import { UNSET_TITLE } from "./schema.mjs";
 
 /** True when this person currently leads a top-level function (not just a team inside one). Such leaders see the whole directory. */
+/** True for anyone who leads a function or a team inside one (a team lead as well as a head of function). */
+export async function leadsAnyFunctionOrTeam(db, personRef) {
+  if (!personRef) return false;
+  const { rowCount } = await db.query(
+    `SELECT 1 FROM public.org_department_leads l JOIN public.org_departments d ON d.id = l.department_id
+     WHERE l.person_ref = $1 AND l.effective_to IS NULL AND d.active LIMIT 1`, [personRef]);
+  return rowCount > 0;
+}
+
 export async function leadsTopLevelFunction(db, personRef) {
   if (!personRef) return false;
   const { rowCount } = await db.query(
