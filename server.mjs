@@ -211,6 +211,7 @@ async function getAppAccount(userId) {
 // DEVELOPMENT ONLY: see the app as another person, to check what they will see. Off unless DEV_VIEW_AS_EMAIL is set, never active
 // in production or on Vercel, only for a signed-in Superadmin, and strictly read-only (every change is refused).
 const devViewAsEmail = !isProduction && !process.env.VERCEL ? String(process.env.DEV_VIEW_AS_EMAIL || "").trim().toLowerCase() : "";
+const PICTURE_EXEMPT_PATHS = new Set(["/api/me/profile", "/api/presence/heartbeat"]);
 const requireAccount = async (request, response, next) => {
   try {
     const devUserId = request.session?.userId ? null : await devSignedInUserId(request);
@@ -226,6 +227,12 @@ const requireAccount = async (request, response, next) => {
       if (other) { request.appAccount = await getAppAccount(other.id); return next(); }
     }
     request.appAccount = own;
+    // A profile picture is required before anyone (other than the Superadmin) can make changes. The prompt in the app is
+    // only the friendly side of this; the server enforces it so it cannot be skipped by removing the prompt.
+    if (!["GET", "HEAD", "OPTIONS"].includes(request.method) && own.app_role !== "Superadmin"
+      && !own.profile_data?.avatarUrl && !PICTURE_EXEMPT_PATHS.has(request.path)) {
+      return response.status(403).json({ error: "Add your profile picture to continue.", code: "profile_picture_required" });
+    }
     return next();
   } catch (error) {
     return response.status(error.statusCode || 503).json({ error: error.message || "Account unavailable." });

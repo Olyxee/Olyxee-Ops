@@ -1,4 +1,5 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Upload, UserRound } from "lucide-react";
 import "./org.css";
 import { PhotoEditor, checkPhotoFile } from "./PhotoEditor";
@@ -13,6 +14,33 @@ export function AvatarPrompt({ name, onSaved }: { name: string; onSaved: (avatar
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const input = useRef<HTMLInputElement>(null);
+  const box = useRef<HTMLDivElement>(null);
+
+  // Unskippable: the app behind is made inert (no clicks, no Tab, no screen reader access), focus stays inside the prompt,
+  // and Escape does nothing. It goes away only when the picture is saved and this component is removed.
+  useEffect(() => {
+    const app = document.getElementById("root");
+    app?.setAttribute("inert", "");
+    app?.setAttribute("aria-hidden", "true");
+    const keep = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); return; }
+      if (event.key !== "Tab") return;
+      const items = Array.from(box.current?.querySelectorAll<HTMLElement>("button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex='-1'])") || []).filter(item => item.offsetParent !== null);
+      if (!items.length) return;
+      const first = items[0], last = items[items.length - 1];
+      if (!box.current?.contains(document.activeElement)) { event.preventDefault(); first.focus(); }
+      else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", keep, true);
+    const focusTimer = window.setTimeout(() => box.current?.querySelector<HTMLElement>("button:not([disabled])")?.focus(), 50);
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.removeEventListener("keydown", keep, true);
+      app?.removeAttribute("inert");
+      app?.removeAttribute("aria-hidden");
+    };
+  }, []);
 
   const [picked, setPicked] = useState<File | null>(null);
   const choose = (file?: File) => {
@@ -32,10 +60,10 @@ export function AvatarPrompt({ name, onSaved }: { name: string; onSaved: (avatar
     } catch (problem) { setError(problem instanceof Error ? problem.message : "Could not save your picture."); } finally { setBusy(false); }
   };
 
-  return <div className="modal-back" role="presentation">
+  return createPortal(<div className="modal-back avatar-prompt-back" role="presentation" onMouseDown={event => event.stopPropagation()}>
     {picked && <PhotoEditor file={picked} name={name} onCancel={() => setPicked(null)} onApply={result => { setImage(result); setPicked(null); }} />}
-    <div className="modal avatar-prompt" role="dialog" aria-modal="true" aria-label="Add your profile picture">
-      <div className="modal-head"><b>Add your profile picture</b></div>
+    <div ref={box} className="modal avatar-prompt" role="alertdialog" aria-modal="true" aria-label="Add your profile picture">
+      <div className="modal-head"><b>Add your profile picture</b><small className="avatar-prompt-required">Required</small></div>
       <div className="modal-body">
         <div className="avatar-prompt-preview">{image ? <img src={image} alt="Your profile preview" /> : <UserRound size={56} strokeWidth={1.5} />}</div>
         <p className="muted">{name ? `${name}, ` : ""}the team needs to see who they are working with. Please add a clear photo of your face to continue.</p>
@@ -46,5 +74,5 @@ export function AvatarPrompt({ name, onSaved }: { name: string; onSaved: (avatar
       </div>
       <div className="modal-foot"><button type="button" className="btn primary" onClick={() => void save()} disabled={!image || busy}>{busy ? "Saving…" : "Save and continue"}</button></div>
     </div>
-  </div>;
+  </div>, document.body);
 }
