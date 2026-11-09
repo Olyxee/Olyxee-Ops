@@ -79,3 +79,4 @@
     border-radius: 15px;
   }
 }
+button.intern-project-card { font: inherit; color: inherit; cursor: pointer; }

@@ -143,8 +143,21 @@ if (appPool) {
   }));
 }
 
-const requireAuth = (request, response, next) => {
-  const userId = request.session?.userId;
+// DEVELOPMENT ONLY: DEV_SIGN_IN_AS_EMAIL opens the app as that person without a login, for checking what they will see.
+// It is ignored in production and on Vercel, answers only requests from this same computer, nothing is stored in a session,
+// and every change is refused (read-only).
+const devSignInEmail = !isProduction && !process.env.VERCEL ? String(process.env.DEV_SIGN_IN_AS_EMAIL || "").trim().toLowerCase() : "";
+let devSignInUserId = null;
+const fromThisComputer = (request) => ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(request.socket?.remoteAddress || "");
+const devSignedInUserId = async (request) => {
+  if (!devSignInEmail || request.session?.userId || !fromThisComputer(request)) return null;
+  if (!devSignInUserId) {
+    devSignInUserId = (await appPool.query("SELECT id FROM public.ops_users WHERE lower(email) = $1 AND active", [devSignInEmail])).rows[0]?.id || null;
+  }
+  return devSignInUserId;
+};
+const requireAuth = async (request, response, next) => {
+  const userId = request.session?.userId || await devSignedInUserId(request).catch(() => null);
   if (!userId) return response.status(401).json({ error: "Unauthorized" });
   return next();
 };
@@ -200,6 +213,12 @@ async function getAppAccount(userId) {
 const devViewAsEmail = !isProduction && !process.env.VERCEL ? String(process.env.DEV_VIEW_AS_EMAIL || "").trim().toLowerCase() : "";
 const requireAccount = async (request, response, next) => {
   try {
+    const devUserId = request.session?.userId ? null : await devSignedInUserId(request);
+    if (devUserId) {
+      if (!["GET", "HEAD", "OPTIONS"].includes(request.method)) return response.status(403).json({ error: `You are viewing the app as ${devSignInEmail}. This view is read-only.` });
+      request.appAccount = await getAppAccount(devUserId);
+      return next();
+    }
     const own = await getAppAccount(request.session.userId);
     if (devViewAsEmail && own.app_role === "Superadmin" && String(own.email).toLowerCase() !== devViewAsEmail) {
       if (!["GET", "HEAD", "OPTIONS"].includes(request.method)) return response.status(403).json({ error: `You are viewing the app as ${devViewAsEmail}. This view is read-only.` });
@@ -224,8 +243,8 @@ app.get("/api/health", (_request, response) => {
   response.json({ ok: true, appDatabaseConfigured: Boolean(appPool), peopleDatabaseConfigured: Boolean(peoplePool), authConfigured: Boolean(appPool && process.env.SESSION_SECRET) });
 });
 
-app.get("/api/auth/session", (request, response) => {
-  return response.json({ authenticated: Boolean(request.session?.userId) });
+app.get("/api/auth/session", async (request, response) => {
+  return response.json({ authenticated: Boolean(request.session?.userId || await devSignedInUserId(request).catch(() => null)) });
 });
 
 app.post("/api/auth/login", async (request, response) => {
@@ -288,8 +307,16 @@ app.get("/api/me", requireAuth, requireAccount, async (request, response) => {
   const account = request.appAccount;
   const person = await resolveExternalPerson(account.email);
   const profile = account.profile_data || {};
+  // Under the organisation model the function and job title come from the organisational record, not the older People text.
+  const orgRecord = orgEnabled() && orgDb && person?.external_id
+    ? (await orgDb.query(
+      "SELECT a.title, d.name AS department FROM public.org_assignments a LEFT JOIN public.org_departments d ON d.id = a.department_id WHERE a.person_ref = $1 AND a.effective_to IS NULL",
+      [person.external_id],
+    ).catch(() => ({ rows: [] }))).rows[0]
+    : undefined;
   return response.json({
     id: person?.external_id || `account-${account.id}`,
+    position: orgRecord?.title && orgRecord.title !== "Title not set" ? orgRecord.title : undefined,
     name: profile.displayName || person?.name || account.display_name || account.email,
     email: account.email,
     employmentType: (orgEnabled() && orgDb && person?.external_id
@@ -297,7 +324,7 @@ app.get("/api/me", requireAuth, requireAccount, async (request, response) => {
       : undefined) || person?.employment_type || "Employee",
     accessRole: account.app_role,
     accountStatus: account.active ? "Active" : "Suspended",
-    department: person?.department || "Operations",
+    department: orgRecord?.department || person?.department || "Operations",
     role: account.app_role === "Superadmin" ? "Super Admin" : account.app_role,
     active: account.active,
     avatarUrl: profile.avatarUrl,
