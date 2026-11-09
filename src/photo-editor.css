@@ -1,5 +1,5 @@
 /* Profile photo framing. Sits above the avatar prompt and the settings dialog. */
-.photo-editor-back { z-index: 1200; }
+.modal-back.photo-editor-back { z-index: 1200; }
 .photo-editor { width: min(640px, 100%); }
 .photo-editor-grid { display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: start; }
 .photo-editor-stage-wrap { display: grid; gap: 12px; justify-items: center; }
