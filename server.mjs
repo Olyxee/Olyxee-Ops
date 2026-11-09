@@ -32,7 +32,7 @@ import {
 import { registerOrgRoutes } from "./server/services/org/routes.mjs";
 import { fromPgPool, getChart } from "./server/services/org/store.mjs";
 import { buildFunctionsView } from "./server/services/org/functions-view.mjs";
-import { assignableByLeader, validTeamIds } from "./shared/project-teams.mjs";
+import { assignableByLeader, leadsTeamOnProject, peopleLedBy, validTeamIds } from "./shared/project-teams.mjs";
 import { registerPersonalCalendarRoutes } from "./server/services/personal-calendar/routes.mjs";
 import { createPeopleLoader } from "./server/services/org/people-source.mjs";
 import { recordNewPerson, endPersonOrg, currentResponsibilities } from "./server/services/org/lifecycle.mjs";
@@ -411,6 +411,8 @@ app.get("/api/staff-summary", requireAuth, requireAccount, async (_request, resp
 
 const orgDb = appPool ? fromPgPool(appPool) : null;
 const loadOrgPeople = peoplePool ? createPeopleLoader(peoplePool) : null;
+// The live functions (teams) with their leaders and members, for project assignment and visibility.
+const liveFunctionsView = () => (orgDb && loadOrgPeople ? getChart(orgDb, loadOrgPeople).then(buildFunctionsView) : Promise.resolve({ functions: [] }));
 // The CEO's private calendar and agenda (own table, own account only; see server/services/personal-calendar).
 if (orgDb) registerPersonalCalendarRoutes(app, { db: orgDb, requireAuth, requireAccount });
 if (orgDb && loadOrgPeople) {
@@ -584,7 +586,11 @@ app.get("/api/people", requireAuth, requireAccount, async (request, response) =>
       ? people
       : role === "Manager"
         ? (orgEnabled() ? visiblePeopleForManager(people, current, functionNameGroups) : people.filter((person) => person.department === current?.department))
-        : people.filter((person) => person.id === current?.id);
+        : await (async () => {
+          // A team lead without a Manager login still needs to see the people of the team they lead (to choose them for projects).
+          const led = orgEnabled() && orgDb && current ? peopleLedBy(await liveFunctionsView().catch(() => ({ functions: [] })), current.id) : new Set();
+          return people.filter((person) => person.id === current?.id || led.has(person.id));
+        })();
     return response.json({ connected: true, source: "Supabase", people: visiblePeople });
   } catch (error) {
     console.error("People query failed:", error instanceof Error ? error.message : "Unknown error");
@@ -2498,8 +2504,11 @@ app.get("/api/state/:key", requireAuth, requireAccount, async (request, response
         WHERE assignee_external_id = $1 AND status <> 'Cancelled'
       `, [identity.externalId]);
       const taskProjectNames = new Set(assignedTaskProjects.rows.map((row) => row.project));
+      const view = await liveFunctionsView().catch(() => ({ functions: [] }));
       value = Array.isArray(value)
-        ? value.filter((project) => (project.assigneeIds || []).includes(identity.externalId) || taskProjectNames.has(project.name))
+        ? value.filter((project) => (project.assigneeIds || []).includes(identity.externalId) || taskProjectNames.has(project.name)
+          // A team lead (of a whole function or one of its teams) sees the projects the CEO gave to their team.
+          || leadsTeamOnProject(view, project, identity.externalId))
         : [];
     } else if (request.params.key === "notices") {
       value = Array.isArray(value) ? value.filter((notice) => notice.userId === identity.externalId) : [];
@@ -2772,12 +2781,13 @@ app.post("/api/projects", requireAuth, requireAccount, requireAdmin, async (requ
 
 app.patch("/api/projects/:id", requireAuth, requireAccount, async (request, response) => {
   const role = request.appAccount.app_role;
-  if (!["Superadmin", "Admin", "Manager"].includes(role)) {
+  // Members cannot edit projects, except a team lead choosing people for a team the CEO assigned (checked below).
+  if (!["Superadmin", "Admin", "Manager", "Member"].includes(role)) {
     return response.status(403).json({ error: "Forbidden" });
   }
   const githubUrl = String(request.body.githubUrl || "").trim();
   const logoUrl = typeof request.body.logoUrl === "string" ? request.body.logoUrl : undefined;
-  if (role !== "Manager") {
+  if (role !== "Manager" && role !== "Member") {
     if (githubUrl && !/^https?:\/\/(www\.)?github\.com\/.+/i.test(githubUrl)) return response.status(400).json({ error: "Enter a valid GitHub repository URL." });
     if (logoUrl !== undefined && logoUrl.length > 500000) return response.status(400).json({ error: "Project logo is too large." });
     if (logoUrl && !logoUrl.startsWith("data:image/") && !logoUrl.startsWith("/api/assets/")) {
@@ -2788,11 +2798,11 @@ app.patch("/api/projects/:id", requireAuth, requireAccount, async (request, resp
   const projects = result.rows[0]?.state_value || [];
   const project = projects.find((item) => item.id === request.params.id);
   if (!project) return response.status(404).json({ error: "Project not found." });
-  if (role !== "Manager") {
+  if (role !== "Manager" && role !== "Member") {
     if (githubUrl) project.githubUrl = githubUrl;
     if (logoUrl !== undefined) project.logoUrl = logoUrl || undefined;
   }
-  const functionsView = () => (orgDb && loadOrgPeople ? getChart(orgDb, loadOrgPeople).then(buildFunctionsView) : { functions: [] });
+  const functionsView = liveFunctionsView;
   if (role === "Superadmin") {
     const newName = typeof request.body.name === "string" ? request.body.name.trim().slice(0, 160) : null;
     if (newName !== null && !newName) return response.status(400).json({ error: "Enter a project name." });
@@ -2810,8 +2820,11 @@ app.patch("/api/projects/:id", requireAuth, requireAccount, async (request, resp
     // The CEO assigns teams. Individual people stay possible for older projects but are not the normal path.
     if (Array.isArray(request.body.teamIds)) project.teamIds = validTeamIds(await functionsView(), request.body.teamIds);
     project.assigneeIds = Array.isArray(request.body.assigneeIds) ? [...new Set(request.body.assigneeIds.map(String))] : project.assigneeIds;
-  } else if (role === "Manager") {
+  } else if (role === "Manager" || role === "Member") {
     const identity = await getTaskContext(request);
+    if (role === "Member" && !leadsTeamOnProject(await functionsView(), project, identity.externalId)) {
+      return response.status(403).json({ error: "Only the leader of a team on this project can choose its people." });
+    }
     const managerInternIds = identity.reportIds.filter((id) => /^intern-\d+$/.test(id));
     // A leader of a team the CEO assigned to this project may add or remove people from that team.
     const teamPeople = assignableByLeader(await functionsView(), project, identity.externalId);

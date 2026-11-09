@@ -774,13 +774,14 @@ function ProjectDetail({user,project,tasks,objectives,team,functions,onBack,onOp
   const [pickedPeople,setPickedPeople]=useState<string[]>([]);
   const projectTeams=functions.filter(fn=>teamIds.includes(fn.id));
   const unitsOf=(fn:FunctionInfo)=>[fn,...fn.specialisations];
-  // Teams this person leads that the CEO has put on the project: they choose the people from those teams.
-  const ledTeams=projectTeams.filter(fn=>unitsOf(fn).some(unit=>unit.leader?.ref===user.id));
-  const teamPeopleRefs=new Set(ledTeams.flatMap(fn=>unitsOf(fn).flatMap(unit=>unit.memberRefs)));
+  // The parts of the assigned teams this person leads (a whole function, or one team inside it): they choose its people.
+  const ledUnits=projectTeams.flatMap(unitsOf).filter(unit=>unit.leader?.ref===user.id);
+  const ledTeams=ledUnits;
+  const teamPeopleRefs=new Set(ledUnits.flatMap(unit=>unit.memberRefs));
   teamPeopleRefs.delete(user.id);
   const teamPeople=team.filter(person=>teamPeopleRefs.has(person.id)&&person.active!==false).sort((a,b)=>a.name.localeCompare(b.name));
   const isCeo=accessOf(user)==="Superadmin";
-  const canAssignPeople=!isCeo&&isManager(user)&&teamPeople.length>0;
+  const canAssignPeople=!isCeo&&ledUnits.length>0;
   const personName=(id?:string)=>team.find(person=>person.id===id)?.name||"Unassigned";
   const projectName=project.name.toLowerCase();
   const projectDepartments=[...new Set(projectTeams.flatMap(fn=>unitsOf(fn).map(unit=>unit.name)))];
@@ -792,7 +793,8 @@ function ProjectDetail({user,project,tasks,objectives,team,functions,onBack,onOp
   const blockedTasks=projectTasks.filter(task=>task.status==="Blocked");
   const blockedObjectives=linkedObjectives.filter(objective=>objective.status==="Blocked");
   const blockerCount=blockedTasks.length+blockedObjectives.length;
-  const contributors=[...new Set([...project.assigneeIds,...projectTasks.flatMap(task=>taskAssignees(task))])].map(id=>team.find(person=>person.id===id)).filter((person):person is User=>Boolean(person)&&person!.active!==false).map(person=>{
+  const teamLeaderIds=projectTeams.flatMap(unitsOf).map(unit=>unit.leader?.ref).filter((id):id is string=>Boolean(id));
+  const contributors=[...new Set([...teamLeaderIds,...project.assigneeIds,...projectTasks.flatMap(task=>taskAssignees(task))])].map(id=>team.find(person=>person.id===id)).filter((person):person is User=>Boolean(person)&&person!.active!==false).map(person=>{
     const mine=projectTasks.filter(task=>taskAssignees(task).includes(person.id)&&task.status!=="Cancelled");
     const done=mine.filter(task=>task.status==="Completed").length;
     return {person,total:mine.length,done,blocked:mine.filter(task=>task.status==="Blocked").length};

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assignableByLeader, teamMemberRefs, teamsLedBy, validTeamIds } from "./project-teams.mjs";
+import { assignableByLeader, leadsTeamOnProject, peopleLedBy, teamMemberRefs, teamsLedBy, validTeamIds } from "./project-teams.mjs";
 
 const view = { functions: [
   { id: "f1", name: "Product Engineering", leader: { ref: "account-2" }, memberRefs: ["account-2", "account-3", "account-4", "intern-1"],
@@ -22,6 +22,7 @@ test("leaders of a function or of one of its specialisations lead that team", ()
 test("a leader can assign only people from assigned teams they lead", () => {
   const project = { teamIds: ["f1"] };
   assert.deepEqual([...assignableByLeader(view, project, "account-2")].sort(), ["account-3", "account-4", "intern-1"]);
+  assert.deepEqual([...assignableByLeader(view, project, "account-3")].sort(), ["intern-1"]);   // leads only the specialisation
   assert.equal(assignableByLeader(view, project, "account-5").size, 0);                 // leads a team that is not on the project
   assert.equal(assignableByLeader(view, { teamIds: [] }, "account-2").size, 0);        // no teams assigned yet
 });
@@ -29,4 +30,10 @@ test("a leader can assign only people from assigned teams they lead", () => {
 test("unknown or repeated teams are dropped", () => {
   assert.deepEqual(validTeamIds(view, ["f1", "f1", "zzz", 7]), ["f1"]);
   assert.deepEqual(validTeamIds(view, undefined), []);
+});
+
+test("a specialisation leader sees the project and the people they lead", () => {
+  assert.equal(leadsTeamOnProject(view, { teamIds: ["f1"] }, "account-3"), true);
+  assert.equal(leadsTeamOnProject(view, { teamIds: ["f2"] }, "account-3"), false);
+  assert.deepEqual([...peopleLedBy(view, "account-3")].sort(), ["account-3", "intern-1"]);
 });

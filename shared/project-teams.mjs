@@ -16,12 +16,30 @@ export function teamsLedBy(view, ref) {
   return view.functions.filter((fn) => unitsOf(fn).some((unit) => unit.leader?.ref === ref)).map((fn) => fn.id);
 }
 
-/** People this manager may add to or remove from the project: members of the assigned teams that they lead. */
+/** Units (a function or one of its specialisations) of the project's teams that this person leads. */
+export function unitsLedOnProject(view, project, ref) {
+  const wanted = new Set(project.teamIds || []);
+  return view.functions.filter((fn) => wanted.has(fn.id)).flatMap(unitsOf).filter((unit) => unit.leader?.ref === ref);
+}
+
+/** True when the person leads any part of a team the CEO put on the project (they can see it and pick people for it). */
+export const leadsTeamOnProject = (view, project, ref) => unitsLedOnProject(view, project, ref).length > 0;
+
+/**
+ * People this leader may add to or remove from the project: the members of the parts of the assigned teams they lead.
+ * Leading a whole function covers all of it; leading one specialisation covers only that specialisation.
+ */
 export function assignableByLeader(view, project, ref) {
-  const led = new Set(teamsLedBy(view, ref));
-  const ids = (project.teamIds || []).filter((id) => led.has(id));
-  const refs = teamMemberRefs(view, ids);
+  const refs = new Set();
+  for (const unit of unitsLedOnProject(view, project, ref)) unit.memberRefs.forEach((member) => refs.add(member));
   refs.delete(ref);                  // a leader assigns their people; they are on the project through their team
+  return refs;
+}
+
+/** Everyone whose directory entry a leader needs: the members of every unit they lead. */
+export function peopleLedBy(view, ref) {
+  const refs = new Set();
+  for (const fn of view.functions) for (const unit of unitsOf(fn)) if (unit.leader?.ref === ref) unit.memberRefs.forEach((member) => refs.add(member));
   return refs;
 }
 
