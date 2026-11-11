@@ -1463,6 +1463,19 @@ async function assigneeBelongsToDepartments(externalId, departmentIds) {
   const result = kind === "intern"
     ? await peoplePool.query("SELECT department FROM public.interns WHERE id=$1 AND archived_at IS NULL", [Number(rawId)])
     : await peoplePool.query("SELECT department FROM public.workspace_accounts WHERE id=$1", [Number(rawId)]);
+  if (!result.rowCount) return false;
+  // The task's departments are stored keys; compare by function so a team or an old name of the same function counts.
+  const functionOfKey = (key) => functionGroups.get(String(key).toLowerCase()) || String(key).toLowerCase();
+  const taskFunctions = new Set(departmentIds.map(functionOfKey));
+  // Under the organisation model a person's function is their organisational assignment, not the older People text.
+  if (orgEnabled() && orgDb) {
+    const assigned = await orgDb.query(
+      "SELECT d.name FROM public.org_assignments a JOIN public.org_departments d ON d.id = a.department_id WHERE a.person_ref = $1 AND a.effective_to IS NULL",
+      [externalId],
+    ).catch(() => ({ rows: [] }));
+    const name = assigned.rows[0]?.name;
+    if (name) return taskFunctions.has(functionNameGroups.get(name.toLowerCase()) || name.toLowerCase());
+  }
   const department = validateDepartment(result.rows[0]?.department, { allowUnassigned: false });
   return Boolean(department && departmentIds.includes(department));
 }
