@@ -44,7 +44,9 @@ export async function endCover(db, loadPeople, { actor, coveredRef }) {
   const step = async (input) => applyChange(db, loadPeople, { actor, input: { ...input, reason }, expectedVersion: await getVersion(db), kind: "cover.change" });
   const restore = row.restore || {};
 
-  if ((restore.led || []).length) await step({ subjectRef: coveredRef, leadOfAdd: restore.led });
+  // They may already lead it again (leadership can be shared during cover): only add what is missing.
+  const stillToLead = (restore.led || []).filter((id) => !(chart.nodes[coveredRef]?.leadsDepartments || []).includes(id));
+  if (stillToLead.length) await step({ subjectRef: coveredRef, leadOfAdd: stillToLead });
   for (const ref of restore.directReports || []) {
     // Only hand back people who still report to the stand-in (someone may have been moved on since).
     if (chart.nodes[ref]?.reportsTo === row.covering_ref) await step({ subjectRef: ref, reportsTo: coveredRef });
