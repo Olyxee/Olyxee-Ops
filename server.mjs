@@ -1002,6 +1002,35 @@ app.patch("/api/people/:id", requireAuth, requireAccount, async (request, respon
   }
 });
 
+// Removes an Ops login. Their own grants and personal calendar go with them. If the login is referenced by history
+// (tasks they created, audit entries) it cannot be erased without breaking that history, so it is switched off instead.
+async function removeOpsLogin(email) {
+  const client = await appPool.connect();
+  try {
+    await client.query("BEGIN");
+    const found = await client.query("SELECT id FROM public.ops_users WHERE lower(email) = lower($1) AND role <> 'Superadmin'", [email]);
+    const userId = found.rows[0]?.id;
+    if (!userId) { await client.query("ROLLBACK"); return "none"; }
+    for (const [table, column] of [["org_capabilities", "user_id"], ["personal_calendar_events", "owner_user_id"], ["personal_calendar_access", "user_id"]]) {
+      await client.query("SAVEPOINT own_data");
+      try { await client.query(`DELETE FROM public.${table} WHERE ${column} = $1`, [userId]); await client.query("RELEASE SAVEPOINT own_data"); }
+      catch (error) { await client.query("ROLLBACK TO SAVEPOINT own_data"); if (error?.code !== "42P01") throw error; }
+    }
+    await client.query("SAVEPOINT remove_login");
+    let outcome = "deleted";
+    try { await client.query("DELETE FROM public.ops_users WHERE id = $1", [userId]); }
+    catch (error) {
+      if (error?.code !== "23503") throw error;
+      await client.query("ROLLBACK TO SAVEPOINT remove_login");
+      await client.query("UPDATE public.ops_users SET active = false, updated_at = now() WHERE id = $1", [userId]);
+      outcome = "deactivated";
+    }
+    await client.query("COMMIT");
+    return outcome;
+  } catch (error) { await client.query("ROLLBACK").catch(() => {}); throw error; }
+  finally { client.release(); }
+}
+
 app.delete("/api/people/:id", requireAuth, requireAccount, async (request, response) => {
   if (request.appAccount.app_role !== "Superadmin") {
     return response.status(403).json({ error: "Only the Superadmin can delete people." });
@@ -1057,12 +1086,7 @@ app.delete("/api/people/:id", requireAuth, requireAccount, async (request, respo
       }
     }
 
-    if (email) {
-      await appPool.query(`
-        DELETE FROM public.ops_users
-        WHERE lower(email) = lower($1) AND role <> 'Superadmin'
-      `, [email]);
-    }
+    if (email) await removeOpsLogin(email);
 
     const deleted = kind === "intern"
       ? await peoplePool.query(`
@@ -1082,7 +1106,7 @@ app.delete("/api/people/:id", requireAuth, requireAccount, async (request, respo
     }
     return response.json({ ok: true });
   } catch (error) {
-    console.error("Person deletion failed:", error instanceof Error ? error.message : "Unknown error");
+    console.error("Person deletion failed:", error instanceof Error ? `${error.code || ""} ${error.message}` : "Unknown error");
     return response.status(503).json({ error: "Could not delete this person." });
   }
 });
@@ -1287,12 +1311,8 @@ app.delete("/api/people/:id/ops-account", requireAuth, requireAccount, async (re
     if (email === String(request.appAccount.email).toLowerCase()) {
       return response.status(409).json({ error: "You cannot delete your own Superadmin account." });
     }
-    const result = await appPool.query(`
-      DELETE FROM public.ops_users
-      WHERE lower(email) = lower($1) AND role <> 'Superadmin'
-      RETURNING id
-    `, [email]);
-    if (!result.rowCount) return response.status(404).json({ error: "This person does not have a deletable Ops account." });
+    const outcome = await removeOpsLogin(email);
+    if (outcome === "none") return response.status(404).json({ error: "This person does not have a deletable Ops account." });
     return response.json({ ok: true });
   } catch (error) {
     console.error("Ops account deletion failed:", error instanceof Error ? error.message : "Unknown error");
