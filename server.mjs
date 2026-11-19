@@ -1143,9 +1143,6 @@ app.post("/api/people/:id/ops-access", requireAuth, requireAccount, async (reque
     const person = personResult.rows[0];
     if (!person) return response.status(404).json({ error: "Person not found." });
     if (!person.email) return response.status(400).json({ error: "Add an email address before creating Ops access." });
-    if (request.appAccount.app_role === "Superadmin" && person.role !== "Manager") {
-      return response.status(403).json({ error: "The Superadmin can create login details only for Managers." });
-    }
     if (request.appAccount.app_role === "Manager") {
       const managerResult = await peoplePool.query(`
         SELECT id, department
@@ -1163,7 +1160,11 @@ app.post("/api/people/:id/ops-access", requireAuth, requireAccount, async (reque
     }
 
     const temporaryPasswordHash = await bcrypt.hash(crypto.randomUUID(), 12);
-    const role = person.role === "Manager" ? "Manager" : "Member";
+    // The Superadmin can choose the login's role for anyone (interns included); a Manager's grant follows the directory.
+    const requestedRole = String(request.body?.role || "");
+    const role = request.appAccount.app_role === "Superadmin" && ["Admin", "Manager", "Member"].includes(requestedRole)
+      ? requestedRole
+      : person.role === "Manager" ? "Manager" : "Member";
     const rawToken = crypto.randomBytes(32).toString("base64url");
     const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
     const setupUrl = `${String(process.env.OPS_APP_URL || "").replace(/\/+$/, "")}/setup-account?token=${encodeURIComponent(rawToken)}`;

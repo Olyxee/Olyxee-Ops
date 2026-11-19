@@ -1145,7 +1145,7 @@ export function InternTaskDetail({task,user,team,repositoryUrl,onBack,update,ref
   const livePerson=Boolean(person&&"source" in person&&person.source==="Supabase");
   const intern=person?employmentOf(person)==="Intern":false;
    const targetIsManager=Boolean(person&&(person.accessRole==="Manager"||person.role==="Manager"));
-   const superadminCanProvision=accessOf(user)==="Superadmin"&&targetIsManager;
+   const superadminCanProvision=accessOf(user)==="Superadmin";
    const managerCanProvision=isManager(user)&&!targetIsManager&&Boolean(person&&(person.department===user.department||person.reportsTo===user.id));
     const canProvision=livePerson&&Boolean(person?.id)&&(superadminCanProvision||managerCanProvision);
     const canAdministerAccount=livePerson&&Boolean(person?.id)&&accessOf(user)==="Superadmin";
@@ -1161,7 +1161,7 @@ export function InternTaskDetail({task,user,team,repositoryUrl,onBack,update,ref
   const [reportsTo,setReportsTo]=useState(person?.reportsTo||(isManager(user)?user.id:""));
   const [provisioning,setProvisioning]=useState(false);
    const [credentials,setCredentials]=useState<{name:string;email:string;role:string;invitationStatus:string;message:string}|null>(null);
-  const [opsRole,setOpsRole]=useState<AccessRole>(person?.opsRole||"Member");
+  const [opsRole,setOpsRole]=useState<AccessRole>(person?.opsRole||(targetIsManager?"Manager":"Member"));
   const [opsActive,setOpsActive]=useState(person?.opsActive!==false);
   const [savingAccount,setSavingAccount]=useState(false);
   const [deletingAccount,setDeletingAccount]=useState(false);
@@ -1191,7 +1191,7 @@ export function InternTaskDetail({task,user,team,repositoryUrl,onBack,update,ref
   const provision=async()=>{
     if(!person?.id)return;
     setProvisioning(true);
-    const response=await fetch(`/api/people/${person.id}/ops-access`,{method:"POST"});
+    const response=await fetch(`/api/people/${person.id}/ops-access`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(accessOf(user)==="Superadmin"?{role:opsRole}:{})});
     const result=await response.json();
     setProvisioning(false);
     if(!response.ok){window.alert(result.error||"Could not create Ops access");return}
@@ -1314,6 +1314,7 @@ export function InternTaskDetail({task,user,team,repositoryUrl,onBack,update,ref
       </section>}
        {editMode&&canProvision&&!person?.hasOpsAccess&&<section className="access-provision">
          <div><b>Ops login access</b><p>The login will use <b>{person.email}</b>. A secure password setup link will be emailed and will expire after 24 hours.</p></div>
+          {canAdministerAccount&&<label className="form-label">Ops role<select className="select" value={opsRole} onChange={event=>setOpsRole(event.target.value as AccessRole)}>{["Admin","Manager","Member"].map(value=><option key={value}>{value}</option>)}</select></label>}
           <button className="btn primary" type="button" disabled={provisioning} onClick={provision}>{provisioning?"Sending invitation…":credentials?"Resend invitation":"Create Ops login"}</button>
          {credentials&&<div className="access-credentials"><span><small>Login email</small><b>{credentials.email}</b></span><span><small>Invitation</small><b>{credentials.invitationStatus==="sent"?"Email sent":"Needs retry"}</b></span><div><button className="btn" type="button" onClick={()=>navigator.clipboard.writeText(shareMessage)}>Copy note</button><a className="btn" href={emailShare}>Open email</a><a className="btn" href={whatsappShare} target="_blank" rel="noreferrer">Share by WhatsApp</a></div></div>}
       </section>}
