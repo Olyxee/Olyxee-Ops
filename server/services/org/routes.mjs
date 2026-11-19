@@ -11,7 +11,7 @@ import { buildFunctionsView } from "./functions-view.mjs";
  * Registers /api/org/*. Authority comes only from server-side capability grants (org_capabilities),
  * never from an email address, a job title, a Superadmin role or the reporting hierarchy.
  */
-export function registerOrgRoutes(app, { db, loadPeople, requireAuth, requireAccount, isEnabled, notify = async () => {} }) {
+export function registerOrgRoutes(app, { db, loadPeople, requireAuth, requireAccount, isEnabled, notify = async () => {}, syncDirectory = async () => {} }) {
   const ANY_VIEW = ["org.view_all", "org.propose", "org.approve", "org.delegate"];
 
   const guard = (handler, { any = [], enabledOnly = true } = {}) => async (request, response) => {
@@ -41,6 +41,7 @@ export function registerOrgRoutes(app, { db, loadPeople, requireAuth, requireAcc
   app.get("/api/org/chart", ...base, guard(async ({ request, response, capabilities }) => {
     const asOf = request.query.asOf ? new Date(String(request.query.asOf)) : null;
     if (asOf && Number.isNaN(asOf.getTime())) throw new OrgError("asOf must be a valid date.");
+    await syncDirectory();
     const privileged = ANY_VIEW.some((capability) => holds(capabilities, capability));
     response.json(await getChart(db, loadPeople, { asOf, includeAlumni: privileged && request.query.alumni === "1" }));
   }, { any: [] }));
@@ -56,8 +57,10 @@ export function registerOrgRoutes(app, { db, loadPeople, requireAuth, requireAcc
   // Functions (departments), specialisations and cross-functional initiatives. Structure edits need org.approve.
   // Read-only view for the Functions page and home card. Any signed-in person may read it: it carries function names,
   // leaders (name and title) and member references, never contact details.
-  app.get("/api/org/functions", ...base, guard(async ({ response }) =>
-    response.json(buildFunctionsView(await getChart(db, loadPeople, { includeAlumni: false }))), { any: [] }));
+  app.get("/api/org/functions", ...base, guard(async ({ response }) => {
+    await syncDirectory();
+    response.json(buildFunctionsView(await getChart(db, loadPeople, { includeAlumni: false })));
+  }, { any: [] }));
   app.post("/api/org/functions", ...base, guard(async ({ request, response, actor }) =>
     response.status(201).json(await createFunction(db, { ...(request.body || {}), actor })), { any: ["org.approve"] }));
   app.patch("/api/org/functions/:id", ...base, guard(async ({ request, response, actor }) =>

@@ -30,6 +30,7 @@ import {
   upsertAccountForSetup,
 } from "./server/services/accounts/account-setup.mjs";
 import { registerOrgRoutes } from "./server/services/org/routes.mjs";
+import { createDirectorySync } from "./server/services/org/sync.mjs";
 import { fromPgPool, getChart } from "./server/services/org/store.mjs";
 import { buildFunctionsView } from "./server/services/org/functions-view.mjs";
 import { assignableByLeader, leadsTeamOnProject, objectiveOwnersFor, peopleLedBy, validTeamIds } from "./shared/project-teams.mjs";
@@ -456,6 +457,7 @@ if (orgDb && loadOrgPeople) {
     requireAuth,
     requireAccount,
     isEnabled: orgEnabled,
+    syncDirectory: createDirectorySync(orgDb, peoplePool),
     notify: createOrgNotifier({ appPool, loadPeople: loadOrgPeople, appUrl: `${String(process.env.OPS_APP_URL || "").replace(/\/+$/, "")}/` }),
   });
 }
